@@ -81,3 +81,188 @@ func (m *MimeType) GetPrimaryExtension() string {
 	}
 	return m.Extensions[0]
 }
+
+// DetectMimeType inspects raw bytes and returns the matching MIME type from the catalog.
+//
+// This function performs basic content detection based on common file signatures
+// (magic numbers). Returns nil if the content cannot be identified.
+//
+// Example:
+//
+//	data := []byte(`{"key": "value"}`)
+//	mimeType, err := DetectMimeType(data)
+//	if err != nil {
+//	    // Handle error
+//	}
+//	if mimeType != nil {
+//	    fmt.Println(mimeType.Mime) // "application/json"
+//	}
+func DetectMimeType(input []byte) (*MimeType, error) {
+	catalog := GetDefaultCatalog()
+	if err := catalog.loadMimeTypes(); err != nil {
+		return nil, err
+	}
+
+	// Basic content-based detection using magic numbers and patterns
+	if len(input) == 0 {
+		return nil, nil
+	}
+
+	// Check for common file signatures
+	// JSON: starts with { or [
+	if len(input) > 0 && (input[0] == '{' || input[0] == '[') {
+		// Validate it's actually JSON-like
+		for _, b := range input[:min(len(input), 50)] {
+			if b == '{' || b == '[' || b == '"' || b == ':' {
+				return catalog.mimeTypes["json"], nil
+			}
+		}
+	}
+
+	// XML: starts with <
+	if len(input) > 0 && input[0] == '<' {
+		if len(input) > 5 && string(input[:5]) == "<?xml" {
+			return catalog.mimeTypes["xml"], nil
+		}
+	}
+
+	// YAML: look for YAML-specific patterns
+	lines := string(input[:min(len(input), 200)])
+	if len(lines) > 0 {
+		// Simple heuristic: if it has key: value patterns and no { or <
+		hasColon := false
+		for i := 0; i < len(lines)-1; i++ {
+			if lines[i] == ':' && (lines[i+1] == ' ' || lines[i+1] == '\n') {
+				hasColon = true
+				break
+			}
+		}
+		if hasColon && input[0] != '{' && input[0] != '[' && input[0] != '<' {
+			return catalog.mimeTypes["yaml"], nil
+		}
+	}
+
+	// CSV: look for comma-separated values
+	firstLine := string(input[:min(len(input), 200)])
+	for idx := 0; idx < len(firstLine); idx++ {
+		if firstLine[idx] == '\n' {
+			firstLine = firstLine[:idx]
+			break
+		}
+	}
+	if len(firstLine) > 0 && countCommas(firstLine) >= 2 {
+		return catalog.mimeTypes["csv"], nil
+	}
+
+	// Protocol Buffers: binary format (hard to detect reliably)
+	// Skip for now as it requires more sophisticated detection
+
+	// Plain text: fallback for text-like content
+	if isTextContent(input[:min(len(input), 512)]) {
+		return catalog.mimeTypes["plain-text"], nil
+	}
+
+	return nil, nil
+}
+
+// IsSupportedMimeType checks if the given MIME string exists in the catalog.
+//
+// Example:
+//
+//	if IsSupportedMimeType("application/json") {
+//	    // MIME type is supported
+//	}
+func IsSupportedMimeType(mime string) bool {
+	catalog := GetDefaultCatalog()
+	if err := catalog.loadMimeTypes(); err != nil {
+		return false
+	}
+
+	for _, mimeType := range catalog.mimeTypes {
+		if mimeType.Mime == mime {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetMimeTypeByExtension retrieves a MIME type by file extension.
+//
+// The extension can be provided with or without a leading dot.
+// Returns nil if no matching MIME type is found.
+//
+// Example:
+//
+//	mimeType, err := GetMimeTypeByExtension("json")
+//	if err != nil {
+//	    // Handle error
+//	}
+//	if mimeType != nil {
+//	    fmt.Println(mimeType.Mime) // "application/json"
+//	}
+func GetMimeTypeByExtension(extension string) (*MimeType, error) {
+	catalog := GetDefaultCatalog()
+	return catalog.GetMimeTypeByExtension(extension)
+}
+
+// ListMimeTypes returns all MIME types from the catalog.
+//
+// Example:
+//
+//	mimeTypes, err := ListMimeTypes()
+//	if err != nil {
+//	    // Handle error
+//	}
+//	for _, mimeType := range mimeTypes {
+//	    fmt.Printf("%s: %s\n", mimeType.ID, mimeType.Mime)
+//	}
+func ListMimeTypes() ([]*MimeType, error) {
+	catalog := GetDefaultCatalog()
+	if err := catalog.loadMimeTypes(); err != nil {
+		return nil, err
+	}
+
+	// Convert map to slice
+	result := make([]*MimeType, 0, len(catalog.mimeTypes))
+	for _, mimeType := range catalog.mimeTypes {
+		result = append(result, mimeType)
+	}
+
+	return result, nil
+}
+
+// Helper functions
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func countCommas(s string) int {
+	count := 0
+	for _, c := range s {
+		if c == ',' {
+			count++
+		}
+	}
+	return count
+}
+
+func isTextContent(data []byte) bool {
+	// Simple heuristic: check if most bytes are printable ASCII or common UTF-8
+	printableCount := 0
+	for _, b := range data {
+		if (b >= 32 && b <= 126) || b == '\n' || b == '\r' || b == '\t' {
+			printableCount++
+		} else if b >= 128 {
+			// UTF-8 continuation or multi-byte character
+			printableCount++
+		}
+	}
+
+	// If more than 80% is printable, consider it text
+	return len(data) > 0 && float64(printableCount)/float64(len(data)) > 0.8
+}

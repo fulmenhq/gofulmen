@@ -9,10 +9,6 @@ func TestNewCatalog(t *testing.T) {
 	if catalog == nil {
 		t.Fatal("Expected non-nil catalog")
 	}
-
-	if catalog.configBasePath == "" {
-		t.Error("Expected catalog to have configBasePath set")
-	}
 }
 
 func TestGetDefaultCatalog(t *testing.T) {

@@ -1,19 +1,23 @@
 package foundry
 
 import (
+	"embed"
 	"fmt"
-	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
 )
 
+//go:embed assets/*.yaml
+var configFiles embed.FS
+
 // Catalog provides immutable access to Foundry pattern datasets.
 //
 // The catalog loads patterns, MIME types, and HTTP status groups from
-// Crucible configuration using lazy loading for performance. All data
-// is cached after first access.
+// embedded Crucible configuration using lazy loading for performance.
+// All data is cached after first access and works offline in compiled binaries.
 //
 // Example:
 //
@@ -23,8 +27,6 @@ import (
 //	    // Valid email
 //	}
 type Catalog struct {
-	configBasePath string
-
 	// Lazy-loaded data with mutex protection
 	patterns     map[string]*Pattern
 	patternsOnce sync.Once
@@ -33,6 +35,12 @@ type Catalog struct {
 	mimeTypes     map[string]*MimeType
 	mimeTypesOnce sync.Once
 	mimeTypesErr  error
+
+	countries        map[string]*Country // keyed by uppercase Alpha2
+	countriesAlpha3  map[string]*Country // keyed by uppercase Alpha3
+	countriesNumeric map[string]*Country // keyed by zero-padded numeric (e.g., "840")
+	countriesOnce    sync.Once
+	countriesErr     error
 
 	httpGroups      []*HTTPStatusGroup
 	httpGroupsOnce  sync.Once
@@ -44,49 +52,13 @@ type Catalog struct {
 // NewCatalog creates a new Catalog instance.
 //
 // The catalog uses lazy loading - data is only loaded when first accessed.
-// It automatically finds the repository root by looking for config/crucible-go.
+// All configuration files are embedded at compile time for offline operation.
 //
 // Example:
 //
 //	catalog := NewCatalog()
 func NewCatalog() *Catalog {
-	// Find repository root by looking for config/crucible-go directory
-	configPath := findConfigPath()
-	return &Catalog{
-		configBasePath: configPath,
-	}
-}
-
-// findConfigPath searches for the config/crucible-go directory starting from the current directory
-// and walking up the directory tree.
-func findConfigPath() string {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		// Fallback to relative path
-		return "config/crucible-go"
-	}
-
-	// Try current directory first
-	checkPath := filepath.Join(currentDir, "config", "crucible-go")
-	if _, err := os.Stat(checkPath); err == nil {
-		return filepath.Join(currentDir, "config", "crucible-go")
-	}
-
-	// Walk up the directory tree
-	for i := 0; i < 10; i++ { // Limit to 10 levels up
-		currentDir = filepath.Dir(currentDir)
-		if currentDir == "/" || currentDir == "." {
-			break
-		}
-
-		checkPath = filepath.Join(currentDir, "config", "crucible-go")
-		if _, err := os.Stat(checkPath); err == nil {
-			return filepath.Join(currentDir, "config", "crucible-go")
-		}
-	}
-
-	// Fallback to relative path
-	return "config/crucible-go"
+	return &Catalog{}
 }
 
 // GetDefaultCatalog returns a singleton catalog.
@@ -110,12 +82,12 @@ var (
 	defaultCatalogOnce sync.Once
 )
 
-// loadYAML loads a YAML file and returns the parsed data.
-func (c *Catalog) loadYAML(relPath string) (map[string]interface{}, error) {
-	fullPath := filepath.Join(c.configBasePath, relPath)
-	data, err := os.ReadFile(fullPath)
+// loadYAML loads a YAML file from embedded files and returns the parsed data.
+func (c *Catalog) loadYAML(filename string) (map[string]interface{}, error) {
+	fullPath := filepath.Join("assets", filename)
+	data, err := configFiles.ReadFile(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", fullPath, err)
+		return nil, fmt.Errorf("failed to read embedded file %s: %w", fullPath, err)
 	}
 
 	var result map[string]interface{}
@@ -129,7 +101,7 @@ func (c *Catalog) loadYAML(relPath string) (map[string]interface{}, error) {
 // loadPatterns loads patterns from Crucible configuration (lazy loading).
 func (c *Catalog) loadPatterns() error {
 	c.patternsOnce.Do(func() {
-		data, err := c.loadYAML("library/foundry/patterns.yaml")
+		data, err := c.loadYAML("patterns.yaml")
 		if err != nil {
 			c.patternsErr = fmt.Errorf("failed to load patterns config: %w", err)
 			return
@@ -216,7 +188,7 @@ func (c *Catalog) loadPatterns() error {
 // loadMimeTypes loads MIME types from Crucible configuration (lazy loading).
 func (c *Catalog) loadMimeTypes() error {
 	c.mimeTypesOnce.Do(func() {
-		data, err := c.loadYAML("library/foundry/mime-types.yaml")
+		data, err := c.loadYAML("mime-types.yaml")
 		if err != nil {
 			c.mimeTypesErr = fmt.Errorf("failed to load mime-types config: %w", err)
 			return
@@ -275,7 +247,7 @@ func (c *Catalog) loadMimeTypes() error {
 // loadHTTPGroups loads HTTP status groups from Crucible configuration (lazy loading).
 func (c *Catalog) loadHTTPGroups() error {
 	c.httpGroupsOnce.Do(func() {
-		data, err := c.loadYAML("library/foundry/http-statuses.yaml")
+		data, err := c.loadYAML("http-statuses.yaml")
 		if err != nil {
 			c.httpGroupsErr = fmt.Errorf("failed to load http-statuses config: %w", err)
 			return
@@ -339,6 +311,85 @@ func (c *Catalog) loadHTTPGroups() error {
 	})
 
 	return c.httpGroupsErr
+}
+
+// loadCountries loads countries from Crucible configuration (lazy loading).
+//
+// Builds three indexes for efficient lookup:
+// - Alpha2 (uppercase, e.g., "US")
+// - Alpha3 (uppercase, e.g., "USA")
+// - Numeric (zero-padded to 3 digits, e.g., "840")
+func (c *Catalog) loadCountries() error {
+	c.countriesOnce.Do(func() {
+		data, err := c.loadYAML("country-codes.yaml")
+		if err != nil {
+			c.countriesErr = fmt.Errorf("failed to load country-codes config: %w", err)
+			return
+		}
+
+		countriesData, ok := data["countries"].([]interface{})
+		if !ok {
+			c.countriesErr = fmt.Errorf("country-codes config has invalid format")
+			return
+		}
+
+		countries := make(map[string]*Country)
+		countriesAlpha3 := make(map[string]*Country)
+		countriesNumeric := make(map[string]*Country)
+
+		for _, item := range countriesData {
+			countryMap, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			country := &Country{}
+
+			if alpha2, ok := countryMap["alpha2"].(string); ok {
+				country.Alpha2 = alpha2
+			}
+			if alpha3, ok := countryMap["alpha3"].(string); ok {
+				country.Alpha3 = alpha3
+			}
+			if numeric, ok := countryMap["numeric"].(string); ok {
+				country.Numeric = numeric
+			}
+			if name, ok := countryMap["name"].(string); ok {
+				country.Name = name
+			}
+			if officialName, ok := countryMap["officialName"].(string); ok {
+				country.OfficialName = officialName
+			}
+
+			// Build primary index (Alpha2, uppercase)
+			if country.Alpha2 != "" {
+				normalizedAlpha2 := strings.ToUpper(country.Alpha2)
+				countries[normalizedAlpha2] = country
+			}
+
+			// Build secondary index (Alpha3, uppercase)
+			if country.Alpha3 != "" {
+				normalizedAlpha3 := strings.ToUpper(country.Alpha3)
+				countriesAlpha3[normalizedAlpha3] = country
+			}
+
+			// Build tertiary index (Numeric, zero-padded to 3 digits)
+			if country.Numeric != "" {
+				// Ensure numeric code is zero-padded to 3 digits
+				numericCode := country.Numeric
+				for len(numericCode) < 3 {
+					numericCode = "0" + numericCode
+				}
+				countriesNumeric[numericCode] = country
+			}
+		}
+
+		c.countries = countries
+		c.countriesAlpha3 = countriesAlpha3
+		c.countriesNumeric = countriesNumeric
+	})
+
+	return c.countriesErr
 }
 
 // GetPattern retrieves a pattern by ID.
@@ -523,4 +574,77 @@ func (c *Catalog) GetHTTPStatusHelper() (*HTTPStatusHelper, error) {
 		return nil, err
 	}
 	return c.httpHelper, nil
+}
+
+// GetCountry retrieves a country by its Alpha2 code.
+//
+// The code is normalized to uppercase for case-insensitive lookup.
+// Returns nil if the country is not found.
+//
+// Example:
+//
+//	country, err := catalog.GetCountry("US")    // works
+//	country, err := catalog.GetCountry("us")    // also works
+//	if err != nil {
+//	    // Handle error
+//	}
+//	if country != nil {
+//	    fmt.Println(country.Name) // "United States of America"
+//	}
+func (c *Catalog) GetCountry(alpha2 string) (*Country, error) {
+	if err := c.loadCountries(); err != nil {
+		return nil, err
+	}
+	normalizedAlpha2 := strings.ToUpper(alpha2)
+	return c.countries[normalizedAlpha2], nil
+}
+
+// GetCountryByAlpha3 retrieves a country by its Alpha3 code.
+//
+// The code is normalized to uppercase for case-insensitive lookup.
+// Returns nil if the country is not found.
+//
+// Example:
+//
+//	country, err := catalog.GetCountryByAlpha3("USA")  // works
+//	country, err := catalog.GetCountryByAlpha3("usa")  // also works
+//	if err != nil {
+//	    // Handle error
+//	}
+//	if country != nil {
+//	    fmt.Println(country.Name) // "United States of America"
+//	}
+func (c *Catalog) GetCountryByAlpha3(alpha3 string) (*Country, error) {
+	if err := c.loadCountries(); err != nil {
+		return nil, err
+	}
+	normalizedAlpha3 := strings.ToUpper(alpha3)
+	return c.countriesAlpha3[normalizedAlpha3], nil
+}
+
+// ListCountries returns all countries from the catalog.
+//
+// Returns a slice of Country instances.
+//
+// Example:
+//
+//	countries, err := catalog.ListCountries()
+//	if err != nil {
+//	    // Handle error
+//	}
+//	for _, country := range countries {
+//	    fmt.Printf("%s: %s\n", country.Alpha2, country.Name)
+//	}
+func (c *Catalog) ListCountries() ([]*Country, error) {
+	if err := c.loadCountries(); err != nil {
+		return nil, err
+	}
+
+	// Convert map to slice
+	result := make([]*Country, 0, len(c.countries))
+	for _, country := range c.countries {
+		result = append(result, country)
+	}
+
+	return result, nil
 }
