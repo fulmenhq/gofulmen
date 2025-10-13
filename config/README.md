@@ -1,0 +1,153 @@
+# Config Library
+
+Gofulmen's `config` package provides XDG-compliant configuration management with flexible, application-agnostic path resolution.
+
+## Purpose
+
+The config library addresses common configuration needs in Go applications:
+
+- **XDG Base Directory Support**: Follows XDG standards for config file locations
+- **Application-Agnostic**: Use with any app name, not just Fulmen ecosystem
+- **File Discovery**: Automatic discovery of configuration files in standard locations
+- **Legacy Support**: Backward compatibility with old config locations
+- **Ecosystem Conventions**: Optional Fulmen ecosystem defaults
+
+## Key Features
+
+- **XDG Compliance**: Proper handling of XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME
+- **Parameterized Paths**: `GetAppConfigDir("myapp")` for any application
+- **Config Discovery**: Searches multiple standard locations for config files
+- **Fulmen Defaults**: Convenience functions for Fulmen ecosystem tools
+- **No Hard-Coded Names**: Library doesn't force "gofulmen" or "fulmen" on consumers
+
+## Basic Usage
+
+### Loading Configuration
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/fulmenhq/gofulmen/config"
+)
+
+func main() {
+    // Load configuration from default locations
+    cfg, err := config.LoadConfig()
+    if err != nil {
+        log.Fatalf("Failed to load config: %v", err)
+    }
+
+    fmt.Println("Configuration loaded successfully")
+}
+```
+
+### Getting XDG Directories
+
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/fulmenhq/gofulmen/config"
+)
+
+func main() {
+    // Get XDG base directories
+    xdg := config.GetXDGBaseDirs()
+
+    fmt.Printf("Config home: %s\n", xdg.ConfigHome)
+    fmt.Printf("Data home: %s\n", xdg.DataHome)
+    fmt.Printf("Cache home: %s\n", xdg.CacheHome)
+
+    // Get gofulmen-specific directories
+    fmt.Printf("Gofulmen config: %s\n", config.GetGofulmenConfigDir())
+    fmt.Printf("Gofulmen data: %s\n", config.GetGofulmenDataDir())
+    fmt.Printf("Gofulmen cache: %s\n", config.GetGofulmenCacheDir())
+}
+```
+
+### Config File Discovery
+
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/fulmenhq/gofulmen/config"
+)
+
+func main() {
+    // Get possible config file paths
+    paths := config.GetConfigPaths()
+
+    fmt.Println("Looking for config in:")
+    for _, path := range paths {
+        fmt.Printf("  - %s\n", path)
+    }
+}
+```
+
+## API Reference
+
+### config.LoadConfig() (\*Config, error)
+
+Loads configuration from default locations following XDG standards.
+
+**Returns:**
+
+- `*Config`: Configuration instance (currently empty struct)
+- `error`: Any error during loading
+
+### config.GetXDGBaseDirs() XDGBaseDirs
+
+Returns the XDG Base Directory paths for the current user.
+
+**Returns:**
+
+- `XDGBaseDirs`: Struct with ConfigHome, DataHome, CacheHome paths
+
+### config.GetConfigPaths() []string
+
+Returns a list of possible configuration file paths in order of precedence.
+
+**Returns:**
+
+- `[]string`: Slice of absolute paths where config files are searched
+
+### config.GetGofulmenConfigDir() string
+
+Returns the gofulmen-specific configuration directory.
+
+**Returns:**
+
+- `string`: Path to ~/.config/gofulmen (or equivalent)
+
+## Configuration File Locations
+
+The library searches for configuration files in the following order:
+
+1. `$XDG_CONFIG_HOME/gofulmen/config.json`
+2. `~/.config/gofulmen/config.json`
+3. `~/.gofulmen.json`
+4. `./gofulmen.json`
+5. `./.gofulmen.json`
+
+## Testing
+
+```bash
+go test ./config/...
+```
+
+## Future Enhancements
+
+- Schema validation for configuration files
+- Hot reloading of configuration
+- Support for YAML and TOML formats
+- Environment variable prefix support
+- Configuration profiles

@@ -1,0 +1,12 @@
+{
+  "pathfinder": {
+    "maxWorkers": 4,
+    "cacheEnabled": false,
+    "validateInputs": true,
+    "validateOutputs": true
+  },
+  "logging": {
+    "level": "info",
+    "format": "text"
+  }
+}

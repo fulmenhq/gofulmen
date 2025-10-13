@@ -1,0 +1,49 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+test_import
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Plans (internal planning documents)
+.plans/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Local tool overrides (never commit - used for development iteration)
+.goneat/tools.local.yaml
+.goneat/*.local.yaml
