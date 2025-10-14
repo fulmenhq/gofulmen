@@ -35,7 +35,7 @@ func TestNewCountryCode_Valid(t *testing.T) {
 		{"Numeric_392", "392", "392"},
 		{"Numeric_276", "276", "276"},
 		{"Numeric_076", "076", "076"},
-		{"Numeric_76", "76", "76"}, // without leading zero
+		{"Numeric_76", "76", "076"}, // canonicalized to 3 digits
 	}
 
 	for _, tt := range tests {
@@ -242,6 +242,37 @@ func TestCountryCode_Country_Invalid(t *testing.T) {
 	_, err := code.Country()
 	if err == nil {
 		t.Error("Expected error for invalid country code")
+	}
+}
+
+// TestCountryCode_Country_Numeric tests Country() with numeric codes
+func TestCountryCode_Country_Numeric(t *testing.T) {
+	tests := []struct {
+		code         CountryCode
+		expectedName string
+	}{
+		{"840", "United States of America"}, // US
+		{"076", "Brazil"},                   // Brazil (zero-padded)
+		{"76", "Brazil"},                    // Brazil (without leading zero)
+		{"392", "Japan"},                    // Japan
+		{"124", "Canada"},                   // Canada
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.code), func(t *testing.T) {
+			country, err := tt.code.Country()
+			if err != nil {
+				t.Fatalf("CountryCode(%q).Country() returned error: %v", tt.code, err)
+			}
+
+			if country == nil {
+				t.Fatalf("CountryCode(%q).Country() returned nil", tt.code)
+			}
+
+			if country.Name != tt.expectedName {
+				t.Errorf("CountryCode(%q).Country().Name = %q, want %q", tt.code, country.Name, tt.expectedName)
+			}
+		})
 	}
 }
 

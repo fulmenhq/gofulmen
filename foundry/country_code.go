@@ -29,13 +29,15 @@ type CountryCode string
 // NewCountryCode creates a validated CountryCode from any ISO 3166-1 format.
 //
 // Accepts Alpha-2 (US, us), Alpha-3 (USA, usa), or Numeric (840, 76) codes.
+// Numeric codes are canonicalized to 3 digits with zero-padding (e.g., "76" → "076").
 // Returns an error if the code is invalid.
 //
 // Example:
 //
-//	code, err := NewCountryCode("US")    // Alpha-2
-//	code, err := NewCountryCode("usa")   // Alpha-3 (case-insensitive)
-//	code, err := NewCountryCode("840")   // Numeric
+//	code, err := NewCountryCode("US")    // Alpha-2 → "US"
+//	code, err := NewCountryCode("usa")   // Alpha-3 → "USA" (case-insensitive)
+//	code, err := NewCountryCode("840")   // Numeric → "840"
+//	code, err := NewCountryCode("76")    // Numeric → "076" (canonicalized)
 func NewCountryCode(code string) (CountryCode, error) {
 	if code == "" {
 		return "", fmt.Errorf("country code cannot be empty")
@@ -46,8 +48,30 @@ func NewCountryCode(code string) (CountryCode, error) {
 		return "", fmt.Errorf("invalid country code: %s", code)
 	}
 
-	// Normalize to uppercase for consistency
+	// Canonicalize numeric codes to 3 digits with zero-padding
+	if isNumericCode(code) {
+		normalized := code
+		for len(normalized) < 3 {
+			normalized = "0" + normalized
+		}
+		return CountryCode(normalized), nil
+	}
+
+	// Normalize alpha codes to uppercase for consistency
 	return CountryCode(strings.ToUpper(code)), nil
+}
+
+// isNumericCode checks if a string contains only digits.
+func isNumericCode(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // MustCountryCode creates a CountryCode or panics if invalid.
@@ -119,6 +143,15 @@ func (c CountryCode) Country() (*Country, error) {
 
 	// Try Alpha-3 lookup
 	country, err = GetCountryByAlpha3(codeStr)
+	if err != nil {
+		return nil, err
+	}
+	if country != nil {
+		return country, nil
+	}
+
+	// Try Numeric lookup (with zero-padding normalization)
+	country, err = GetCountryByNumeric(codeStr)
 	if err != nil {
 		return nil, err
 	}

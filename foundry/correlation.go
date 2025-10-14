@@ -55,19 +55,22 @@ func ParseCorrelationID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
 
-// IsValidCorrelationID checks if a string is a valid UUID (any version).
+// IsValidCorrelationID checks if a string is a valid UUIDv7.
 //
-// Note: This validates UUID format but doesn't check if it's specifically UUIDv7.
-// Use ParseCorrelationID and check the version field if you need strict v7 validation.
+// This validates both UUID format and ensures the version is specifically v7
+// for time-sortable guarantees required by correlation tracking.
 //
 // Example:
 //
 //	if IsValidCorrelationID("018b2c5e-8f4a-7890-b123-456789abcdef") {
-//	    // Valid UUID format
+//	    // Valid UUIDv7 format
 //	}
 func IsValidCorrelationID(s string) bool {
-	_, err := uuid.Parse(s)
-	return err == nil
+	parsed, err := uuid.Parse(s)
+	if err != nil {
+		return false
+	}
+	return parsed.Version() == 7
 }
 
 // CorrelationID is a validated UUIDv7 correlation ID newtype for distributed tracing.
@@ -110,7 +113,8 @@ func NewCorrelationIDValue() CorrelationID {
 
 // ParseCorrelationIDValue parses and validates a correlation ID string.
 //
-// Returns an error if the string is not a valid UUID format.
+// Returns an error if the string is not a valid UUIDv7 format.
+// Enforces UUIDv7 to ensure time-sortable guarantees.
 //
 // Example:
 //
@@ -119,9 +123,16 @@ func NewCorrelationIDValue() CorrelationID {
 //	    log.Fatal("Invalid correlation ID:", err)
 //	}
 func ParseCorrelationIDValue(s string) (CorrelationID, error) {
-	if !IsValidCorrelationID(s) {
-		return "", fmt.Errorf("invalid correlation ID format")
+	parsed, err := uuid.Parse(s)
+	if err != nil {
+		return "", fmt.Errorf("invalid correlation ID format: %w", err)
 	}
+
+	// Enforce UUIDv7 for time-sortable guarantees
+	if parsed.Version() != 7 {
+		return "", fmt.Errorf("correlation ID must be UUIDv7, got UUID version %d", parsed.Version())
+	}
+
 	return CorrelationID(s), nil
 }
 
@@ -130,14 +141,24 @@ func (c CorrelationID) String() string {
 	return string(c)
 }
 
-// Validate checks if the correlation ID is valid.
+// Validate checks if the correlation ID is valid UUIDv7.
+//
+// Enforces UUIDv7 format to ensure time-sortable guarantees.
 func (c CorrelationID) Validate() error {
 	if c == "" {
 		return fmt.Errorf("correlation ID is empty")
 	}
-	if !IsValidCorrelationID(string(c)) {
-		return fmt.Errorf("invalid correlation ID format")
+
+	parsed, err := uuid.Parse(string(c))
+	if err != nil {
+		return fmt.Errorf("invalid correlation ID format: %w", err)
 	}
+
+	// Enforce UUIDv7 for time-sortable guarantees
+	if parsed.Version() != 7 {
+		return fmt.Errorf("correlation ID must be UUIDv7, got UUID version %d", parsed.Version())
+	}
+
 	return nil
 }
 

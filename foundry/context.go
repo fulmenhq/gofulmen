@@ -124,3 +124,82 @@ func CorrelationIDMiddleware(next http.Handler) http.Handler {
 func CorrelationIDHandler(next http.HandlerFunc) http.Handler {
 	return CorrelationIDMiddleware(next)
 }
+
+// CorrelationIDRoundTripper is an HTTP client transport that automatically
+// propagates correlation IDs from context to outbound requests.
+//
+// This RoundTripper extracts the correlation ID from the request context
+// and sets it as the X-Correlation-ID header on outbound HTTP requests,
+// enabling automatic correlation ID propagation across service boundaries.
+//
+// If no correlation ID is found in the context, the request proceeds without
+// modification.
+//
+// Example:
+//
+//	// Create HTTP client with correlation ID propagation
+//	client := &http.Client{
+//	    Transport: foundry.NewCorrelationIDRoundTripper(http.DefaultTransport),
+//	}
+//
+//	// Use in request with context
+//	ctx := foundry.WithCorrelationID(context.Background(), corrID)
+//	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+//	resp, _ := client.Do(req)  // X-Correlation-ID header automatically added
+type CorrelationIDRoundTripper struct {
+	// Base is the underlying transport to use for HTTP requests.
+	// If nil, http.DefaultTransport is used.
+	Base http.RoundTripper
+}
+
+// NewCorrelationIDRoundTripper creates a new CorrelationIDRoundTripper
+// wrapping the provided base transport.
+//
+// If base is nil, http.DefaultTransport is used.
+//
+// Example:
+//
+//	transport := foundry.NewCorrelationIDRoundTripper(http.DefaultTransport)
+//	client := &http.Client{Transport: transport}
+func NewCorrelationIDRoundTripper(base http.RoundTripper) *CorrelationIDRoundTripper {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return &CorrelationIDRoundTripper{Base: base}
+}
+
+// RoundTrip executes a single HTTP transaction, adding the X-Correlation-ID
+// header from the request context if present.
+//
+// This method implements the http.RoundTripper interface.
+func (t *CorrelationIDRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Extract correlation ID from request context
+	if corrID, ok := CorrelationIDFromContext(req.Context()); ok {
+		// Clone the request to avoid mutating the original
+		req = req.Clone(req.Context())
+
+		// Set X-Correlation-ID header
+		req.Header.Set("X-Correlation-ID", corrID.String())
+	}
+
+	// Execute request with base transport
+	return t.Base.RoundTrip(req)
+}
+
+// NewHTTPClientWithCorrelationID creates a new http.Client that automatically
+// propagates correlation IDs from context to outbound requests.
+//
+// This is a convenience function that wraps the default transport with
+// CorrelationIDRoundTripper.
+//
+// Example:
+//
+//	client := foundry.NewHTTPClientWithCorrelationID()
+//	ctx := foundry.WithCorrelationID(context.Background(), corrID)
+//	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+//	resp, _ := client.Do(req)  // X-Correlation-ID automatically propagated
+func NewHTTPClientWithCorrelationID() *http.Client {
+	return &http.Client{
+		Transport: NewCorrelationIDRoundTripper(http.DefaultTransport),
+	}
+}

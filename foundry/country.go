@@ -77,6 +77,27 @@ func GetCountryByAlpha3(alpha3 string) (*Country, error) {
 	return catalog.GetCountryByAlpha3(alpha3)
 }
 
+// GetCountryByNumeric retrieves a country by its numeric ISO 3166-1 code from the default catalog.
+//
+// The code is normalized to a zero-padded 3-digit string for consistent lookup.
+// Accepts numeric codes with or without leading zeros.
+// Returns nil if the country is not found or if an error occurs.
+//
+// Example:
+//
+//	country, err := GetCountryByNumeric("840")  // United States
+//	country, err := GetCountryByNumeric("76")   // Brazil (normalized to "076")
+//	if err != nil {
+//	    // Handle error
+//	}
+//	if country != nil {
+//	    fmt.Println(country.Name) // "Brazil" or "United States of America"
+//	}
+func GetCountryByNumeric(numeric string) (*Country, error) {
+	catalog := GetDefaultCatalog()
+	return catalog.GetCountryByNumeric(numeric)
+}
+
 // ValidateCountryCode checks if the given code (Alpha2, Alpha3, or Numeric) is valid.
 //
 // The code is normalized (uppercase for alpha codes, zero-padded for numeric)
@@ -114,18 +135,8 @@ func ValidateCountryCode(code string) bool {
 		return true
 	}
 
-	// Try Numeric lookup (zero-padded)
-	if err := catalog.loadCountries(); err != nil {
-		return false
-	}
-
-	// Normalize numeric code (left-pad with zeros to 3 digits)
-	numericCode := code
-	for len(numericCode) < 3 {
-		numericCode = "0" + numericCode
-	}
-
-	country = catalog.countriesNumeric[numericCode]
+	// Try Numeric lookup (zero-padded to 3 digits)
+	country, _ = catalog.GetCountryByNumeric(code)
 	return country != nil
 }
 

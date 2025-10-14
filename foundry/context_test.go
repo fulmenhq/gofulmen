@@ -441,3 +441,189 @@ func BenchmarkCorrelationIDMiddleware(b *testing.B) {
 		middleware.ServeHTTP(rec, req)
 	}
 }
+
+// Tests for CorrelationIDRoundTripper
+
+// mockRoundTripper is a mock http.RoundTripper for testing
+type mockRoundTripper struct {
+	capturedRequest *http.Request
+	response        *http.Response
+	err             error
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	m.capturedRequest = req
+	if m.response != nil {
+		return m.response, m.err
+	}
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       http.NoBody,
+	}, m.err
+}
+
+// TestCorrelationIDRoundTripper_AddsHeader tests RoundTripper adds header from context
+func TestCorrelationIDRoundTripper_AddsHeader(t *testing.T) {
+	corrID := NewCorrelationIDValue()
+	ctx := WithCorrelationID(context.Background(), corrID)
+
+	mock := &mockRoundTripper{}
+	transport := NewCorrelationIDRoundTripper(mock)
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+	_, err := transport.RoundTrip(req)
+
+	if err != nil {
+		t.Fatalf("RoundTrip() error: %v", err)
+	}
+
+	// Verify header was added
+	if mock.capturedRequest == nil {
+		t.Fatal("Request was not passed to base transport")
+	}
+
+	headerValue := mock.capturedRequest.Header.Get("X-Correlation-ID")
+	if headerValue != corrID.String() {
+		t.Errorf("X-Correlation-ID header = %q, want %q", headerValue, corrID.String())
+	}
+}
+
+// TestCorrelationIDRoundTripper_NoHeaderWithoutContext tests RoundTripper without correlation ID
+func TestCorrelationIDRoundTripper_NoHeaderWithoutContext(t *testing.T) {
+	ctx := context.Background() // No correlation ID
+
+	mock := &mockRoundTripper{}
+	transport := NewCorrelationIDRoundTripper(mock)
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+	_, err := transport.RoundTrip(req)
+
+	if err != nil {
+		t.Fatalf("RoundTrip() error: %v", err)
+	}
+
+	// Verify no header was added
+	if mock.capturedRequest == nil {
+		t.Fatal("Request was not passed to base transport")
+	}
+
+	headerValue := mock.capturedRequest.Header.Get("X-Correlation-ID")
+	if headerValue != "" {
+		t.Errorf("X-Correlation-ID header should not be set, got %q", headerValue)
+	}
+}
+
+// TestCorrelationIDRoundTripper_DoesNotMutateOriginal tests request cloning
+func TestCorrelationIDRoundTripper_DoesNotMutateOriginal(t *testing.T) {
+	corrID := NewCorrelationIDValue()
+	ctx := WithCorrelationID(context.Background(), corrID)
+
+	mock := &mockRoundTripper{}
+	transport := NewCorrelationIDRoundTripper(mock)
+
+	originalReq, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+
+	// Store original header count
+	originalHeaderCount := len(originalReq.Header)
+
+	_, err := transport.RoundTrip(originalReq)
+	if err != nil {
+		t.Fatalf("RoundTrip() error: %v", err)
+	}
+
+	// Verify original request was not mutated
+	if len(originalReq.Header) != originalHeaderCount {
+		t.Errorf("Original request headers were mutated: before=%d, after=%d",
+			originalHeaderCount, len(originalReq.Header))
+	}
+
+	if originalReq.Header.Get("X-Correlation-ID") != "" {
+		t.Error("Original request should not have X-Correlation-ID header")
+	}
+
+	// Verify cloned request has header
+	if mock.capturedRequest.Header.Get("X-Correlation-ID") != corrID.String() {
+		t.Error("Cloned request should have X-Correlation-ID header")
+	}
+}
+
+// TestNewCorrelationIDRoundTripper_NilBase tests using nil base transport
+func TestNewCorrelationIDRoundTripper_NilBase(t *testing.T) {
+	transport := NewCorrelationIDRoundTripper(nil)
+
+	if transport.Base == nil {
+		t.Error("Base transport should default to http.DefaultTransport, got nil")
+	}
+
+	if transport.Base != http.DefaultTransport {
+		t.Error("Base transport should be http.DefaultTransport")
+	}
+}
+
+// TestNewHTTPClientWithCorrelationID tests convenience client constructor
+func TestNewHTTPClientWithCorrelationID(t *testing.T) {
+	client := NewHTTPClientWithCorrelationID()
+
+	if client == nil {
+		t.Fatal("NewHTTPClientWithCorrelationID() returned nil")
+	}
+
+	if client.Transport == nil {
+		t.Fatal("Client transport is nil")
+	}
+
+	// Verify transport is CorrelationIDRoundTripper
+	_, ok := client.Transport.(*CorrelationIDRoundTripper)
+	if !ok {
+		t.Errorf("Client transport type = %T, want *CorrelationIDRoundTripper", client.Transport)
+	}
+}
+
+// TestCorrelationIDRoundTripper_Integration tests full client integration
+func TestCorrelationIDRoundTripper_Integration(t *testing.T) {
+	corrID := NewCorrelationIDValue()
+
+	// Create mock server to verify header propagation
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		headerValue := r.Header.Get("X-Correlation-ID")
+		if headerValue != corrID.String() {
+			t.Errorf("Server received X-Correlation-ID = %q, want %q", headerValue, corrID.String())
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	// Create client with correlation ID transport
+	client := NewHTTPClientWithCorrelationID()
+
+	// Create request with correlation ID in context
+	ctx := WithCorrelationID(context.Background(), corrID)
+	req, _ := http.NewRequestWithContext(ctx, "GET", server.URL, nil)
+
+	// Make request
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Client.Do() error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Response status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+}
+
+// BenchmarkCorrelationIDRoundTripper benchmarks RoundTripper overhead
+func BenchmarkCorrelationIDRoundTripper(b *testing.B) {
+	corrID := NewCorrelationIDValue()
+	ctx := WithCorrelationID(context.Background(), corrID)
+
+	mock := &mockRoundTripper{}
+	transport := NewCorrelationIDRoundTripper(mock)
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.example.com", nil)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		transport.RoundTrip(req)
+	}
+}

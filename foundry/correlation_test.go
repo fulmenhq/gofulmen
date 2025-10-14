@@ -123,9 +123,9 @@ func TestIsValidCorrelationID(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "Valid UUIDv4",
-			input:    uuid.New().String(),
-			expected: true,
+			name:     "Invalid UUIDv4 (must be v7)",
+			input:    uuid.New().String(), // UUIDv4 is rejected
+			expected: false,
 		},
 		{
 			name:     "Invalid format",
@@ -156,6 +156,21 @@ func TestIsValidCorrelationID(t *testing.T) {
 				t.Errorf("IsValidCorrelationID(%q) = %v, expected %v", tt.input, result, tt.expected)
 			}
 		})
+	}
+}
+
+// TestIsValidCorrelationID_RejectsNonV7 verifies that only UUIDv7 is accepted
+func TestIsValidCorrelationID_RejectsNonV7(t *testing.T) {
+	// Generate UUIDv4 (random)
+	uuidv4 := uuid.New() // This is v4
+	if IsValidCorrelationID(uuidv4.String()) {
+		t.Error("IsValidCorrelationID should reject UUIDv4")
+	}
+
+	// Generate UUIDv7
+	uuidv7 := uuid.Must(uuid.NewV7())
+	if !IsValidCorrelationID(uuidv7.String()) {
+		t.Error("IsValidCorrelationID should accept UUIDv7")
 	}
 }
 
@@ -216,6 +231,26 @@ func TestParseCorrelationIDValue_Invalid(t *testing.T) {
 	}
 }
 
+// TestParseCorrelationIDValue_RejectsNonV7 verifies that non-v7 UUIDs are rejected
+func TestParseCorrelationIDValue_RejectsNonV7(t *testing.T) {
+	// UUIDv4 should be rejected
+	uuidv4 := uuid.New()
+	_, err := ParseCorrelationIDValue(uuidv4.String())
+	if err == nil {
+		t.Error("ParseCorrelationIDValue should reject UUIDv4")
+	}
+	if !strings.Contains(err.Error(), "UUIDv7") {
+		t.Errorf("Error message should mention UUIDv7 requirement, got: %v", err)
+	}
+
+	// UUIDv7 should be accepted
+	uuidv7 := uuid.Must(uuid.NewV7())
+	_, err = ParseCorrelationIDValue(uuidv7.String())
+	if err != nil {
+		t.Errorf("ParseCorrelationIDValue should accept UUIDv7, got error: %v", err)
+	}
+}
+
 func TestCorrelationIDValue_JSONRoundTrip(t *testing.T) {
 	type Request struct {
 		CorrelationID CorrelationID `json:"correlation_id"`
@@ -252,9 +287,10 @@ func TestCorrelationIDValue_Validate(t *testing.T) {
 		id      CorrelationID
 		wantErr bool
 	}{
-		{"Valid", "018b2c5e-8f4a-7890-b123-456789abcdef", false},
+		{"Valid UUIDv7", CorrelationID(uuid.Must(uuid.NewV7()).String()), false},
 		{"Empty", "", true},
-		{"Invalid", "not-a-uuid", true},
+		{"Invalid format", "not-a-uuid", true},
+		{"UUIDv4 rejected", CorrelationID(uuid.New().String()), true},
 	}
 
 	for _, tt := range tests {
@@ -264,6 +300,26 @@ func TestCorrelationIDValue_Validate(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestCorrelationIDValue_Validate_RejectsNonV7 verifies Validate rejects non-v7 UUIDs
+func TestCorrelationIDValue_Validate_RejectsNonV7(t *testing.T) {
+	// UUIDv4 should be rejected
+	uuidv4 := CorrelationID(uuid.New().String())
+	err := uuidv4.Validate()
+	if err == nil {
+		t.Error("Validate should reject UUIDv4")
+	}
+	if !strings.Contains(err.Error(), "UUIDv7") {
+		t.Errorf("Error message should mention UUIDv7 requirement, got: %v", err)
+	}
+
+	// UUIDv7 should be accepted
+	uuidv7 := CorrelationID(uuid.Must(uuid.NewV7()).String())
+	err = uuidv7.Validate()
+	if err != nil {
+		t.Errorf("Validate should accept UUIDv7, got error: %v", err)
 	}
 }
 
