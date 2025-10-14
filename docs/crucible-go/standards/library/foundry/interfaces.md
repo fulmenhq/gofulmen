@@ -52,6 +52,8 @@ Each library MUST expose functions that allow consumers to identify MIME types u
 ## Status & Country Catalogs
 
 - Expose helper utilities (`isClientError(code)`, `lookupStatus(code)`, `lookupCountry(alpha2)`, etc.) with parity tests.
+- Normalize ISO country tokens (upper-case alpha variants; left-pad numeric strings to three digits) before indexing so lookups are case-insensitive across alpha-2, alpha-3, and numeric codes.
+- Precompute secondary indexes (alpha-3 → country, numeric → country) when loading the catalog to avoid repeated linear scans during validation.
 - Implement mappings using the curated data rather than hardcoding values.
 
 ## Future Interfaces

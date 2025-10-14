@@ -33,6 +33,7 @@ Helper libraries MUST treat these catalogs as read-only SSOT data. Updates origi
 2. Enforce immutability and avoid runtime mutation of the shared catalog.
 3. Surface documentation (e.g., `describe(patternId)`) pulling from the catalog’s metadata.
 4. Integrate patterns into validation tooling where applicable (Pydantic validators, Go custom types, Zod schemas).
+5. Normalize ISO country tokens (upper-case alpha codes, three-digit numeric strings) before indexing and maintain secondary indexes for alpha-3 and numeric codes so lookups stay case-insensitive across all ISO forms.
 
 ## Language Notes
 
@@ -47,7 +48,7 @@ Helper libraries MUST treat these catalogs as read-only SSOT data. Updates origi
 - Ensure accessors return compiled/typed representations without error.
 - Provide positive/negative unit tests for each pattern (sample matches + mismatches).
 - Verify HTTP status group helpers cover the documented codes; ensure language implementations expose convenience sets (e.g., `IsClientError(code)`).
-- Verify country code lookups support alpha-2, alpha-3, and numeric forms.
+- Verify country code lookups support alpha-2, alpha-3, and numeric forms case-insensitively (including numeric normalization) and reuse the precomputed indexes built at load time.
 - Verify MIME type helpers handle lookup by id, MIME string, and extensions; add tests for unknown types.
 - Maintain snapshot/parity tests to detect catalog drift across languages.
 - Verify per-language flag handling (Unicode, ignore-case, etc.) in unit tests.

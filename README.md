@@ -45,6 +45,19 @@ Simple, dependency-free tool installation for Go repositories using the goneat b
 - Cross-platform (macOS, Linux, Windows)
 - Local development overrides via `.goneat/tools.local.yaml`
 
+### Foundry (`foundry/`)
+
+Enterprise-grade foundation utilities providing consistent cross-language implementations from Crucible catalogs.
+
+- **Time Utilities**: RFC3339Nano timestamps with nanosecond precision
+- **Correlation IDs**: UUIDv7 time-sortable IDs for distributed tracing
+- **Pattern Matching**: Regex, glob, and literal patterns from Crucible catalogs
+- **MIME Type Detection**: Content-based detection and extension lookup
+- **HTTP Status Helpers**: Status code grouping and validation
+- **Country Code Validation**: ISO 3166-1 country codes (Alpha2, Alpha3, Numeric)
+
+All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
+
 ## Installation
 
 ```bash
@@ -104,6 +117,52 @@ if err != nil {
 // Get XDG directories
 xdg := config.GetXDGBaseDirs()
 fmt.Printf("Config dir: %s\n", xdg.ConfigHome)
+```
+
+### Foundry Package
+
+```go
+import "github.com/fulmenhq/gofulmen/foundry"
+
+// RFC3339Nano timestamps (cross-language compatible)
+timestamp := foundry.UTCNowRFC3339Nano()
+fmt.Println(timestamp) // "2025-10-13T14:32:15.123456789Z"
+
+// UUIDv7 correlation IDs (time-sortable, globally unique)
+correlationID := foundry.GenerateCorrelationID()
+fmt.Println(correlationID) // "018b2c5e-8f4a-7890-b123-456789abcdef"
+
+// Pattern matching from Crucible catalogs
+catalog := foundry.GetDefaultCatalog()
+emailPattern, _ := catalog.GetPattern("ansi-email")
+if emailPattern.MustMatch("user@example.com") {
+    fmt.Println("Valid email address")
+}
+
+// MIME type detection from content or extension
+mimeType, _ := foundry.GetMimeTypeByExtension("json")
+fmt.Printf("MIME: %s\n", mimeType.Mime) // "application/json"
+
+data := []byte(`{"key": "value"}`)
+detected, _ := foundry.DetectMimeType(data)
+fmt.Printf("Detected: %s\n", detected.Name) // "JSON"
+
+// HTTP status helpers
+helper, _ := catalog.GetHTTPStatusHelper()
+if helper.IsSuccess(200) {
+    fmt.Println("Success response")
+}
+reason := helper.GetReasonPhrase(404) // "Not Found"
+
+// Country code validation (Alpha2, Alpha3, Numeric)
+country, _ := foundry.GetCountry("US")
+fmt.Printf("%s (%s)\n", country.Name, country.Alpha3)
+// "United States of America (USA)"
+
+// Validate any ISO 3166-1 format (case-insensitive)
+if foundry.ValidateCountryCode("usa") {
+    fmt.Println("Valid country code")
+}
 ```
 
 ## CLI Tools

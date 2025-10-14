@@ -64,8 +64,10 @@ See [`docs/crucible-go/standards/agentic-attribution.md`](docs/crucible-go/stand
 ## Session Startup Protocol
 
 1. **Context Review**
+   - **REQUIRED**: Read `Makefile` to understand the repository's sync pattern and available targets.
    - Read `MAINTAINERS.md`, `REPOSITORY_SAFETY_PROTOCOLS.md`, and relevant package READMEs under `ascii/`, `logging/`, `config/`, `schema/`, `pathfinder/`, `bootstrap/`, `crucible/`.
    - Review synced Crucible standards in `docs/crucible-go/standards/` (especially coding/go.md, observability/logging.md, library module standards).
+   - **CRITICAL**: Understand that `docs/crucible-go/`, `schemas/crucible-go/`, and `config/crucible-go/` are synced FROM Crucible SSOT via `make sync`.
 2. **Environment Check**
    - Confirm required tools (`go >= 1.21`, `goneat`) are available if commands will be executed.
    - Run `make bootstrap` if tools are missing.
@@ -100,7 +102,12 @@ See [`docs/crucible-go/standards/agentic-attribution.md`](docs/crucible-go/stand
 
 ### DO NOT
 
-- **Edit Synced Files**: Never manually edit files in `docs/crucible-go/`, `schemas/crucible-go/`, or `config/crucible-go/` that are synced from Crucible SSOT. These are regenerated via `make sync`.
+- **Edit Synced Files**: NEVER manually edit files in `docs/crucible-go/`, `schemas/crucible-go/`, or `config/crucible-go/` - these are synced FROM Crucible SSOT via `make sync`. If changes are needed:
+  1. Create `.plans/crucible/<YYYYMMDD>/` directory
+  2. Save proposed changes there for Crucible team review
+  3. Reset the synced files: `git checkout -- docs/crucible-go schemas/crucible-go config/crucible-go`
+  4. After Crucible team updates, run `make sync` to get changes
+- **Commit Planning Files**: Never attempt to commit files in `.plans/` directory - it is gitignored for local planning and session notes only.
 - **Break API Compatibility**: Gofulmen is a library - breaking changes require major version bump and migration guide.
 - **Skip Tests**: Never commit code without passing tests. Run `make test` before every commit.
 - **Ignore Linting**: All code must pass `make lint` before commit.

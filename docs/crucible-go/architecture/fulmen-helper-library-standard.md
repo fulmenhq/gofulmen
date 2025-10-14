@@ -178,6 +178,7 @@ make bootstrap
   - Embedding/parsing of Crucible defaults.
   - Schema validation wrappers.
   - Logging severity/middleware mapping.
+  - Foundry catalog helpers normalizing alpha-2/alpha-3/numeric country codes with case-insensitive lookups backed by precomputed secondary indexes.
   - Bootstrap script functionality (both local and production paths).
 
 ## Documentation Requirements
