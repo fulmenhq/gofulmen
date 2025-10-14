@@ -116,6 +116,19 @@ func TestCatalog_GetMimeType(t *testing.T) {
 	}
 }
 
+func TestCatalog_GetMimeType_NotFound(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	mimeType, err := catalog.GetMimeType("non-existent-mime")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if mimeType != nil {
+		t.Error("Expected nil MIME type for non-existent ID")
+	}
+}
+
 func TestCatalog_GetMimeTypeByExtension(t *testing.T) {
 	catalog := GetDefaultCatalog()
 
@@ -148,6 +161,20 @@ func TestCatalog_GetMimeTypeByExtension(t *testing.T) {
 	}
 }
 
+// TestCatalog_GetMimeTypeByExtension_NotFound tests non-existent extension
+func TestCatalog_GetMimeTypeByExtension_NotFound(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	mimeType, err := catalog.GetMimeTypeByExtension("nonexistent")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if mimeType != nil {
+		t.Error("Expected nil MIME type for non-existent extension")
+	}
+}
+
 func TestCatalog_GetHTTPStatusGroup(t *testing.T) {
 	catalog := GetDefaultCatalog()
 
@@ -175,6 +202,20 @@ func TestCatalog_GetHTTPStatusGroup(t *testing.T) {
 
 	if group.Contains(404) {
 		t.Error("Expected success group to not contain 404")
+	}
+}
+
+// TestCatalog_GetHTTPStatusGroup_NotFound tests non-existent group
+func TestCatalog_GetHTTPStatusGroup_NotFound(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	group, err := catalog.GetHTTPStatusGroup("non-existent-group")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if group != nil {
+		t.Error("Expected nil group for non-existent ID")
 	}
 }
 
@@ -211,6 +252,20 @@ func TestCatalog_GetHTTPStatusGroupForCode(t *testing.T) {
 				t.Errorf("Expected group name %q, got %q", tt.expectedName, group.Name)
 			}
 		})
+	}
+}
+
+// TestCatalog_GetHTTPStatusGroupForCode_NotFound tests invalid status code
+func TestCatalog_GetHTTPStatusGroupForCode_NotFound(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	group, err := catalog.GetHTTPStatusGroupForCode(999)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if group != nil {
+		t.Error("Expected nil group for invalid status code 999")
 	}
 }
 

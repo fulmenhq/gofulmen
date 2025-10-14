@@ -281,6 +281,33 @@ func TestCorrelationIDValue_JSONRoundTrip(t *testing.T) {
 	}
 }
 
+// TestCorrelationIDValue_MarshalText_Error tests MarshalText with invalid ID
+func TestCorrelationIDValue_MarshalText_Error(t *testing.T) {
+	// Create invalid correlation ID (empty)
+	invalidID := CorrelationID("")
+
+	_, err := invalidID.MarshalText()
+	if err == nil {
+		t.Error("MarshalText should return error for empty correlation ID")
+	}
+
+	// Create invalid correlation ID (non-UUID)
+	invalidID2 := CorrelationID("not-a-uuid")
+
+	_, err = invalidID2.MarshalText()
+	if err == nil {
+		t.Error("MarshalText should return error for invalid correlation ID format")
+	}
+
+	// Create invalid correlation ID (UUIDv4)
+	invalidID3 := CorrelationID(uuid.New().String())
+
+	_, err = invalidID3.MarshalText()
+	if err == nil {
+		t.Error("MarshalText should return error for UUIDv4 correlation ID")
+	}
+}
+
 func TestCorrelationIDValue_Validate(t *testing.T) {
 	tests := []struct {
 		name    string

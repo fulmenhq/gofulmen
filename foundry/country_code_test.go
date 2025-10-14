@@ -302,6 +302,28 @@ func TestCountryCode_JSONMarshal(t *testing.T) {
 	}
 }
 
+// TestCountryCode_MarshalText_Error tests MarshalText with invalid codes
+func TestCountryCode_MarshalText_Error(t *testing.T) {
+	tests := []struct {
+		name string
+		code CountryCode
+	}{
+		{"Empty", ""},
+		{"Invalid_Alpha2", "XX"},
+		{"Invalid_Alpha3", "XXX"},
+		{"Invalid_Numeric", "999"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.code.MarshalText()
+			if err == nil {
+				t.Errorf("MarshalText(%q) should return error for invalid code", tt.code)
+			}
+		})
+	}
+}
+
 // TestCountryCode_JSONUnmarshal tests JSON unmarshaling
 func TestCountryCode_JSONUnmarshal(t *testing.T) {
 	tests := []struct {

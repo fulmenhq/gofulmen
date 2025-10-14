@@ -146,6 +146,100 @@ func TestPattern_Search(t *testing.T) {
 	}
 }
 
+// TestPattern_Search_Literal tests Search with literal patterns
+func TestPattern_Search_Literal(t *testing.T) {
+	pattern := &Pattern{
+		ID:      "test-literal",
+		Kind:    PatternKindLiteral,
+		Pattern: "hello",
+	}
+
+	tests := []struct {
+		name     string
+		value    string
+		expected bool
+	}{
+		{"Contains_exact", "hello", true},
+		{"Contains_in_middle", "say hello world", true},
+		{"Contains_at_start", "hello world", true},
+		{"Contains_at_end", "world hello", true},
+		{"Not_contains", "hi there", false},
+		{"Empty_string", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := pattern.Search(tt.value)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("Search(%q) = %v, expected %v", tt.value, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPattern_Search_Glob tests Search with glob patterns
+func TestPattern_Search_Glob(t *testing.T) {
+	pattern := &Pattern{
+		ID:      "test-glob",
+		Kind:    PatternKindGlob,
+		Pattern: "*.json",
+	}
+
+	tests := []struct {
+		name     string
+		value    string
+		expected bool
+	}{
+		{"Match_json", "config.json", true},
+		{"Match_data_json", "data.json", true},
+		{"No_match_txt", "file.txt", false},
+		{"No_match_json_prefix", "json.file", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := pattern.Search(tt.value)
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("Search(%q) = %v, expected %v", tt.value, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPattern_Search_UnknownKind tests Search with unknown pattern kind
+func TestPattern_Search_UnknownKind(t *testing.T) {
+	pattern := &Pattern{
+		ID:      "test-unknown",
+		Kind:    PatternKind("unknown"),
+		Pattern: "test",
+	}
+
+	_, err := pattern.Search("test value")
+	if err == nil {
+		t.Error("Expected error for unknown pattern kind")
+	}
+}
+
+// TestPattern_Search_InvalidRegex tests Search with invalid regex
+func TestPattern_Search_InvalidRegex(t *testing.T) {
+	pattern := &Pattern{
+		ID:      "test-invalid-regex",
+		Kind:    PatternKindRegex,
+		Pattern: "[invalid(regex",
+	}
+
+	_, err := pattern.Search("test value")
+	if err == nil {
+		t.Error("Expected error for invalid regex pattern")
+	}
+}
+
 func TestPattern_CompiledRegex(t *testing.T) {
 	pattern := &Pattern{
 		ID:      "slug",
