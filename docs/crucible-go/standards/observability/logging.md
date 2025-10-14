@@ -236,6 +236,29 @@ Language packages MUST expose:
 
 Each package must be installable standalone (e.g., `fulmen-logging` on PyPI) but can be bundled in a future "observability" meta-package.
 
+### Progressive Logging Playbook
+
+| Profile    | Default Sinks                                   | Required Middleware                                             | Notes                                                                                   |
+| ---------- | ----------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| SIMPLE     | `console` (stderr JSON)                         | `annotate-trace` (optional), `throttle` (optional)              | Zero-config path for tooling; inherits defaults from schema.                            |
+| STRUCTURED | `console` + optional `file`                     | `annotate-trace`, `throttle`, `correlation-context`             | Targets long-running CLIs and services needing durable logs.                            |
+| ENTERPRISE | `console`, `file`, optional external transports | `annotate-trace`, `throttle`, `correlation-context`, `redact-*` | MUST honour `policyFile` and throttle limits; supports per-sink middleware ordering.    |
+| CUSTOM     | Author-defined                                  | Author-defined                                                  | Reserved for advanced scenarios; still must validate against schema + policy contracts. |
+
+Implementations MUST document how these defaults materialize (zap cores, pino transports, structlog processors, etc.) so auditors can trace configuration to runtime behaviour.
+
+### Schema Field Naming & Hydration
+
+- Schemas publish keys in camelCase; languages MUST map them to idiomatic naming (`snake_case` for Python, exported struct fields for Go, lowerCamelCase properties for TypeScript). A single normalization layer per language performs this conversion, applies defaults, and flattens nested values such as `middleware[].config`.
+- Middleware registries accept `(name, config, order, enabled)` and return typed components. Avoid ad-hoc `map[string]any`/`Record<string, unknown>` mutations after normalization.
+- Policy files integrate with normalization. Implementations MUST fail fast when `enforceStrictMode` denies a configuration; placeholder loaders are prohibited.
+
+### Shared Fixtures & Golden Events
+
+- Maintain canonical fixtures (for example, `tests/fixtures/logging/simple.yaml`, `enterprise-event.json`) in every language repository. Fixtures reference the Crucible schema version they target.
+- CI MUST load each fixture through the normalization layer, instantiate middleware, emit representative events, and validate both hydrated configs and emitted JSON against `logger-config` and `log-event` schemas. Snapshot/approval tests SHOULD guard against regression.
+- Coordinate fixture updates across languages (tracked in `.plans/active/.../progressive-logger-crosslang.md` or successor planning docs) so parity gaps stay visible.
+
 ## Packaging & Distribution
 
 - Go: `gofulmen` module (`foundation/logging`).
