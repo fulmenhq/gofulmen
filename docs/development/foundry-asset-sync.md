@@ -41,6 +41,7 @@ sync-foundry-assets: ## Copy foundry YAML assets to embedded location (post-sync
 ### Usage
 
 **Developer workflow:**
+
 ```bash
 # Standard sync (automatically copies foundry assets)
 make sync
@@ -50,6 +51,7 @@ make sync-foundry-assets
 ```
 
 **CI/CD workflow:**
+
 ```bash
 # Run sync before build/test to ensure latest assets
 make sync
@@ -88,11 +90,13 @@ diff config/crucible-go/library/foundry/patterns.yaml foundry/assets/patterns.ya
 ## Git Handling
 
 **`.gitignore` Status:** `foundry/assets/` is **tracked** in git (not gitignored) because:
+
 - Embedded files are required for build
 - Allows git to detect sync drift
 - Enables code review of SSOT changes
 
 **Commit Practice:** When `make sync` updates Crucible assets, commit both locations together:
+
 ```bash
 git add config/crucible-go/ foundry/assets/
 git commit -m "sync: update Crucible assets to vX.Y.Z"

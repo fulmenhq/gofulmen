@@ -110,12 +110,12 @@ func TestValidateCountryCode(t *testing.T) {
 		{"CAN", true},
 		{"can", true}, // case-insensitive
 		// Numeric codes
-		{"840", true},  // US numeric
-		{"124", true},  // CA numeric
-		{"076", true},  // BR numeric
-		{"76", true},   // BR numeric (without leading zero)
-		{"392", true},  // JP numeric
-		{"276", true},  // DE numeric
+		{"840", true}, // US numeric
+		{"124", true}, // CA numeric
+		{"076", true}, // BR numeric
+		{"76", true},  // BR numeric (without leading zero)
+		{"392", true}, // JP numeric
+		{"276", true}, // DE numeric
 		// Invalid codes
 		{"XX", false},
 		{"XXX", false},
