@@ -139,6 +139,65 @@ func TestGetGofulmenConfigDirDeprecated(t *testing.T) {
 	}
 }
 
+func TestGetGofulmenDataDir(t *testing.T) {
+	dir := GetGofulmenDataDir()
+	fulmenDir := GetFulmenDataDir()
+	if dir != fulmenDir {
+		t.Error("Deprecated GetGofulmenDataDir should return same as GetFulmenDataDir")
+	}
+	if !strings.Contains(dir, "fulmen") {
+		t.Errorf("Gofulmen data dir should contain 'fulmen', got: %s", dir)
+	}
+	t.Logf("Gofulmen data dir: %s", dir)
+}
+
+func TestGetGofulmenCacheDir(t *testing.T) {
+	dir := GetGofulmenCacheDir()
+	fulmenDir := GetFulmenCacheDir()
+	if dir != fulmenDir {
+		t.Error("Deprecated GetGofulmenCacheDir should return same as GetFulmenCacheDir")
+	}
+	if !strings.Contains(dir, "fulmen") {
+		t.Errorf("Gofulmen cache dir should contain 'fulmen', got: %s", dir)
+	}
+	t.Logf("Gofulmen cache dir: %s", dir)
+}
+
+func TestSaveConfig(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "subdir", "config.yaml")
+
+	config := &Config{}
+	err := SaveConfig(config, configPath)
+	if err != nil {
+		t.Fatalf("Failed to save config: %v", err)
+	}
+
+	// Verify the file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("Config file should have been created")
+	}
+
+	// Verify the parent directory was created
+	parentDir := filepath.Dir(configPath)
+	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+		t.Error("Parent directory should have been created")
+	}
+
+	t.Logf("Config saved to: %s", configPath)
+}
+
+func TestSaveConfig_InvalidPath(t *testing.T) {
+	// Test with an invalid path (no permissions)
+	config := &Config{}
+	err := SaveConfig(config, "/root/impossible/config.yaml")
+	if err == nil {
+		t.Error("Should fail to save config to restricted directory")
+	}
+	t.Logf("Expected error: %v", err)
+}
+
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig()
 	if err != nil {

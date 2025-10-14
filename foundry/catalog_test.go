@@ -244,6 +244,209 @@ func TestCatalog_GetHTTPStatusHelper(t *testing.T) {
 	}
 }
 
+func TestCatalog_GetAllMimeTypes(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	mimeTypes, err := catalog.GetAllMimeTypes()
+	if err != nil {
+		t.Fatalf("Failed to get all MIME types: %v", err)
+	}
+
+	if len(mimeTypes) == 0 {
+		t.Error("Expected at least one MIME type")
+	}
+
+	// Verify some known MIME types exist
+	knownTypes := []string{"json", "yaml", "xml", "csv", "plain-text"}
+	for _, id := range knownTypes {
+		if _, exists := mimeTypes[id]; !exists {
+			t.Errorf("Expected MIME type %q to exist", id)
+		}
+	}
+}
+
+func TestCatalog_GetAllHTTPStatusGroups(t *testing.T) {
+	catalog := GetDefaultCatalog()
+
+	groups, err := catalog.GetAllHTTPStatusGroups()
+	if err != nil {
+		t.Fatalf("Failed to get all HTTP status groups: %v", err)
+	}
+
+	if len(groups) == 0 {
+		t.Error("Expected at least one HTTP status group")
+	}
+
+	// Verify known groups exist
+	knownGroups := map[string]bool{
+		"informational": false,
+		"success":       false,
+		"redirect":      false,
+		"client-error":  false,
+		"server-error":  false,
+	}
+
+	for _, group := range groups {
+		if _, exists := knownGroups[group.ID]; exists {
+			knownGroups[group.ID] = true
+		}
+	}
+
+	for groupID, found := range knownGroups {
+		if !found {
+			t.Errorf("Expected HTTP status group %q to exist", groupID)
+		}
+	}
+}
+
+func TestHTTPStatusGroup_GetReason(t *testing.T) {
+	group := &HTTPStatusGroup{
+		ID:   "success",
+		Name: "Successful Responses",
+		Codes: []HTTPStatusCode{
+			{Value: 200, Reason: "OK"},
+			{Value: 201, Reason: "Created"},
+		},
+	}
+
+	tests := []struct {
+		code           int
+		expectedReason string
+	}{
+		{200, "OK"},
+		{201, "Created"},
+		{404, ""}, // Not in this group
+	}
+
+	for _, tt := range tests {
+		t.Run(string(rune(tt.code)), func(t *testing.T) {
+			reason := group.GetReason(tt.code)
+			if reason != tt.expectedReason {
+				t.Errorf("Expected reason %q for code %d, got %q", tt.expectedReason, tt.code, reason)
+			}
+		})
+	}
+}
+
+func TestHTTPStatusHelper_IsInformational(t *testing.T) {
+	catalog := GetDefaultCatalog()
+	helper, err := catalog.GetHTTPStatusHelper()
+	if err != nil {
+		t.Fatalf("Failed to get HTTP status helper: %v", err)
+	}
+
+	tests := []struct {
+		code     int
+		expected bool
+	}{
+		{100, true},  // Continue
+		{101, true},  // Switching Protocols
+		{200, false}, // Success, not informational
+		{404, false}, // Client error, not informational
+	}
+
+	for _, tt := range tests {
+		t.Run(string(rune(tt.code)), func(t *testing.T) {
+			result := helper.IsInformational(tt.code)
+			if result != tt.expected {
+				t.Errorf("IsInformational(%d) = %v, want %v", tt.code, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHTTPStatusHelper_IsRedirect(t *testing.T) {
+	catalog := GetDefaultCatalog()
+	helper, err := catalog.GetHTTPStatusHelper()
+	if err != nil {
+		t.Fatalf("Failed to get HTTP status helper: %v", err)
+	}
+
+	tests := []struct {
+		code     int
+		expected bool
+	}{
+		{301, true},  // Moved Permanently
+		{302, true},  // Found
+		{304, true},  // Not Modified
+		{200, false}, // Success, not redirect
+		{404, false}, // Client error, not redirect
+	}
+
+	for _, tt := range tests {
+		t.Run(string(rune(tt.code)), func(t *testing.T) {
+			result := helper.IsRedirect(tt.code)
+			if result != tt.expected {
+				t.Errorf("IsRedirect(%d) = %v, want %v", tt.code, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHTTPStatusHelper_GetReasonPhrase(t *testing.T) {
+	catalog := GetDefaultCatalog()
+	helper, err := catalog.GetHTTPStatusHelper()
+	if err != nil {
+		t.Fatalf("Failed to get HTTP status helper: %v", err)
+	}
+
+	tests := []struct {
+		code           int
+		expectedReason string
+	}{
+		{200, "OK"},
+		{404, "Not Found"},
+		{500, "Internal Server Error"},
+		{999, ""}, // Unknown code
+	}
+
+	for _, tt := range tests {
+		t.Run(string(rune(tt.code)), func(t *testing.T) {
+			reason := helper.GetReasonPhrase(tt.code)
+			if reason != tt.expectedReason {
+				t.Errorf("GetReasonPhrase(%d) = %q, want %q", tt.code, reason, tt.expectedReason)
+			}
+		})
+	}
+}
+
+func TestHTTPStatusHelper_GetGroup(t *testing.T) {
+	catalog := GetDefaultCatalog()
+	helper, err := catalog.GetHTTPStatusHelper()
+	if err != nil {
+		t.Fatalf("Failed to get HTTP status helper: %v", err)
+	}
+
+	tests := []struct {
+		code       int
+		expectedID string
+	}{
+		{200, "success"},
+		{404, "client-error"},
+		{500, "server-error"},
+		{301, "redirect"},
+		{100, "informational"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(rune(tt.code)), func(t *testing.T) {
+			group := helper.GetGroup(tt.code)
+			if group == nil {
+				t.Fatalf("Expected non-nil group for code %d", tt.code)
+			}
+			if group.ID != tt.expectedID {
+				t.Errorf("GetGroup(%d).ID = %q, want %q", tt.code, group.ID, tt.expectedID)
+			}
+		})
+	}
+
+	// Test unknown code
+	group := helper.GetGroup(999)
+	if group != nil {
+		t.Error("Expected nil group for unknown code 999")
+	}
+}
+
 func BenchmarkCatalog_GetPattern(b *testing.B) {
 	catalog := GetDefaultCatalog()
 	b.ResetTimer()

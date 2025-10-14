@@ -332,3 +332,89 @@ func TestReloadTerminalOverrides(t *testing.T) {
 	// Cleanup - reload again to ensure defaults for other tests
 	_ = ReloadTerminalOverrides()
 }
+
+func TestIsPrintable(t *testing.T) {
+	tests := []struct {
+		name     string
+		r        rune
+		expected bool
+	}{
+		{"letter", 'a', true},
+		{"digit", '5', true},
+		{"space", ' ', true},
+		{"punctuation", '!', true},
+		{"unicode", '世', true},
+		{"newline", '\n', false},
+		{"tab", '\t', false},
+		{"null", '\x00', false},
+		{"bell", '\a', false},
+		{"backspace", '\b', false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsPrintable(tt.r)
+			if result != tt.expected {
+				t.Errorf("IsPrintable(%q) = %v, want %v", tt.r, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSanitize(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "clean string",
+			input:    "hello world",
+			expected: "hello world",
+		},
+		{
+			name:     "with newline",
+			input:    "hello\nworld",
+			expected: "helloworld",
+		},
+		{
+			name:     "with tab",
+			input:    "hello\tworld",
+			expected: "helloworld",
+		},
+		{
+			name:     "with null byte",
+			input:    "hello\x00world",
+			expected: "helloworld",
+		},
+		{
+			name:     "with multiple control chars",
+			input:    "hello\n\t\x00\aworld",
+			expected: "helloworld",
+		},
+		{
+			name:     "with unicode",
+			input:    "hello 世界",
+			expected: "hello 世界",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "only control chars",
+			input:    "\n\t\x00\a",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Sanitize(tt.input)
+			if result != tt.expected {
+				t.Errorf("Sanitize(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
