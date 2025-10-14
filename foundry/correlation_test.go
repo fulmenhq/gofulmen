@@ -1,6 +1,7 @@
 package foundry
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -179,5 +180,102 @@ func BenchmarkIsValidCorrelationID(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		IsValidCorrelationID(id)
+	}
+}
+
+// Tests for CorrelationID newtype
+
+func TestNewCorrelationIDValue(t *testing.T) {
+	id := NewCorrelationIDValue()
+
+	if !id.IsValid() {
+		t.Error("NewCorrelationIDValue() generated invalid ID")
+	}
+
+	if len(id.String()) != 36 {
+		t.Errorf("NewCorrelationIDValue() length = %d, want 36", len(id.String()))
+	}
+}
+
+func TestParseCorrelationIDValue(t *testing.T) {
+	validID := "018b2c5e-8f4a-7890-b123-456789abcdef"
+	id, err := ParseCorrelationIDValue(validID)
+	if err != nil {
+		t.Fatalf("ParseCorrelationIDValue() error: %v", err)
+	}
+
+	if id.String() != validID {
+		t.Errorf("ParseCorrelationIDValue() = %q, want %q", id.String(), validID)
+	}
+}
+
+func TestParseCorrelationIDValue_Invalid(t *testing.T) {
+	_, err := ParseCorrelationIDValue("invalid")
+	if err == nil {
+		t.Error("ParseCorrelationIDValue() should return error for invalid input")
+	}
+}
+
+func TestCorrelationIDValue_JSONRoundTrip(t *testing.T) {
+	type Request struct {
+		CorrelationID CorrelationID `json:"correlation_id"`
+		Data          string        `json:"data"`
+	}
+
+	original := Request{
+		CorrelationID: NewCorrelationIDValue(),
+		Data:          "test",
+	}
+
+	// Marshal
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v", err)
+	}
+
+	// Unmarshal
+	var decoded Request
+	err = json.Unmarshal(data, &decoded)
+	if err != nil {
+		t.Fatalf("json.Unmarshal() error: %v", err)
+	}
+
+	// Compare
+	if decoded.CorrelationID.String() != original.CorrelationID.String() {
+		t.Errorf("JSON round-trip failed: got %q, want %q", decoded.CorrelationID, original.CorrelationID)
+	}
+}
+
+func TestCorrelationIDValue_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      CorrelationID
+		wantErr bool
+	}{
+		{"Valid", "018b2c5e-8f4a-7890-b123-456789abcdef", false},
+		{"Empty", "", true},
+		{"Invalid", "not-a-uuid", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.id.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func BenchmarkNewCorrelationIDValue(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewCorrelationIDValue()
+	}
+}
+
+func BenchmarkCorrelationIDValue_Validate(b *testing.B) {
+	id := NewCorrelationIDValue()
+	for i := 0; i < b.N; i++ {
+		id.Validate()
 	}
 }

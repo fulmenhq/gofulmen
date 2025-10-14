@@ -1,6 +1,8 @@
 package foundry
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 )
 
@@ -66,4 +68,98 @@ func ParseCorrelationID(s string) (uuid.UUID, error) {
 func IsValidCorrelationID(s string) bool {
 	_, err := uuid.Parse(s)
 	return err == nil
+}
+
+// CorrelationID is a validated UUIDv7 correlation ID newtype for distributed tracing.
+//
+// This type enforces UUIDv7 format and provides type safety for correlation IDs
+// across service boundaries. UUIDv7 embeds a timestamp (first 48 bits), making
+// IDs naturally time-sortable and beneficial for log aggregation.
+//
+// Use this type when:
+//   - Tracking requests across distributed services
+//   - Correlating logs, traces, and metrics
+//   - Ensuring type safety for correlation IDs in APIs
+//   - Validating correlation ID format at service boundaries
+//
+// Example:
+//
+//	type Request struct {
+//	    CorrelationID CorrelationID     `json:"correlation_id" header:"X-Correlation-ID"`
+//	    Data          map[string]string `json:"data"`
+//	}
+//
+//	req := Request{
+//	    CorrelationID: foundry.NewCorrelationIDValue(),
+//	    Data:          map[string]string{"key": "value"},
+//	}
+type CorrelationID string
+
+// NewCorrelationIDValue generates a new time-sortable UUIDv7 correlation ID.
+//
+// Returns a correlation ID suitable for distributed tracing. The ID is globally
+// unique and time-ordered for efficient log aggregation and indexing.
+//
+// Example:
+//
+//	id := foundry.NewCorrelationIDValue()
+//	fmt.Println(id) // 018b2c5e-8f4a-7890-b123-456789abcdef
+func NewCorrelationIDValue() CorrelationID {
+	return CorrelationID(GenerateCorrelationID())
+}
+
+// ParseCorrelationIDValue parses and validates a correlation ID string.
+//
+// Returns an error if the string is not a valid UUID format.
+//
+// Example:
+//
+//	id, err := foundry.ParseCorrelationIDValue("018b2c5e-8f4a-7890-b123-456789abcdef")
+//	if err != nil {
+//	    log.Fatal("Invalid correlation ID:", err)
+//	}
+func ParseCorrelationIDValue(s string) (CorrelationID, error) {
+	if !IsValidCorrelationID(s) {
+		return "", fmt.Errorf("invalid correlation ID format")
+	}
+	return CorrelationID(s), nil
+}
+
+// String returns the correlation ID as a string.
+func (c CorrelationID) String() string {
+	return string(c)
+}
+
+// Validate checks if the correlation ID is valid.
+func (c CorrelationID) Validate() error {
+	if c == "" {
+		return fmt.Errorf("correlation ID is empty")
+	}
+	if !IsValidCorrelationID(string(c)) {
+		return fmt.Errorf("invalid correlation ID format")
+	}
+	return nil
+}
+
+// IsValid returns true if the correlation ID is valid.
+func (c CorrelationID) IsValid() bool {
+	return c.Validate() == nil
+}
+
+// MarshalText implements encoding.TextMarshaler for JSON, YAML, TOML support.
+func (c CorrelationID) MarshalText() ([]byte, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return []byte(c), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler for JSON, YAML, TOML support.
+func (c *CorrelationID) UnmarshalText(text []byte) error {
+	parsed, err := ParseCorrelationIDValue(string(text))
+	if err != nil {
+		return err
+	}
+	*c = parsed
+	return nil
 }
