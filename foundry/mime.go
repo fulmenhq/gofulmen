@@ -108,11 +108,17 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 		return nil, nil
 	}
 
+	// Trim BOM and leading whitespace for accurate signature detection
+	trimmed := trimBOMAndWhitespace(input)
+	if len(trimmed) == 0 {
+		return nil, nil
+	}
+
 	// Check for common file signatures
 	// JSON: starts with { or [
-	if len(input) > 0 && (input[0] == '{' || input[0] == '[') {
+	if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
 		// Validate it's actually JSON-like
-		for _, b := range input[:min(len(input), 50)] {
+		for _, b := range trimmed[:min(len(trimmed), 50)] {
 			if b == '{' || b == '[' || b == '"' || b == ':' {
 				return catalog.mimeTypes["json"], nil
 			}
@@ -120,14 +126,14 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 	}
 
 	// XML: starts with <
-	if len(input) > 0 && input[0] == '<' {
-		if len(input) > 5 && string(input[:5]) == "<?xml" {
+	if len(trimmed) > 0 && trimmed[0] == '<' {
+		if len(trimmed) > 5 && string(trimmed[:5]) == "<?xml" {
 			return catalog.mimeTypes["xml"], nil
 		}
 	}
 
 	// YAML: look for YAML-specific patterns
-	lines := string(input[:min(len(input), 200)])
+	lines := string(trimmed[:min(len(trimmed), 200)])
 	if len(lines) > 0 {
 		// Simple heuristic: if it has key: value patterns and no { or <
 		hasColon := false
@@ -137,7 +143,7 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 				break
 			}
 		}
-		if hasColon && input[0] != '{' && input[0] != '[' && input[0] != '<' {
+		if hasColon && trimmed[0] != '{' && trimmed[0] != '[' && trimmed[0] != '<' {
 			return catalog.mimeTypes["yaml"], nil
 		}
 	}
@@ -265,4 +271,33 @@ func isTextContent(data []byte) bool {
 
 	// If more than 80% is printable, consider it text
 	return len(data) > 0 && float64(printableCount)/float64(len(data)) > 0.8
+}
+
+// trimBOMAndWhitespace removes byte order marks (BOM) and leading whitespace.
+//
+// This is critical for accurate MIME detection since real-world JSON/XML files
+// often start with BOM (UTF-8: EF BB BF, UTF-16: FF FE or FE FF) or whitespace.
+func trimBOMAndWhitespace(data []byte) []byte {
+	// Remove UTF-8 BOM (EF BB BF)
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		data = data[3:]
+	}
+
+	// Remove UTF-16 BOM (FF FE or FE FF)
+	if len(data) >= 2 && ((data[0] == 0xFF && data[1] == 0xFE) || (data[0] == 0xFE && data[1] == 0xFF)) {
+		data = data[2:]
+	}
+
+	// Trim leading whitespace (space, tab, newline, carriage return)
+	start := 0
+	for start < len(data) {
+		b := data[start]
+		if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
+			start++
+		} else {
+			break
+		}
+	}
+
+	return data[start:]
 }

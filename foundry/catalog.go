@@ -3,13 +3,14 @@ package foundry
 import (
 	"embed"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
 )
 
+// Embed YAML catalogs from assets/ (synced from Crucible SSOT via make sync)
+//
 //go:embed assets/*.yaml
 var configFiles embed.FS
 
@@ -84,7 +85,9 @@ var (
 
 // loadYAML loads a YAML file from embedded files and returns the parsed data.
 func (c *Catalog) loadYAML(filename string) (map[string]interface{}, error) {
-	fullPath := filepath.Join("assets", filename)
+	// Use forward slash for embed.FS paths (Windows-safe)
+	// Assets are synced from Crucible SSOT via make sync
+	fullPath := "assets/" + filename
 	data, err := configFiles.ReadFile(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read embedded file %s: %w", fullPath, err)
