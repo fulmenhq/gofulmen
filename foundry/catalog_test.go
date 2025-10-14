@@ -80,12 +80,40 @@ func TestCatalog_GetAllPatterns(t *testing.T) {
 		t.Error("Expected at least one pattern")
 	}
 
-	// Verify some known patterns exist
-	knownPatterns := []string{"slug", "ansi-email", "identifier"}
-	for _, id := range knownPatterns {
+	// Verify ALL catalog patterns are loaded (per Foundry Interfaces standard)
+	requiredPatterns := []string{
+		"ansi-email",
+		"slug",
+		"path-segment",
+		"identifier",
+		"uri-scheme",
+		"logger-name",
+		"env-prefix",
+		"tag",
+		"unicode-tag",
+		"domain-name",
+		"ipv6",
+		"hex-lower",
+		"base64",
+		"jwt",
+		"strict-iso-date",
+		"iso-timestamp-z",
+		"uuid-v4",
+		"ulid",
+		"semantic-version",
+		"glob-any-json",
+		"glob-any-yaml",
+	}
+
+	for _, id := range requiredPatterns {
 		if _, exists := patterns[id]; !exists {
-			t.Errorf("Expected pattern %q to exist", id)
+			t.Errorf("Expected pattern %q to exist in catalog (check sync with config/crucible-go/library/foundry/patterns.yaml)", id)
 		}
+	}
+
+	// Verify loaded count matches expected
+	if len(patterns) != len(requiredPatterns) {
+		t.Logf("Warning: Catalog has %d patterns but test expects %d. May indicate catalog drift.", len(patterns), len(requiredPatterns))
 	}
 }
 
@@ -311,12 +339,26 @@ func TestCatalog_GetAllMimeTypes(t *testing.T) {
 		t.Error("Expected at least one MIME type")
 	}
 
-	// Verify some known MIME types exist
-	knownTypes := []string{"json", "yaml", "xml", "csv", "plain-text"}
-	for _, id := range knownTypes {
+	// Verify ALL catalog MIME types are loaded (per Foundry Interfaces standard)
+	requiredTypes := []string{
+		"json",
+		"yaml",
+		"ndjson",
+		"csv",
+		"xml",
+		"protobuf",
+		"plain-text",
+	}
+
+	for _, id := range requiredTypes {
 		if _, exists := mimeTypes[id]; !exists {
-			t.Errorf("Expected MIME type %q to exist", id)
+			t.Errorf("Expected MIME type %q to exist in catalog (check sync with config/crucible-go/library/foundry/mime-types.yaml)", id)
 		}
+	}
+
+	// Verify loaded count matches expected
+	if len(mimeTypes) != len(requiredTypes) {
+		t.Logf("Warning: Catalog has %d MIME types but test expects %d. May indicate catalog drift.", len(mimeTypes), len(requiredTypes))
 	}
 }
 
