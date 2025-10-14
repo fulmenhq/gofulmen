@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -195,5 +196,56 @@ func TestStaticFields(t *testing.T) {
 	}
 
 	logger.Info("test static fields")
+	logger.Sync()
+}
+
+func TestLoggingMethods(t *testing.T) {
+	config := DefaultConfig("test-service")
+	logger, err := New(config)
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+
+	// Test all logging level methods
+	logger.Trace("trace message")
+	logger.Debug("debug message")
+	logger.Info("info message")
+	logger.Warn("warning message")
+	logger.Error("error message")
+
+	logger.Sync()
+}
+
+func TestNamed(t *testing.T) {
+	config := DefaultConfig("test-service")
+	logger, err := New(config)
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+
+	namedLogger := logger.Named("subsystem")
+	if namedLogger == nil {
+		t.Fatal("Named() returned nil logger")
+	}
+
+	namedLogger.Info("message from named logger")
+	logger.Sync()
+}
+
+func TestWithContext(t *testing.T) {
+	config := DefaultConfig("test-service")
+	logger, err := New(config)
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+
+	ctx := context.Background()
+	contextLogger := logger.WithContext(ctx)
+
+	if contextLogger == nil {
+		t.Fatal("WithContext() returned nil logger")
+	}
+
+	contextLogger.Info("message with context")
 	logger.Sync()
 }
