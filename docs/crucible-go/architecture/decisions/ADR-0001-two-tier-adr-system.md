@@ -88,6 +88,7 @@ We adopt a **two-tier ADR system** with schema-driven lifecycle management:
 - Filename: `ADR-XXXX-kebab-case-title.md` (same format as ecosystem)
 - Frontmatter: `id: "ADR-XXXX"`, `scope: "{library-name}"`
 - Independent sequential numbering per library
+- **Note**: Local ADRs can omit the `adoption` field since it's only meaningful for cross-library tracking
 
 ### Key Design Decisions
 
@@ -128,6 +129,8 @@ adoption:
 ```
 
 **Rationale**: Provides ecosystem-wide visibility into implementation progress, enables adoption matrices.
+
+**Note**: This applies to ecosystem ADRs only. Local ADRs can omit the `adoption` block entirely since they apply to a single library. Libraries should not feel compelled to track peer adoption unless specifically coordinating cross-library work.
 
 **5. Promotion Path**
 
