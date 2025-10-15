@@ -242,9 +242,155 @@ make bootstrap
 
   Libraries MAY add additional documents (`testing.md`, `release-process.md`, `bootstrap.md`, etc.) referenced from `docs/development/README.md`.
 
-  ```
+## Architecture Decision Records (ADRs)
 
-  ```
+Helper libraries operate under a two-tier ADR system to track both ecosystem-wide and language-specific architectural decisions. This system enables consistent decision tracking while allowing flexibility for language-specific implementations.
+
+### Tier 1: Ecosystem ADRs (from Crucible)
+
+**Location**: `docs/crucible-{lang}/architecture/decisions/`
+
+**Source**: Synced from Crucible SSOT via `make sync`
+
+**Scope**: Cross-language patterns, contracts, and foundational decisions that affect multiple libraries
+
+**Status**: Read-only reference - propose changes upstream to Crucible
+
+**Examples**:
+
+- ADR-0001: Triple-Index Catalog Strategy
+- ADR-0002: Progressive Logging Profiles
+- ADR-0003: Schema-Driven Config Hydration
+- ADR-0004: CamelCase to Language Convention Mapping
+
+**Lifecycle Management**: Ecosystem ADRs use the [ADR Lifecycle Status Schema](https://schemas.fulmenhq.dev/standards/adr-lifecycle-status-v1.0.0.json) with stages from `proposal` through `stable` to `deprecated/superseded/retired`. Each ADR includes adoption tracking showing implementation status across all language libraries.
+
+### Tier 2: Local ADRs (library-specific)
+
+**Location**: `docs/development/adr/`
+
+**Scope**: Language/implementation-specific decisions that don't affect other languages
+
+**Maintained By**: Library maintainers (not synced from Crucible)
+
+**Examples**:
+
+- gofulmen: `ADR-0001-use-sync-pool-for-event-buffers.md`
+- pyfulmen: `ADR-0001-fulmencatalogmodel-populate-by-name.md`
+- tsfulmen: `ADR-0001-use-proxy-for-lazy-loading.md`
+
+**Naming Convention**: All ADRs use consistent `ADR-XXXX-kebab-case-title.md` filename format and `id: "ADR-XXXX"` frontmatter, regardless of scope. Location determines whether it's ecosystem or local.
+
+See [Crucible ADR README](https://github.com/fulmenhq/crucible/blob/main/docs/architecture/decisions/README.md) for complete guide including lifecycle stages, adoption tracking, and when to promote local decisions to ecosystem ADRs.
+
+### Directory Structure
+
+```
+docs/
+├── <lang>fulmen_overview.md      # Library overview
+├── development/                   # LOCAL: Library-specific documentation
+│   ├── README.md                  # Index linking to operations/testing/ADR docs
+│   ├── operations.md              # Required operations guide
+│   └── adr/                       # LOCAL: Library-specific ADRs
+│       ├── README.md              # ADR index, references ecosystem ADRs
+│       ├── ADR-0001-title.md      # Local ADRs (library-maintained)
+│       └── ...
+└── crucible-{lang}/               # SYNCED: From Crucible SSOT (read-only)
+    ├── standards/                 # Synced standards
+    ├── config/                    # Synced config defaults
+    └── architecture/
+        └── decisions/             # Ecosystem ADRs (reference only)
+            ├── README.md
+            ├── template.md
+            └── ADR-0001-*.md      # Ecosystem ADRs (all use ADR- prefix)
+```
+
+### Path Ownership
+
+- `docs/development/` - **Maintained by library team**, not synced from Crucible
+- `docs/crucible-{lang}/` - **Synced from Crucible**, do not edit directly
+
+### Local ADR Requirements
+
+**README.md** (in `docs/development/adr/`) MUST include:
+
+1. ADR index table with ID, title, status, date
+2. When to write a local ADR vs. promoting to ecosystem
+3. Link to ecosystem ADRs in `docs/crucible-{lang}/architecture/decisions/`
+4. Contribution guidelines for proposing new ADRs
+
+**When to Write Local ADR**:
+
+- ✅ Implementation detail unique to language
+- ✅ Tooling/dependency choice (e.g., which JSON library)
+- ✅ Performance optimization specific to runtime
+- ✅ Language idiom preference
+- ✅ Test framework choice
+- ✅ Build/packaging decisions
+
+**When to Promote to Ecosystem ADR**:
+
+- ✅ Decision affects API contracts between languages
+- ✅ Pattern must be consistent across Go/Python/TypeScript
+- ✅ Schema structure or field naming is involved
+- ✅ Other languages must implement same behavior
+
+**ADR Format**: Use Crucible standard template from `docs/crucible-{lang}/architecture/decisions/template.md`
+
+### Adoption Tracking
+
+Libraries SHOULD track their implementation status for ecosystem ADRs in the library's local documentation. This enables ecosystem-wide visibility into ADR adoption progress.
+
+**Example** (`docs/development/adr/ecosystem-adoption-status.md`):
+
+| Ecosystem ADR                  | Status      | Notes                                   | Related Local ADRs             |
+| ------------------------------ | ----------- | --------------------------------------- | ------------------------------ |
+| ADR-0001: Triple-Index Catalog | verified    | Implemented with sync.Pool optimization | ADR-0003-sync-pool-buffers.md  |
+| ADR-0002: Progressive Logging  | implemented | SIMPLE/STRUCTURED profiles complete     | ADR-0005-structured-logging.md |
+| ADR-0003: Schema-Driven Config | in-progress | Layer 1 & 2 done, Layer 3 pending       | -                              |
+| ADR-0004: CamelCase Mapping    | planned     | Scheduled for v0.5.0                    | -                              |
+
+**Adoption Status Values** (from [ADR Adoption Status Schema](https://schemas.fulmenhq.dev/standards/adr-adoption-status-v1.0.0.json)):
+
+- `not-applicable` (0): Does not apply to this library
+- `deferred` (5): Postponed with documented rationale
+- `planned` (10): Implementation planned but not started
+- `in-progress` (20): Active implementation underway
+- `implemented` (30): Fully implemented, ready for validation
+- `verified` (40): Implemented and validated through tests/production use
+
+### Cross-Referencing
+
+When a local ADR relates to an ecosystem ADR, include a cross-reference using your library's language-specific path:
+
+```markdown
+## Related Ecosystem ADRs
+
+- [ADR-0001: Triple-Index Catalog Strategy](../crucible-{lang}/architecture/decisions/ADR-0001-triple-index-catalog-strategy.md)
+
+This local decision implements the ecosystem strategy using {language}-specific patterns.
+```
+
+**Path is Language-Specific**:
+
+- gofulmen: `../crucible-go/architecture/decisions/`
+- pyfulmen: `../crucible-py/architecture/decisions/`
+- tsfulmen: `../crucible-ts/architecture/decisions/`
+
+Each library sees Crucible content synced to its own language namespace, so always use the path matching your library's language.
+
+### Promotion Path
+
+When a local ADR reveals cross-language impact during implementation or review:
+
+1. **Recognize**: Decision affects other language implementations
+2. **Propose**: Create proposal in Crucible `.plans/` referencing the local ADR
+3. **Coordinate**: Discuss in #fulmen-architecture channel, get buy-in from other library maintainers
+4. **Promote**: Create ecosystem ADR in Crucible `docs/architecture/decisions/` with next available ADR-XXXX number
+5. **Update Local ADR**: Mark as "Superseded by [ADR-XXXX]" with clear link
+6. **Sync**: Run `make sync` in Crucible to propagate to all language wrappers
+
+See `.plans/active/2025.10.2/library-adr-brief.md` for complete promotion workflow and lifecycle management details.
 
 ## Version Alignment
 

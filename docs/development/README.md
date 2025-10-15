@@ -14,6 +14,14 @@ Development operations documentation covering:
 - Community guidelines and support channels
 - Security and dependency management
 
+### [Architecture Decision Records (ADRs)](adr/)
+
+Local ADRs documenting Go-specific implementation decisions:
+
+- ADR index and contribution guidelines
+- When to write local vs ecosystem ADRs
+- References to ecosystem ADRs from Crucible
+
 ## 🎯 Quick Start for Contributors
 
 ```bash
