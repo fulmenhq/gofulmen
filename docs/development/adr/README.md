@@ -4,15 +4,16 @@ This directory contains **local ADRs** specific to gofulmen implementation decis
 
 ## 📋 ADR Index
 
-| ID | Title | Status | Date | Tags |
-|----|-------|--------|------|------|
-| _No local ADRs yet_ | | | | |
+| ID                  | Title | Status | Date | Tags |
+| ------------------- | ----- | ------ | ---- | ---- |
+| _No local ADRs yet_ |       |        |      |      |
 
 ## 🎯 When to Write a Local ADR
 
 Write a local ADR for decisions that are **Go-specific** and don't affect other language implementations:
 
 ### ✅ Write Local ADR For:
+
 - Implementation details unique to Go (e.g., "use sync.Pool for event buffers")
 - Go-specific library/dependency choices (e.g., "use santhosh-tekuri/jsonschema for validation")
 - Performance optimizations specific to Go runtime (e.g., "pre-allocate slices for catalog indexes")
@@ -21,6 +22,7 @@ Write a local ADR for decisions that are **Go-specific** and don't affect other 
 - Build/packaging decisions (e.g., "use goneat for tooling bootstrap")
 
 ### 🚀 Promote to Ecosystem ADR When:
+
 - Decision affects API contracts between Go/Python/TypeScript
 - Pattern must be consistent across all helper libraries
 - Schema structure or field naming is involved
@@ -45,19 +47,21 @@ These ADRs define cross-language patterns and contracts that gofulmen must imple
 Use the standard template from [`docs/crucible-go/architecture/decisions/template.md`](../../crucible-go/architecture/decisions/template.md).
 
 **Required Frontmatter:**
+
 ```yaml
 ---
 id: "ADR-XXXX"
 title: "Brief Descriptive Title"
-status: "proposal"  # proposal | experimental | accepted | stable | deprecated | superseded | retired
+status: "proposal" # proposal | experimental | accepted | stable | deprecated | superseded | retired
 date: "YYYY-MM-DD"
 deciders: ["@username"]
-scope: "gofulmen"  # Always "gofulmen" for local ADRs
+scope: "gofulmen" # Always "gofulmen" for local ADRs
 tags: ["tag1", "tag2"]
 ---
 ```
 
 **Standard Sections:**
+
 1. **Context** - Problem, constraints, requirements
 2. **Decision** - What we decided (with code examples if relevant)
 3. **Rationale** - Why this is the right choice
@@ -79,6 +83,7 @@ If a local ADR reveals cross-language impact during implementation or review:
 6. **Sync**: Run `make sync` in Crucible to propagate to all language wrappers
 
 **Example Update When Promoted:**
+
 ```markdown
 **Status**: Superseded by [ADR-0012](../../crucible-go/architecture/decisions/ADR-0012-title.md)
 
