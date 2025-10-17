@@ -31,6 +31,7 @@ Agent identities, specializations, and supervision details are maintained in `MA
 ## Commit Attribution
 
 **DO**: Follow the standard attribution format and concise commit message style
+
 - Attribution format: [`docs/crucible-go/standards/agentic-attribution.md`](docs/crucible-go/standards/agentic-attribution.md)
 - Message style: [Repository Operations SOP - Commit Message Style](docs/crucible-go/sop/repository-operations-sop.md#commit-message-style)
 - Quick style check: [Style Checklist](docs/crucible-go/sop/repository-operations-sop.md#quick-style-check)
@@ -42,6 +43,7 @@ Agent identities, specializations, and supervision details are maintained in `MA
 3. `Committer-of-Record:` trailer with human committer info (required, last line)
 
 **DO NOT**:
+
 - Use simplified or incomplete attribution formats
 - Use excessive emoji sections in commit messages ([see what to avoid](docs/crucible-go/sop/repository-operations-sop.md#avoid---excessive-emoji-sections))
 - Write verbose internal documentation style in commits (belongs in code comments, docs/, or ADRs)
