@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 )
@@ -28,24 +27,20 @@ func installLink(tool *Tool) error {
 
 	destPath := filepath.Join(destDir, tool.Install.BinName)
 
+	// Remove existing file or symlink
 	if err := os.Remove(destPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove existing binary: %w", err)
 	}
 
-	sourceFile, err := os.Open(source)
+	// Convert source to absolute path for symlink
+	absSource, err := filepath.Abs(source)
 	if err != nil {
-		return fmt.Errorf("failed to open source: %w", err)
+		return fmt.Errorf("failed to get absolute path for source: %w", err)
 	}
-	defer sourceFile.Close()
 
-	destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create destination: %w", err)
-	}
-	defer destFile.Close()
-
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return fmt.Errorf("failed to copy binary: %w", err)
+	// Create symlink instead of copying
+	if err := os.Symlink(absSource, destPath); err != nil {
+		return fmt.Errorf("failed to create symlink: %w", err)
 	}
 
 	return nil
