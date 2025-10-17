@@ -79,6 +79,15 @@ make version-bump-major
 make version-set VERSION=1.2.3
 ```
 
+**Note on `goneat version propagate`**: This command synchronizes VERSION file content to package manager files (package.json, pyproject.toml) in multi-language projects. Gofulmen does not use this feature because:
+
+- Go libraries use semantic import versioning with git tags
+- No package.json or pyproject.toml files to sync
+- VERSION file is already the single source of truth for Make targets and goneat
+- go.mod only contains module path, not version number
+
+This capability is useful for monorepos with Go + JavaScript + Python components.
+
 ## 🔧 Tooling and Commands
 
 ### Development Tools
