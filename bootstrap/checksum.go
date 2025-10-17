@@ -9,6 +9,7 @@ import (
 )
 
 func VerifySHA256(filePath string, expectedHex string) error {
+	// #nosec G304 -- filePath is controlled path for checksum verification in bootstrap
 	f, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file for checksum verification: %w", err)
@@ -33,6 +34,7 @@ func VerifySHA256(filePath string, expectedHex string) error {
 }
 
 func ComputeSHA256(filePath string) (string, error) {
+	// #nosec G304 -- filePath is controlled path for checksum computation in bootstrap
 	f, err := os.Open(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)

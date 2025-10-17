@@ -21,7 +21,7 @@ func installLink(tool *Tool) error {
 		destDir = "./bin"
 	}
 
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 

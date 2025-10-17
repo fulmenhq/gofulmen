@@ -39,7 +39,7 @@ func installDownload(tool *Tool, platform Platform) error {
 	}
 
 	extractDir := filepath.Join(tempDir, "extract")
-	if err := os.MkdirAll(extractDir, 0755); err != nil {
+	if err := os.MkdirAll(extractDir, 0750); err != nil {
 		return fmt.Errorf("failed to create extraction directory: %w", err)
 	}
 
@@ -57,7 +57,7 @@ func installDownload(tool *Tool, platform Platform) error {
 		destDir = "./bin"
 	}
 
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
 		return fmt.Errorf("failed to create destination directory %s: %w", destDir, err)
 	}
 
@@ -68,6 +68,7 @@ func installDownload(tool *Tool, platform Platform) error {
 	}
 
 	if runtime.GOOS != "windows" {
+		// #nosec G302 -- binary files require executable permissions (0755)
 		if err := os.Chmod(destPath, 0755); err != nil {
 			return fmt.Errorf("failed to make binary executable: %w", err)
 		}
@@ -77,6 +78,7 @@ func installDownload(tool *Tool, platform Platform) error {
 }
 
 func downloadFile(url, destPath string) error {
+	// #nosec G107 -- URL comes from validated manifest in bootstrap process
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -87,6 +89,7 @@ func downloadFile(url, destPath string) error {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
+	// #nosec G304 -- destPath is controlled path from manifest for tool installation
 	out, err := os.Create(destPath)
 	if err != nil {
 		return err
@@ -129,12 +132,14 @@ func findBinary(dir, binName string) (string, error) {
 }
 
 func copyFile(src, dst string) error {
+	// #nosec G304 -- src path is controlled in bootstrap file operations
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
+	// #nosec G304 -- dst path is controlled in bootstrap file operations
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err

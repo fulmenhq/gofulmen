@@ -89,6 +89,7 @@ func DetectMimeTypeFromReader(r io.Reader, maxBytes int) (*MimeType, io.Reader, 
 //	}
 func DetectMimeTypeFromFile(path string) (*MimeType, error) {
 	// Open file
+	// #nosec G304 -- path is user-controlled file path for MIME type detection
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)

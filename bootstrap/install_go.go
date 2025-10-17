@@ -17,6 +17,7 @@ func installGo(tool *Tool) error {
 
 	moduleVersion := fmt.Sprintf("%s@%s", tool.Install.Module, tool.Install.Version)
 
+	// #nosec G204 -- module version comes from validated manifest for intentional go install
 	cmd := exec.Command("go", "install", moduleVersion)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

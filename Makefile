@@ -166,7 +166,13 @@ check-all: build fmt lint test ## Run all quality checks (ensures sync, fmt, lin
 precommit: check-all ## Run pre-commit hooks (check-all includes sync, lint, test)
 	@echo "✅ Pre-commit checks passed"
 
-prepush: check-all ## Run pre-push hooks (check-all includes sync, lint, test)
+prepush: check-all ## Run pre-push hooks (check-all + security)
+	@echo "Running security assessment..."
+	@if [ ! -f ./bin/goneat ]; then \
+		echo "❌ goneat not found. Run 'make bootstrap' first."; \
+		exit 1; \
+	fi
+	@./bin/goneat assess --categories security
 	@echo "✅ Pre-push checks passed"
 
 # Test targets

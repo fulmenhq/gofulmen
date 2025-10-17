@@ -60,6 +60,7 @@ func loadTerminalCatalog() error {
 }
 
 func loadUserOverrides(path string) error {
+	// #nosec G304 -- intentional user-controlled file access for loading terminal override configuration
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read user terminal overrides: %w", err)

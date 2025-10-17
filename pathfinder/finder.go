@@ -86,6 +86,7 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 			// Validate path safety
 			if err := ValidatePath(match); err != nil {
 				if query.ErrorHandler != nil {
+					// #nosec G104 -- error handler call failure is non-critical in pathfinder context
 					query.ErrorHandler(match, err)
 				}
 				continue

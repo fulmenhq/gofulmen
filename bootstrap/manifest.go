@@ -33,6 +33,7 @@ type Install struct {
 }
 
 func LoadManifest(path string) (*Manifest, error) {
+	// #nosec G304 -- intentional file access for loading bootstrap manifest files in controlled bootstrap process
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, &ManifestError{Path: path, Err: err}

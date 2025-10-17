@@ -82,10 +82,12 @@ func GetAppConfigPaths(appName string, legacyNames ...string) []string {
 // SaveConfig saves configuration to the specified path
 func SaveConfig(config *Config, path string) error {
 	dir := filepath.Dir(path)
+	// #nosec G301 -- config directories use 0755 for multi-user access compatibility
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
+	// #nosec G304 -- intentional user-controlled file creation for saving configuration to user-specified path
 	file, err := os.Create(path)
 	if err != nil {
 		return err

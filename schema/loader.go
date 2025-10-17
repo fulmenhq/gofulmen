@@ -12,6 +12,7 @@ import (
 
 // LoadJSONFile loads and parses a JSON file
 func LoadJSONFile(filename string) ([]byte, error) {
+	// #nosec G304 -- schema loading is intentional user-controlled file access for loading JSON schemas from disk
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
@@ -21,6 +22,7 @@ func LoadJSONFile(filename string) ([]byte, error) {
 
 // LoadYAMLFile loads and parses a YAML file, converting to JSON
 func LoadYAMLFile(filename string) ([]byte, error) {
+	// #nosec G304 -- schema loading is intentional user-controlled file access for loading YAML schemas from disk
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)

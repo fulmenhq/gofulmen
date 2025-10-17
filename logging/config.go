@@ -48,6 +48,7 @@ type FileSinkConfig struct {
 // LoadConfig loads and validates logger configuration from a file
 func LoadConfig(path string) (*LoggerConfig, error) {
 	// Read file
+	// #nosec G304 -- intentional user-controlled file access for loading logger configuration from user-specified path
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
