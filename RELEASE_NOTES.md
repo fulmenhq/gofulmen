@@ -156,12 +156,34 @@ All existing APIs remain stable. New Foundry package is additive.
 
 ## [Unreleased]
 
-### v0.1.2+ - Additional Improvements (Planned)
+### v0.1.2 - Pathfinder Security & Compliance (In Progress)
 
-- Additional coverage improvements for pathfinder (11.4%) and bootstrap (16.3%)
-- Documentation enhancements
+**Release Type**: Security Fix + Spec Compliance
+**Status**: 🚧 In Development
+
+#### Security Fixes
+
+- ✅ **Path Traversal Protection**: ValidatePathWithinRoot prevents glob patterns from escaping declared root
+- ✅ **Hidden File Filtering**: All path segments checked, not just basename (prevents `.secrets/key.pem` leakage)
+
+#### Spec Compliance
+
+- ✅ **Metadata Population**: PathResult.Metadata now includes size and mtime (RFC3339Nano)
+- ✅ **.fulmenignore Support**: Gitignore-style pattern matching with directory semantics
+- ✅ **Unused Config Fields**: Documented as future enhancements (MaxWorkers, CacheEnabled, Constraint)
+
+#### Testing
+
+- ✅ **Security Tests**: Comprehensive path traversal prevention tests
+- ✅ **Hidden Directory Tests**: Multi-level nesting validation
+- ✅ **Metadata Tests**: Size and mtime accuracy verification
+- ✅ **.fulmenignore Tests**: Pattern matching and directory filtering
+
+#### Future Enhancements (v0.1.3+)
+
+- File checksums with xxHash128 (see `.plans/active/v0.1.3/pathfinder-checksums.md`)
+- Additional coverage improvements for bootstrap (16.3%)
 - Performance optimizations
-- Additional Crucible catalog integrations
 
 ### v0.2.0 - Enterprise Complete (Future)
 

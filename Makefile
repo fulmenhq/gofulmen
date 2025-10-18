@@ -66,7 +66,7 @@ version-bump: ## Bump version (usage: make version-bump TYPE=patch|minor|major|c
 		exit 1; \
 	fi
 	@echo "Bumping version ($(TYPE))..."
-	@$(GONEAT) version bump --type $(TYPE)
+	@$(GONEAT) version bump $(TYPE)
 	@echo "✅ Version bumped to $$(cat VERSION)"
 
 version-set: ## Set version to specific value (usage: make version-set VERSION=x.y.z)

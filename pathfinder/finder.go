@@ -3,21 +3,31 @@ package pathfinder
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/fulmenhq/crucible"
 	"github.com/fulmenhq/gofulmen/schema"
 )
 
 // FinderConfig holds default settings for the FinderFacade
 type FinderConfig struct {
-	MaxWorkers      int            `json:"maxWorkers"`
-	CacheEnabled    bool           `json:"cacheEnabled"`
-	CacheTTL        int            `json:"cacheTTL"` // in seconds
-	Constraint      PathConstraint `json:"constraint"`
-	LoaderType      string         `json:"loaderType"`
-	ValidateInputs  bool           `json:"validateInputs"`  // validate FindQuery inputs
-	ValidateOutputs bool           `json:"validateOutputs"` // validate PathResult outputs
+	// TODO: Future enhancement - implement concurrent file discovery
+	MaxWorkers int `json:"maxWorkers"` // Currently unused - single-threaded implementation
+
+	// TODO: Future enhancement - implement result caching
+	CacheEnabled bool `json:"cacheEnabled"` // Currently unused - no caching layer
+	CacheTTL     int  `json:"cacheTTL"`     // Currently unused - cache TTL in seconds
+
+	// TODO: Future enhancement - implement PathConstraint enforcement
+	Constraint PathConstraint `json:"constraint"` // Currently unused - no constraint validation
+
+	// Implemented fields
+	LoaderType      string `json:"loaderType"`      // Type of loader (default: "local")
+	ValidateInputs  bool   `json:"validateInputs"`  // Validate FindQuery inputs against schema
+	ValidateOutputs bool   `json:"validateOutputs"` // Validate PathResult outputs against schema
 }
 
 // FindQuery specifies the parameters for discovery
@@ -68,51 +78,181 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 		}
 	}
 
+	// Convert root to absolute path for relative path calculations
+	absRoot, err := filepath.Abs(query.Root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute root path: %w", err)
+	}
+
+	// Load .fulmenignore patterns from root directory
+	ignoreMatcher, err := NewIgnoreMatcher(absRoot)
+	if err != nil {
+		// Non-fatal - continue without ignore patterns
+		if query.ErrorHandler != nil {
+			// Error handler call failure is non-critical in pathfinder context
+			_ = query.ErrorHandler(".fulmenignore", err)
+		}
+	}
+
 	var results []PathResult
 
-	// For each include pattern, find matching files
+	// Collect all matches from include patterns
 	for _, pattern := range query.Include {
-		matches, err := filepath.Glob(filepath.Join(query.Root, "**", pattern))
+		// Use doublestar for recursive ** support - always use absolute root
+		globPattern := filepath.Join(absRoot, pattern)
+
+		// SECURITY: Validate the glob pattern base doesn't escape root
+		// Extract the base directory (part before any wildcard characters)
+		basePattern := globPattern
+		for _, wildcard := range []string{"*", "?", "[", "]"} {
+			if idx := strings.Index(basePattern, wildcard); idx != -1 {
+				basePattern = basePattern[:idx]
+			}
+		}
+		// Clean the base pattern
+		basePattern = filepath.Clean(basePattern)
+
+		// Ensure the base pattern is within or starts at absRoot
+		// This prevents patterns like ../../**/*.go from escaping
+		if basePattern != absRoot && !strings.HasPrefix(basePattern, absRoot+string(filepath.Separator)) {
+			// Pattern base escapes root - reject it
+			if query.ErrorHandler != nil {
+				// Error handler call failure is non-critical in pathfinder context
+				_ = query.ErrorHandler(pattern, ErrEscapesRoot)
+			}
+			continue
+		}
+
+		matches, err := doublestar.FilepathGlob(globPattern)
 		if err != nil {
 			if query.ErrorHandler != nil {
-				if err := query.ErrorHandler(pattern, err); err != nil {
-					return nil, err
+				if handlerErr := query.ErrorHandler(pattern, err); handlerErr != nil {
+					return nil, handlerErr
 				}
 			}
 			continue
 		}
 
 		for _, match := range matches {
-			// Validate path safety
-			if err := ValidatePath(match); err != nil {
-				if query.ErrorHandler != nil {
-					// #nosec G104 -- error handler call failure is non-critical in pathfinder context
-					query.ErrorHandler(match, err)
-				}
-				continue
+			// Check context cancellation
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
 			}
 
-			// Get relative path
-			relPath, err := filepath.Rel(query.Root, match)
+			// Convert to absolute path
+			absMatch, err := filepath.Abs(match)
 			if err != nil {
 				continue
 			}
 
+			// Validate path safety
+			if err := ValidatePath(absMatch); err != nil {
+				if query.ErrorHandler != nil {
+					// Error handler call failure is non-critical in pathfinder context
+					_ = query.ErrorHandler(absMatch, err)
+				}
+				continue
+			}
+
+			// SECURITY: Ensure the matched path doesn't escape the root directory
+			// This prevents path traversal attacks via glob patterns like ../**/*.go
+			if err := ValidatePathWithinRoot(absMatch, absRoot); err != nil {
+				if query.ErrorHandler != nil {
+					// Error handler call failure is non-critical in pathfinder context
+					_ = query.ErrorHandler(absMatch, err)
+				}
+				continue
+			}
+
+			// Get file info
+			info, err := os.Lstat(absMatch)
+			if err != nil {
+				if query.ErrorHandler != nil {
+					// Error handler call failure is non-critical in pathfinder context
+					_ = query.ErrorHandler(absMatch, err)
+				}
+				continue
+			}
+
+			// Skip directories (glob returns both files and dirs)
+			if info.IsDir() {
+				continue
+			}
+
+			// Handle symlinks
+			if !query.FollowSymlinks && info.Mode()&os.ModeSymlink != 0 {
+				continue
+			}
+
+			// Get relative path
+			relPath, err := filepath.Rel(absRoot, absMatch)
+			if err != nil {
+				continue
+			}
+
+			// Check MaxDepth
+			if query.MaxDepth > 0 {
+				depth := strings.Count(relPath, string(filepath.Separator)) + 1
+				if depth > query.MaxDepth {
+					continue
+				}
+			}
+
+			// Check hidden files/directories - check ALL path segments, not just the base
+			// This correctly filters files under hidden directories like .secrets/key.pem
+			if !query.IncludeHidden && ContainsHiddenSegment(relPath) {
+				continue
+			}
+
+			// Check .fulmenignore patterns if matcher is loaded
+			if ignoreMatcher != nil && ignoreMatcher.IsIgnored(relPath) {
+				continue
+			}
+
+			// Populate metadata per Pathfinder spec (size, mtime, checksum)
+			metadata := make(map[string]any)
+			metadata["size"] = info.Size()
+			metadata["mtime"] = info.ModTime().Format("2006-01-02T15:04:05.000000000Z07:00") // RFC3339Nano
+
+			// TODO: Add optional checksum calculation (SHA-256) when config flag is added
+			// For now, omit checksum to avoid performance penalty on large file trees
+
 			result := PathResult{
 				RelativePath: relPath,
-				SourcePath:   match,
-				LogicalPath:  relPath, // Same as relative for now
+				SourcePath:   absMatch,
+				LogicalPath:  relPath,
 				LoaderType:   f.config.LoaderType,
-				Metadata:     make(map[string]any),
+				Metadata:     metadata,
 			}
 
 			results = append(results, result)
 
 			// Progress callback
 			if query.ProgressCallback != nil {
-				query.ProgressCallback(len(results), -1, match) // -1 for unknown total
+				query.ProgressCallback(len(results), -1, absMatch) // -1 for unknown total
 			}
 		}
+	}
+
+	// Filter by exclude patterns
+	if len(query.Exclude) > 0 {
+		filtered := make([]PathResult, 0, len(results))
+		for _, result := range results {
+			excluded := false
+			for _, excludePattern := range query.Exclude {
+				matched, _ := doublestar.Match(excludePattern, result.RelativePath)
+				if matched {
+					excluded = true
+					break
+				}
+			}
+			if !excluded {
+				filtered = append(filtered, result)
+			}
+		}
+		results = filtered
 	}
 
 	// Validate outputs if enabled
@@ -125,11 +265,20 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 	return results, nil
 }
 
+// FindGoFiles finds Go source files
+func (f *Finder) FindGoFiles(ctx context.Context, root string) ([]PathResult, error) {
+	query := FindQuery{
+		Root:    root,
+		Include: []string{"**/*.go"},
+	}
+	return f.FindFiles(ctx, query)
+}
+
 // FindConfigFiles finds common configuration files
 func (f *Finder) FindConfigFiles(ctx context.Context, root string) ([]PathResult, error) {
 	query := FindQuery{
 		Root:    root,
-		Include: []string{"*.json", "*.yaml", "*.yml", "*.toml", "*.config", "*.conf"},
+		Include: []string{"**/*.json", "**/*.yaml", "**/*.yml", "**/*.toml", "**/*.config", "**/*.conf"},
 	}
 	return f.FindFiles(ctx, query)
 }
@@ -138,7 +287,7 @@ func (f *Finder) FindConfigFiles(ctx context.Context, root string) ([]PathResult
 func (f *Finder) FindSchemaFiles(ctx context.Context, root string) ([]PathResult, error) {
 	query := FindQuery{
 		Root:    root,
-		Include: []string{"*.schema.json", "schema.json"},
+		Include: []string{"**/*.schema.json", "**/schema.json"},
 	}
 	return f.FindFiles(ctx, query)
 }
@@ -147,7 +296,7 @@ func (f *Finder) FindSchemaFiles(ctx context.Context, root string) ([]PathResult
 func (f *Finder) FindByExtension(ctx context.Context, root string, exts []string) ([]PathResult, error) {
 	patterns := make([]string, len(exts))
 	for i, ext := range exts {
-		patterns[i] = "*." + ext
+		patterns[i] = "**/*." + ext
 	}
 
 	query := FindQuery{

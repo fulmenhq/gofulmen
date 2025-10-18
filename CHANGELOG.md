@@ -17,7 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Pathfinder** - Root boundary enforcement preventing path traversal via glob patterns
+- **Pathfinder** - Hidden file filtering now checks all path segments, not just basename
+- **Pathfinder** - Metadata now populated with file size and mtime (RFC3339Nano)
+- **Pathfinder** - .fulmenignore support with gitignore-style pattern matching
+
 ### Security
+
+- **Pathfinder** - Path traversal protection via ValidatePathWithinRoot preventing escapes through patterns like `../**/*.go`
 
 ## [0.1.1] - 2025-10-17
 
