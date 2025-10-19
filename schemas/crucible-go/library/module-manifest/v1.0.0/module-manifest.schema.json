@@ -17,8 +17,10 @@
         "observability-logging",
         "foundry-patterns",
         "cloud-storage",
+        "error-handling-propagation",
         "pathfinder",
-        "ascii-helpers"
+        "ascii-helpers",
+        "telemetry-metrics"
       ]
     },
     "language": {
