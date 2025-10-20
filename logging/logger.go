@@ -16,12 +16,58 @@ type Logger struct {
 	config       *LoggerConfig
 	atomicLevel  zap.AtomicLevel
 	staticFields map[string]any
+	pipeline     *MiddlewarePipeline
 }
 
 // New creates a new logger from configuration
 func New(config *LoggerConfig) (*Logger, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
+	}
+
+	// Initialize profile-specific defaults FIRST
+	if err := initializeProfileDefaults(config); err != nil {
+		return nil, fmt.Errorf("profile initialization failed: %w", err)
+	}
+
+	// Load and enforce policy if specified
+	if config.PolicyFile != "" {
+		policy, err := LoadPolicy(config.PolicyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load policy: %w", err)
+		}
+		if err := EnforcePolicy(config, policy, config.Environment, ""); err != nil {
+			return nil, fmt.Errorf("policy enforcement failed: %w", err)
+		}
+	}
+
+	// Validate profile requirements AFTER defaults applied
+	// Filter to only enabled middleware for validation
+	enabledMiddleware := make([]MiddlewareConfig, 0, len(config.Middleware))
+	for _, mw := range config.Middleware {
+		if mw.Enabled {
+			enabledMiddleware = append(enabledMiddleware, mw)
+		}
+	}
+
+	throttlingEnabled := config.Throttling != nil && config.Throttling.Enabled
+	policyEnabled := config.PolicyFile != ""
+	errs := ValidateProfileRequirements(
+		config.Profile,
+		config.Sinks,
+		enabledMiddleware, // Only validate enabled middleware
+		"",                // format not used in current implementation
+		throttlingEnabled,
+		policyEnabled,
+	)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("profile requirements validation failed: %v", errs[0])
+	}
+
+	// Build middleware pipeline
+	pipeline, err := buildMiddlewarePipeline(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build middleware pipeline: %w", err)
 	}
 
 	// Parse default level
@@ -93,6 +139,7 @@ func New(config *LoggerConfig) (*Logger, error) {
 		config:       config,
 		atomicLevel:  atomicLevel,
 		staticFields: config.StaticFields,
+		pipeline:     pipeline,
 	}, nil
 }
 
@@ -244,6 +291,7 @@ func (l *Logger) WithFields(fields map[string]any) *Logger {
 		config:       l.config,
 		atomicLevel:  l.atomicLevel,
 		staticFields: l.staticFields,
+		pipeline:     l.pipeline,
 	}
 }
 
@@ -256,6 +304,7 @@ func (l *Logger) WithError(err error) *Logger {
 		config:       l.config,
 		atomicLevel:  l.atomicLevel,
 		staticFields: l.staticFields,
+		pipeline:     l.pipeline,
 	}
 }
 
@@ -268,6 +317,7 @@ func (l *Logger) WithComponent(component string) *Logger {
 		config:       l.config,
 		atomicLevel:  l.atomicLevel,
 		staticFields: l.staticFields,
+		pipeline:     l.pipeline,
 	}
 }
 
@@ -315,5 +365,152 @@ func (l *Logger) Named(name string) *Logger {
 		config:       l.config,
 		atomicLevel:  l.atomicLevel,
 		staticFields: l.staticFields,
+		pipeline:     l.pipeline,
 	}
+}
+
+// initializeProfileDefaults applies profile-specific defaults and validations
+func initializeProfileDefaults(config *LoggerConfig) error {
+	switch config.Profile {
+	case ProfileSimple:
+		return initializeSimpleProfile(config)
+	case ProfileStructured:
+		return initializeStructuredProfile(config)
+	case ProfileEnterprise:
+		return initializeEnterpriseProfile(config)
+	case ProfileCustom:
+		return initializeCustomProfile(config)
+	default:
+		// Default to SIMPLE if not specified
+		config.Profile = ProfileSimple
+		return initializeSimpleProfile(config)
+	}
+}
+
+// initializeSimpleProfile ensures console sink is present
+func initializeSimpleProfile(config *LoggerConfig) error {
+	// Ensure at least one console sink exists
+	hasConsole := false
+	for _, sink := range config.Sinks {
+		if sink.Type == "console" {
+			hasConsole = true
+			break
+		}
+	}
+
+	if !hasConsole {
+		// Add default console sink
+		config.Sinks = append(config.Sinks, SinkConfig{
+			Type:   "console",
+			Format: "console",
+			Console: &ConsoleSinkConfig{
+				Stream:   "stderr",
+				Colorize: false,
+			},
+		})
+	}
+
+	return nil
+}
+
+// initializeStructuredProfile validates sinks are present and adds correlation
+func initializeStructuredProfile(config *LoggerConfig) error {
+	if len(config.Sinks) == 0 {
+		return fmt.Errorf("STRUCTURED profile requires at least one sink")
+	}
+
+	// Ensure correlation middleware is present
+	hasCorrelation := false
+	for _, mw := range config.Middleware {
+		if mw.Name == "correlation" {
+			hasCorrelation = true
+			break
+		}
+	}
+
+	if !hasCorrelation {
+		config.Middleware = append(config.Middleware, MiddlewareConfig{
+			Name:    "correlation",
+			Enabled: true,
+			Order:   5,
+		})
+	}
+
+	return nil
+}
+
+// initializeEnterpriseProfile validates middleware and throttling are configured
+func initializeEnterpriseProfile(config *LoggerConfig) error {
+	if len(config.Sinks) == 0 {
+		return fmt.Errorf("ENTERPRISE profile requires at least one sink")
+	}
+
+	if len(config.Middleware) == 0 {
+		return fmt.Errorf("ENTERPRISE profile requires middleware configuration")
+	}
+
+	if config.Throttling == nil || !config.Throttling.Enabled {
+		return fmt.Errorf("ENTERPRISE profile requires throttling to be enabled")
+	}
+
+	return nil
+}
+
+// initializeCustomProfile is a no-op - accepts any configuration
+func initializeCustomProfile(config *LoggerConfig) error {
+	return nil
+}
+
+// buildMiddlewarePipeline constructs the middleware pipeline from config
+func buildMiddlewarePipeline(config *LoggerConfig) (*MiddlewarePipeline, error) {
+	var middleware []Middleware
+
+	// Add configured middleware
+	for _, mwConfig := range config.Middleware {
+		if !mwConfig.Enabled {
+			continue
+		}
+
+		// Create middleware from registry
+		mw, err := DefaultRegistry().Create(mwConfig.Name, mwConfig.Config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create middleware %s: %w", mwConfig.Name, err)
+		}
+
+		// Override order if specified in config
+		if mwConfig.Order > 0 {
+			mw = &middlewareOrderOverride{
+				Middleware: mw,
+				order:      mwConfig.Order,
+			}
+		}
+
+		middleware = append(middleware, mw)
+	}
+
+	// Add throttling middleware if enabled
+	if config.Throttling != nil && config.Throttling.Enabled {
+		throttleConfig := map[string]any{
+			"maxRate":    config.Throttling.MaxRate,
+			"burstSize":  config.Throttling.BurstSize,
+			"dropPolicy": config.Throttling.DropPolicy,
+		}
+		mw, err := DefaultRegistry().Create("throttle", throttleConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create throttling middleware: %w", err)
+		}
+		middleware = append(middleware, mw)
+	}
+
+	return NewMiddlewarePipeline(middleware), nil
+}
+
+// middlewareOrderOverride wraps a middleware to override its Order() method
+type middlewareOrderOverride struct {
+	Middleware
+	order int
+}
+
+func (m *middlewareOrderOverride) Order() int {
+	return m.order
 }
