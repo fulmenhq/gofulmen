@@ -15,6 +15,7 @@ type LoggerConfig struct {
 	Profile          LoggingProfile     `json:"profile"`
 	DefaultLevel     string             `json:"defaultLevel"`
 	Service          string             `json:"service"`
+	Component        string             `json:"component,omitempty"`
 	Environment      string             `json:"environment"`
 	PolicyFile       string             `json:"policyFile,omitempty"`
 	Sinks            []SinkConfig       `json:"sinks"`
