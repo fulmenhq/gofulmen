@@ -96,15 +96,27 @@ func LoadConfigWithOptions(path string, appType string) (*LoggerConfig, error) {
 		jsonData = data
 	}
 
-	// Validate against crucible schema
-	if err := ValidateConfig(jsonData); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
-	}
-
 	// Unmarshal to struct
 	var config LoggerConfig
 	if err := json.Unmarshal(jsonData, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Normalize config before validation
+	normResult, err := NormalizeLoggerConfig(&config)
+	if err != nil {
+		return nil, fmt.Errorf("config normalization failed: %w", err)
+	}
+
+	// Convert normalized config back to JSON for schema validation
+	jsonData, err = json.Marshal(&config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized config: %w", err)
+	}
+
+	// Validate against crucible schema
+	if err := ValidateConfig(jsonData); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	// Apply defaults
@@ -124,6 +136,14 @@ func LoadConfigWithOptions(path string, appType string) (*LoggerConfig, error) {
 
 		if err := EnforcePolicy(&config, policy, config.Environment, appType); err != nil {
 			return nil, fmt.Errorf("policy enforcement failed: %w", err)
+		}
+	}
+
+	// Log normalization warnings to stderr (before logger is initialized)
+	if len(normResult.Warnings) > 0 {
+		fmt.Fprintf(os.Stderr, "[gofulmen/logging] Config normalization warnings:\n")
+		for _, warning := range normResult.Warnings {
+			fmt.Fprintf(os.Stderr, "  - %s\n", warning)
 		}
 	}
 
