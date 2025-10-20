@@ -1,0 +1,29 @@
+allowedProfiles:
+  - ENTERPRISE
+requiredProfiles:
+  api-service:
+    - ENTERPRISE
+  cli-tool:
+    - STRUCTURED
+    - ENTERPRISE
+environmentRules:
+  production:
+    - ENTERPRISE
+  staging:
+    - STRUCTURED
+    - ENTERPRISE
+  development:
+    - SIMPLE
+    - STRUCTURED
+    - ENTERPRISE
+profileRequirements:
+  ENTERPRISE:
+    minEnvironment: staging
+    requiredFeatures:
+      - middleware
+      - throttling
+      - policy
+auditSettings:
+  logPolicyViolations: true
+  enforceStrictMode: true
+  requirePolicyFile: true

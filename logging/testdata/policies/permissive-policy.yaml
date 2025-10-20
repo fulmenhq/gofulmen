@@ -1,0 +1,12 @@
+allowedProfiles:
+  - SIMPLE
+  - STRUCTURED
+  - ENTERPRISE
+  - CUSTOM
+requiredProfiles: {}
+environmentRules: {}
+profileRequirements: {}
+auditSettings:
+  logPolicyViolations: true
+  enforceStrictMode: false
+  requirePolicyFile: false

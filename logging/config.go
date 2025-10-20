@@ -12,13 +12,34 @@ import (
 
 // LoggerConfig holds logger configuration matching crucible schema
 type LoggerConfig struct {
-	DefaultLevel     string         `json:"defaultLevel"`
-	Service          string         `json:"service"`
-	Environment      string         `json:"environment"`
-	Sinks            []SinkConfig   `json:"sinks"`
-	StaticFields     map[string]any `json:"staticFields,omitempty"`
-	EnableCaller     bool           `json:"enableCaller"`
-	EnableStacktrace bool           `json:"enableStacktrace"`
+	Profile          LoggingProfile     `json:"profile"`
+	DefaultLevel     string             `json:"defaultLevel"`
+	Service          string             `json:"service"`
+	Environment      string             `json:"environment"`
+	PolicyFile       string             `json:"policyFile,omitempty"`
+	Sinks            []SinkConfig       `json:"sinks"`
+	Middleware       []MiddlewareConfig `json:"middleware,omitempty"`
+	Throttling       *ThrottlingConfig  `json:"throttling,omitempty"`
+	StaticFields     map[string]any     `json:"staticFields,omitempty"`
+	EnableCaller     bool               `json:"enableCaller"`
+	EnableStacktrace bool               `json:"enableStacktrace"`
+}
+
+// MiddlewareConfig defines middleware pipeline configuration
+type MiddlewareConfig struct {
+	Name    string         `json:"name"`
+	Enabled bool           `json:"enabled"`
+	Order   int            `json:"order"`
+	Config  map[string]any `json:"config,omitempty"`
+}
+
+// ThrottlingConfig controls log output rate
+type ThrottlingConfig struct {
+	Enabled    bool   `json:"enabled"`
+	MaxRate    int    `json:"maxRate"`    // logs/second
+	BurstSize  int    `json:"burstSize"`  // burst capacity
+	WindowSize int    `json:"windowSize"` // seconds
+	DropPolicy string `json:"dropPolicy"` // "drop-oldest" | "drop-newest" | "block"
 }
 
 // SinkConfig defines an output sink
@@ -124,6 +145,9 @@ func ValidateConfig(jsonData []byte) error {
 
 // applyDefaults applies default values to config
 func applyDefaults(config *LoggerConfig) {
+	if config.Profile == "" {
+		config.Profile = ProfileSimple
+	}
 	if config.DefaultLevel == "" {
 		config.DefaultLevel = "INFO"
 	}
@@ -138,7 +162,13 @@ func applyDefaults(config *LoggerConfig) {
 	for i := range config.Sinks {
 		sink := &config.Sinks[i]
 		if sink.Format == "" {
-			sink.Format = "json"
+			// Default format based on profile
+			switch config.Profile {
+			case ProfileSimple:
+				sink.Format = "console"
+			default:
+				sink.Format = "json"
+			}
 		}
 		if sink.Type == "console" && sink.Console == nil {
 			sink.Console = &ConsoleSinkConfig{
@@ -169,13 +199,14 @@ func isYAML(path string) bool {
 // DefaultConfig returns a default logger configuration
 func DefaultConfig(service string) *LoggerConfig {
 	return &LoggerConfig{
+		Profile:      ProfileSimple,
 		DefaultLevel: "INFO",
 		Service:      service,
 		Environment:  "development",
 		Sinks: []SinkConfig{
 			{
-				Type:   "console",
-				Format: "json",
+				Type: "console",
+				// Format intentionally omitted - applyDefaults will set based on profile
 				Console: &ConsoleSinkConfig{
 					Stream:   "stderr",
 					Colorize: false,

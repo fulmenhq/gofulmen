@@ -118,9 +118,9 @@ auditSettings:
 
 Policy files are resolved in the following order:
 
-1. `.goneat/logging-policy.yaml` (repository-local development)
+1. `.fulmen/logging-policy.yaml` (repository-local development)
 2. `/etc/fulmen/logging-policy.yaml` (system-wide default)
-3. `/org/logging-policy.yaml` (organization-managed baseline)
+3. `$FULMEN_ORG_PATH/logging-policy.yaml` (organization-managed baseline, default `/opt/fulmen/`)
 
 Libraries MUST validate logger configuration against the policy (when present) during initialization. Violations MUST be logged and, when `enforceStrictMode` is true, MUST prevent the logger from starting.
 
