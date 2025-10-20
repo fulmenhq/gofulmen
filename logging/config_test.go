@@ -2,6 +2,10 @@ package logging
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -335,4 +339,209 @@ func TestThrottlingConfig_JSON(t *testing.T) {
 	if decoded.DropPolicy != throttle.DropPolicy {
 		t.Errorf("DropPolicy = %s, want %s", decoded.DropPolicy, throttle.DropPolicy)
 	}
+}
+
+func TestLoadConfig_WithPolicy(t *testing.T) {
+	tempDir := t.TempDir()
+
+	policyPath := filepath.Join(tempDir, "test-policy.yaml")
+	policyContent := `
+allowedProfiles:
+  - STRUCTURED
+  - ENTERPRISE
+auditSettings:
+  logPolicyViolations: true
+  enforceStrictMode: true
+  requirePolicyFile: false
+`
+	if err := os.WriteFile(policyPath, []byte(policyContent), 0644); err != nil {
+		t.Fatalf("failed to write policy: %v", err)
+	}
+
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := fmt.Sprintf(`
+profile: STRUCTURED
+service: test-service
+environment: production
+policyFile: %s
+defaultLevel: INFO
+sinks:
+  - type: console
+    format: json
+`, policyPath)
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+
+	if config.Profile != ProfileStructured {
+		t.Errorf("Profile = %s, want %s", config.Profile, ProfileStructured)
+	}
+
+	if config.PolicyFile != policyPath {
+		t.Errorf("PolicyFile = %s, want %s", config.PolicyFile, policyPath)
+	}
+}
+
+func TestLoadConfig_WithPolicyViolation(t *testing.T) {
+	tempDir := t.TempDir()
+
+	policyPath := filepath.Join(tempDir, "strict-policy.yaml")
+	policyContent := `
+allowedProfiles:
+  - ENTERPRISE
+auditSettings:
+  logPolicyViolations: true
+  enforceStrictMode: true
+  requirePolicyFile: false
+`
+	if err := os.WriteFile(policyPath, []byte(policyContent), 0644); err != nil {
+		t.Fatalf("failed to write policy: %v", err)
+	}
+
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := fmt.Sprintf(`
+profile: SIMPLE
+service: test-service
+environment: production
+policyFile: %s
+defaultLevel: INFO
+sinks:
+  - type: console
+    format: json
+`, policyPath)
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	_, err := LoadConfig(configPath)
+	if err == nil {
+		t.Error("LoadConfig should fail for policy violation in strict mode")
+	}
+
+	if !strings.Contains(err.Error(), "policy enforcement failed") {
+		t.Errorf("error should mention policy enforcement, got: %v", err)
+	}
+}
+
+func TestLoadConfig_WithoutPolicy(t *testing.T) {
+	tempDir := t.TempDir()
+
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := `
+profile: SIMPLE
+service: test-service
+environment: development
+defaultLevel: INFO
+sinks:
+  - type: console
+    format: console
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+
+	if config.Profile != ProfileSimple {
+		t.Errorf("Profile = %s, want %s", config.Profile, ProfileSimple)
+	}
+
+	if config.PolicyFile != "" {
+		t.Errorf("PolicyFile should be empty, got: %s", config.PolicyFile)
+	}
+}
+
+func TestLoadConfigWithOptions_AppType(t *testing.T) {
+	tempDir := t.TempDir()
+
+	policyPath := filepath.Join(tempDir, "apptype-policy.yaml")
+	policyContent := `
+allowedProfiles:
+  - STRUCTURED
+  - ENTERPRISE
+requiredProfiles:
+  api-service:
+    - ENTERPRISE
+auditSettings:
+  logPolicyViolations: true
+  enforceStrictMode: true
+  requirePolicyFile: false
+`
+	if err := os.WriteFile(policyPath, []byte(policyContent), 0644); err != nil {
+		t.Fatalf("failed to write policy: %v", err)
+	}
+
+	t.Run("api-service with ENTERPRISE passes", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "api-config.yaml")
+		configContent := fmt.Sprintf(`
+profile: ENTERPRISE
+service: api-service
+environment: production
+policyFile: %s
+defaultLevel: INFO
+middleware:
+  - name: correlation
+    enabled: true
+    order: 1
+throttling:
+  enabled: true
+  maxRate: 1000
+  burstSize: 100
+  windowSize: 60
+  dropPolicy: drop-oldest
+sinks:
+  - type: console
+    format: json
+`, policyPath)
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		config, err := LoadConfigWithOptions(configPath, "api-service")
+		if err != nil {
+			t.Fatalf("LoadConfigWithOptions failed: %v", err)
+		}
+
+		if config.Profile != ProfileEnterprise {
+			t.Errorf("Profile = %s, want %s", config.Profile, ProfileEnterprise)
+		}
+	})
+
+	t.Run("api-service with STRUCTURED fails", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "api-bad-config.yaml")
+		configContent := fmt.Sprintf(`
+profile: STRUCTURED
+service: api-service
+environment: production
+policyFile: %s
+defaultLevel: INFO
+sinks:
+  - type: console
+    format: json
+`, policyPath)
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		_, err := LoadConfigWithOptions(configPath, "api-service")
+		if err == nil {
+			t.Error("LoadConfigWithOptions should fail when appType requires different profile")
+		}
+
+		if !strings.Contains(err.Error(), "policy enforcement failed") {
+			t.Errorf("error should mention policy enforcement, got: %v", err)
+		}
+
+		if !strings.Contains(err.Error(), "api-service") {
+			t.Errorf("error should mention app type, got: %v", err)
+		}
+	})
 }

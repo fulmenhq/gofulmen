@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fulmenhq/gofulmen/schema"
 	"gopkg.in/yaml.v3"
@@ -213,7 +214,11 @@ func EnforcePolicy(
 	}
 
 	if policy.AuditSettings.EnforceStrictMode {
-		return fmt.Errorf("policy violations in strict mode (%d violations): %v", len(violations), violations)
+		var messages []string
+		for _, v := range violations {
+			messages = append(messages, v.Error())
+		}
+		return fmt.Errorf("policy violations in strict mode (%d violations): %s", len(violations), strings.Join(messages, "; "))
 	}
 
 	return nil

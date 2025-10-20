@@ -68,6 +68,11 @@ type FileSinkConfig struct {
 
 // LoadConfig loads and validates logger configuration from a file
 func LoadConfig(path string) (*LoggerConfig, error) {
+	return LoadConfigWithOptions(path, "")
+}
+
+// LoadConfigWithOptions loads and validates logger configuration with optional app type for policy enforcement
+func LoadConfigWithOptions(path string, appType string) (*LoggerConfig, error) {
 	// Read file
 	// #nosec G304 -- intentional user-controlled file access for loading logger configuration from user-specified path
 	data, err := os.ReadFile(path)
@@ -107,6 +112,18 @@ func LoadConfig(path string) (*LoggerConfig, error) {
 	// Validate console sink discipline (stderr only)
 	if err := validateConsoleSinks(config.Sinks); err != nil {
 		return nil, fmt.Errorf("sink validation failed: %w", err)
+	}
+
+	// Enforce logging policy if specified
+	if config.PolicyFile != "" {
+		policy, err := LoadPolicy(config.PolicyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load policy: %w", err)
+		}
+
+		if err := EnforcePolicy(&config, policy, config.Environment, appType); err != nil {
+			return nil, fmt.Errorf("policy enforcement failed: %w", err)
+		}
 	}
 
 	return &config, nil

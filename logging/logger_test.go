@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 
 	// Test basic logging
 	logger.Info("test message")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestNewCLI(t *testing.T) {
@@ -35,7 +35,7 @@ func TestNewCLI(t *testing.T) {
 	}
 
 	logger.Info("CLI test message")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestWithFields(t *testing.T) {
@@ -48,7 +48,7 @@ func TestWithFields(t *testing.T) {
 	})
 
 	contextLogger.Info("test with fields")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestWithError(t *testing.T) {
@@ -59,7 +59,7 @@ func TestWithError(t *testing.T) {
 	errorLogger := logger.WithError(err)
 
 	errorLogger.Error("test with error")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestWithComponent(t *testing.T) {
@@ -68,7 +68,7 @@ func TestWithComponent(t *testing.T) {
 
 	componentLogger := logger.WithComponent("pathfinder")
 	componentLogger.Info("test with component")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestSetLevel(t *testing.T) {
@@ -123,7 +123,7 @@ func TestFileOutput(t *testing.T) {
 	}
 
 	logger.Info("test file output")
-	logger.Sync()
+	_ = logger.Sync()
 
 	// Verify log file was created
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
@@ -163,7 +163,7 @@ func TestMultipleSinks(t *testing.T) {
 	}
 
 	logger.Info("multi-sink test")
-	logger.Sync()
+	_ = logger.Sync()
 
 	// Verify file was created
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
@@ -196,7 +196,7 @@ func TestStaticFields(t *testing.T) {
 	}
 
 	logger.Info("test static fields")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestLoggingMethods(t *testing.T) {
@@ -213,7 +213,7 @@ func TestLoggingMethods(t *testing.T) {
 	logger.Warn("warning message")
 	logger.Error("error message")
 
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestNamed(t *testing.T) {
@@ -229,7 +229,7 @@ func TestNamed(t *testing.T) {
 	}
 
 	namedLogger.Info("message from named logger")
-	logger.Sync()
+	_ = logger.Sync()
 }
 
 func TestWithContext(t *testing.T) {
@@ -247,5 +247,5 @@ func TestWithContext(t *testing.T) {
 	}
 
 	contextLogger.Info("message with context")
-	logger.Sync()
+	_ = logger.Sync()
 }
