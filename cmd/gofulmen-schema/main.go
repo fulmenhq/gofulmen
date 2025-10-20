@@ -1,16 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/fulmenhq/gofulmen/schema"
 )
+
+const goneatEnv = "GOFULMEN_GONEAT_PATH"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -65,6 +69,7 @@ func schemaValidate(args []string) error {
 
 	schemaID := fs.String("schema-id", "", "Catalog schema identifier (e.g., pathfinder/v1.0.0/path-result)")
 	format := fs.String("format", "text", "Output format (text|json)")
+	useGoneat := fs.Bool("use-goneat", false, "Use goneat CLI if available (falls back to local validation)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -77,6 +82,16 @@ func schemaValidate(args []string) error {
 	}
 
 	dataPath := fs.Arg(0)
+
+	if *useGoneat {
+		if output, err := runGoneatValidate(*schemaID, dataPath, *format); err == nil {
+			fmt.Print(output)
+			return nil
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: %v; falling back to local validation\n", err)
+		}
+	}
+
 	diags, err := schema.ValidateFileByID(*schemaID, dataPath)
 	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)
@@ -110,6 +125,7 @@ func schemaValidateSchema(args []string) error {
 	fs := flag.NewFlagSet("validate-schema", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	format := fs.String("format", "text", "Output format (text|json)")
+	useGoneat := fs.Bool("use-goneat", false, "Use goneat CLI if available (falls back to local validation)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -118,6 +134,16 @@ func schemaValidateSchema(args []string) error {
 	}
 
 	path := fs.Arg(0)
+
+	if *useGoneat {
+		if output, err := runGoneatValidateSchema(path, *format); err == nil {
+			fmt.Print(output)
+			return nil
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: %v; falling back to local validation\n", err)
+		}
+	}
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read schema: %w", err)
@@ -149,6 +175,53 @@ func schemaValidateSchema(args []string) error {
 		}
 		return nil
 	}
+}
+
+func runGoneatValidate(schemaID, dataPath, format string) (string, error) {
+	goneatFormat := mapGoneatFormat(format)
+	args := []string{"validate", "data", "--format", goneatFormat, "--data", dataPath}
+	if schemaID != "" {
+		args = append(args, "--schema", schemaID)
+	}
+	return runGoneat(args...)
+}
+
+func runGoneatValidateSchema(schemaPath, format string) (string, error) {
+	goneatFormat := mapGoneatFormat(format)
+	args := []string{"schema", "validate-schema", "--format", goneatFormat, schemaPath}
+	return runGoneat(args...)
+}
+
+func mapGoneatFormat(format string) string {
+	switch strings.ToLower(format) {
+	case "json":
+		return "json"
+	default:
+		return "markdown"
+	}
+}
+
+func runGoneat(args ...string) (string, error) {
+	binary := os.Getenv(goneatEnv)
+	if binary == "" {
+		binary = "goneat"
+	}
+
+	cmd := exec.Command(binary, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return "", fmt.Errorf("goneat binary not found (set %s or install goneat)", goneatEnv)
+		}
+		return "", fmt.Errorf("goneat command failed: %v (stderr: %s)", err, strings.TrimSpace(stderr.String()))
+	}
+	if stderr.Len() > 0 {
+		fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(stderr.String()))
+	}
+	return stdout.String(), nil
 }
 
 func usage() {

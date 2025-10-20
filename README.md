@@ -227,6 +227,10 @@ go run ./cmd/gofulmen-schema -- schema validate \
   --schema-id pathfinder/v1.0.0/path-result ./path-result.json
 
 go run ./cmd/gofulmen-schema -- schema validate-schema ./schema.json
+
+# Optional goneat integration
+go run ./cmd/gofulmen-schema -- schema validate \
+  --use-goneat --schema-id pathfinder/v1.0.0/path-result ./path-result.json
 ```
 
 ### Bootstrap
