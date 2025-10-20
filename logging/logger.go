@@ -101,6 +101,15 @@ func New(config *LoggerConfig) (*Logger, error) {
 	// Combine cores
 	core := zapcore.NewTee(cores...)
 
+	// Wrap core with middleware pipeline if present
+	if pipeline != nil && len(pipeline.middleware) > 0 {
+		core = &middlewareCore{
+			Core:     core,
+			pipeline: pipeline,
+			config:   config,
+		}
+	}
+
 	// Build logger options
 	opts := []zap.Option{
 		zap.AddCaller(),
@@ -513,4 +522,107 @@ type middlewareOrderOverride struct {
 
 func (m *middlewareOrderOverride) Order() int {
 	return m.order
+}
+
+// middlewareCore wraps a zapcore.Core to execute middleware pipeline
+type middlewareCore struct {
+	zapcore.Core
+	pipeline *MiddlewarePipeline
+	config   *LoggerConfig
+}
+
+// Write executes middleware pipeline and writes enriched/filtered events
+func (c *middlewareCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
+	// Create LogEvent from zap entry
+	event := NewLogEvent(entry, fields, c.config)
+
+	// Execute middleware pipeline
+	processedEvent := c.pipeline.Process(event)
+
+	// Drop event if middleware returned nil (throttled, filtered, etc.)
+	if processedEvent == nil {
+		return nil
+	}
+
+	// Update entry message if modified by middleware (e.g., redaction)
+	if processedEvent.Message != entry.Message {
+		entry.Message = processedEvent.Message
+	}
+
+	// Convert processed event back to zap fields
+	enrichedFields := eventToZapFields(processedEvent, fields)
+
+	// Write through underlying core with enriched fields and updated entry
+	return c.Core.Write(entry, enrichedFields)
+}
+
+// With adds fields to the core (pass through)
+func (c *middlewareCore) With(fields []zapcore.Field) zapcore.Core {
+	return &middlewareCore{
+		Core:     c.Core.With(fields),
+		pipeline: c.pipeline,
+		config:   c.config,
+	}
+}
+
+// Check determines if the entry should be logged and ensures middleware executes
+func (c *middlewareCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if !c.Enabled(entry.Level) {
+		return checkedEntry
+	}
+	return checkedEntry.AddCore(entry, c)
+}
+
+// eventToZapFields converts processed LogEvent back to zap fields
+func eventToZapFields(event *LogEvent, originalFields []zapcore.Field) []zapcore.Field {
+	// Start with original fields as base
+	fields := make([]zapcore.Field, 0, len(originalFields)+10)
+	fields = append(fields, originalFields...)
+
+	// Add correlation ID if set by middleware
+	if event.CorrelationID != "" {
+		fields = append(fields, zap.String("correlationId", event.CorrelationID))
+	}
+
+	// Add request ID if present
+	if event.RequestID != "" {
+		fields = append(fields, zap.String("requestId", event.RequestID))
+	}
+
+	// Add trace/span IDs if present
+	if event.TraceID != "" {
+		fields = append(fields, zap.String("traceId", event.TraceID))
+	}
+	if event.SpanID != "" {
+		fields = append(fields, zap.String("spanId", event.SpanID))
+	}
+
+	// Add operation if present
+	if event.Operation != "" {
+		fields = append(fields, zap.String("operation", event.Operation))
+	}
+
+	// Add duration if present
+	if event.DurationMs != nil {
+		fields = append(fields, zap.Float64("durationMs", *event.DurationMs))
+	}
+
+	// Add user ID if present
+	if event.UserID != "" {
+		fields = append(fields, zap.String("userId", event.UserID))
+	}
+
+	// Add context fields if any
+	if len(event.Context) > 0 {
+		for k, v := range event.Context {
+			fields = append(fields, zap.Any(k, v))
+		}
+	}
+
+	// Add redaction flags if present (for observability)
+	if len(event.RedactionFlags) > 0 {
+		fields = append(fields, zap.Strings("redactionFlags", event.RedactionFlags))
+	}
+
+	return fields
 }

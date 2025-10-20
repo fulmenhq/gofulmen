@@ -5,6 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestNew(t *testing.T) {
@@ -530,4 +534,122 @@ func TestBuildMiddlewarePipeline_OrderOverride(t *testing.T) {
 	if pipeline.middleware[1].Order() != 100 {
 		t.Errorf("Second middleware order = %d, want 100 (overridden)", pipeline.middleware[1].Order())
 	}
+}
+
+func TestMiddlewareCore_CorrelationInjection(t *testing.T) {
+	pipelineConfig := &LoggerConfig{
+		Middleware: []MiddlewareConfig{
+			{Name: "correlation", Enabled: true},
+		},
+	}
+
+	pipeline, err := buildMiddlewarePipeline(pipelineConfig)
+	if err != nil {
+		t.Fatalf("buildMiddlewarePipeline() error = %v", err)
+	}
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	middlewareCfg := &LoggerConfig{Service: "test-service", Environment: "test"}
+	wrapped := &middlewareCore{
+		Core:     core,
+		pipeline: pipeline,
+		config:   middlewareCfg,
+	}
+
+	zapLogger := zap.New(wrapped)
+	zapLogger.Info("correlation test")
+
+	recorded := logs.All()
+	if len(recorded) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(recorded))
+	}
+
+	ctx := recorded[0].ContextMap()
+	if _, ok := ctx["correlationId"]; !ok {
+		t.Error("correlationId not present in log entry after middleware execution")
+	}
+}
+
+func TestMiddlewareCore_Redaction(t *testing.T) {
+	pipelineConfig := &LoggerConfig{
+		Middleware: []MiddlewareConfig{
+			{Name: "redact-secrets", Enabled: true},
+		},
+	}
+
+	pipeline, err := buildMiddlewarePipeline(pipelineConfig)
+	if err != nil {
+		t.Fatalf("buildMiddlewarePipeline() error = %v", err)
+	}
+
+	core, logs := observer.New(zapcore.DebugLevel)
+	middlewareCfg := &LoggerConfig{Service: "test-service", Environment: "test"}
+	wrapped := &middlewareCore{
+		Core:     core,
+		pipeline: pipeline,
+		config:   middlewareCfg,
+	}
+
+	zapLogger := zap.New(wrapped)
+	zapLogger.Info("password=SuperSecret123")
+
+	recorded := logs.All()
+	if len(recorded) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(recorded))
+	}
+
+	if recorded[0].Message != "[REDACTED]" {
+		t.Errorf("expected redacted message, got %q", recorded[0].Message)
+	}
+
+	ctx := recorded[0].ContextMap()
+	rawFlags, ok := ctx["redactionFlags"]
+	if !ok {
+		t.Fatal("expected redactionFlags field in log entry")
+	}
+
+	switch flags := rawFlags.(type) {
+	case []string:
+		if len(flags) == 0 || flags[0] != "secrets" {
+			t.Errorf("expected redaction flag 'secrets', got %v", flags)
+		}
+	case []interface{}:
+		if len(flags) == 0 {
+			t.Fatal("expected redactionFlags to be non-empty")
+		}
+		if flag, ok := flags[0].(string); !ok || flag != "secrets" {
+			t.Errorf("expected redaction flag 'secrets', got %v", flags)
+		}
+	default:
+		t.Errorf("unexpected redactionFlags type %T", rawFlags)
+	}
+}
+
+func TestMiddlewareCore_CorrelationID(t *testing.T) {
+	config := &LoggerConfig{
+		Profile:      ProfileStructured,
+		DefaultLevel: "INFO",
+		Service:      "test",
+		Sinks: []SinkConfig{
+			{Type: "console", Format: "json"},
+		},
+		Middleware: []MiddlewareConfig{
+			{Name: "correlation", Enabled: true, Order: 5},
+		},
+	}
+
+	logger, err := New(config)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if logger.pipeline == nil {
+		t.Fatal("Logger pipeline is nil - middleware not initialized")
+	}
+
+	if len(logger.pipeline.middleware) == 0 {
+		t.Fatal("Pipeline has no middleware")
+	}
+
+	t.Logf("Pipeline has %d middleware", len(logger.pipeline.middleware))
 }
