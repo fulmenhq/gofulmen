@@ -20,16 +20,16 @@ Gofulmen is the Go foundation library for the FulmenHQ ecosystem, providing ente
 
 ## Module Catalog
 
-| Module          | Status     | Specification                                                                   | Purpose                                                            |
-| --------------- | ---------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **config/**     | ✅ Stable  | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and management          |
-| **logging/**    | ✅ Stable  | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE) |
-| **schema/**     | ✅ Stable  | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with draft 2020-12 support                  |
-| **crucible/**   | ✅ Stable  | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards           |
-| **bootstrap/**  | ✅ Stable  | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories              |
-| **pathfinder/** | ✅ Stable  | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with security constraints                |
-| **ascii/**      | ✅ Stable  | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing         |
-| **foundry/**    | 🚧 Planned | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Cloud storage, country codes, HTTP status, MIME types              |
+| Module          | Status    | Specification                                                                   | Purpose                                                            |
+| --------------- | --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **config/**     | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading |
+| **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE) |
+| **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support        |
+| **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards           |
+| **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories              |
+| **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection           |
+| **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing         |
+| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes  |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
@@ -101,38 +101,35 @@ Policy files are resolved in order:
 
 ## Roadmap & Gaps
 
-### Current Version: 0.1.0
+### Current Version: 0.1.2
 
 **Completed**:
 
 - ✅ Core library modules (config, logging, schema, crucible, bootstrap)
-- ✅ Extension modules (pathfinder, ascii)
+- ✅ Extension modules (pathfinder, ascii, foundry)
 - ✅ Goneat bootstrap integration
 - ✅ Crucible SSOT synchronization
-- ✅ Progressive logging profiles
-- ✅ Policy enforcement framework
+- ✅ Progressive logging with profiles and middleware pipeline
+- ✅ Policy enforcement framework with YAML governance
+- ✅ Schema validation with catalog and composition helpers
+- ✅ Three-layer configuration loading
+- ✅ Pathfinder security with path traversal protection
+- ✅ Foundry utilities (time, correlation IDs, patterns, MIME, HTTP, country codes)
 
-**In Progress** (v0.1.0 Upscaling):
+**Planned** (v0.1.3+):
 
-- 🚧 Foundry module implementation (cloud storage, country codes, HTTP status, MIME types)
-- 🚧 Schema validation module alignment (catalog discovery, offline metas, structured diagnostics)
-- 🚧 Improved terminal catalog (dynamic detection, runtime configuration)
-- 🚧 Progressive logging implementation (profile-based configuration, middleware pipeline)
+- 📋 File checksums with xxHash128 (pathfinder enhancement)
+- 📋 Additional coverage improvements for bootstrap package
+- 📋 Performance optimizations
+- 📋 Additional middleware (sampling, batching)
 
 **Planned** (v0.2.0):
 
 - 📋 Metrics integration (following logging pattern)
 - 📋 Tracing integration (OpenTelemetry support)
+- 📋 Cloud storage evaluation (pending cross-library discussion)
 - 📋 Cosmography shim (when SSOT expands)
 - 📋 Registry API clients (if SSOT repos expose HTTP endpoints)
-
-### Known Gaps
-
-1. **Foundry Module**: Not yet implemented - required for enterprise cloud storage operations
-2. **Advanced Schema Validation**: Catalog + diagnostics in flight; remaining work includes composition helpers and drift tooling
-3. **Terminal Catalog**: Static configuration only; needs dynamic detection
-4. **Progressive Logging**: Interface defined but not yet implemented with profiles
-5. **Metrics/Tracing**: Not yet started - planned for v0.2.0
 
 ### Migration Path
 
@@ -262,7 +259,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.0
+- **Current Version**: 0.1.2
 - **Crucible Version**: 2025.10.2
 - **Go Version**: 1.21+
 - **License**: MIT

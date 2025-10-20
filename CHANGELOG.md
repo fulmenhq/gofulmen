@@ -9,14 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Schema** - Catalog metadata, offline metaschema validation, structured diagnostics, shared validator cache, composition/diff helpers, and CLI shim with optional goneat bridge
-- **Config** - Three-layer configuration loader (defaults → user → runtime) with schema validation helpers and environment override parsing
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.2] - 2025-10-20
+
+### Added
+
+- **Logging** - Progressive logging system with profiles, middleware pipeline, and policy enforcement
+  - **Progressive Profiles**: SIMPLE (minimal), STRUCTURED (JSON + middleware), ENTERPRISE (full observability), CUSTOM (flexible)
+  - **Middleware Pipeline**: Pluggable event processing with correlation, redaction, and throttling middleware
+  - **Correlation Middleware**: UUIDv7 correlation ID injection for distributed tracing
+  - **Redaction Middleware**: Pattern-based PII and secrets redaction
+  - **Throttling Middleware**: Token bucket rate limiting with configurable drop policies
+  - **Policy Enforcement**: YAML-based logging governance with environment-specific rules
+  - **Config Normalization**: Case-insensitive profiles, automatic defaults, middleware deduplication
+  - **Full Crucible Envelope**: 20+ fields including traceId, spanId, contextId, requestId
+  - **Profile Validation**: Strict requirements for middleware, throttling, and policy enforcement
+  - **Integration Tests**: End-to-end testing for all profiles and middleware combinations
+  - **Golden Tests**: Cross-language compatibility validation (pyfulmen/tsfulmen alignment)
+  - **Godoc Examples**: 10+ comprehensive examples for all major features
+  - **Test Coverage**: 89.2% with 190+ tests
+  - **Documentation**: Complete progressive logging guide with migration paths
+- **Schema** - Catalog metadata, offline metaschema validation, structured diagnostics, shared validator cache, composition/diff helpers, and CLI shim with optional goneat bridge
+- **Config** - Three-layer configuration loader (defaults → user → runtime) with schema validation helpers and environment override parsing
 
 ### Fixed
 
