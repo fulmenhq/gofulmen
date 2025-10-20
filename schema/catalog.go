@@ -108,26 +108,16 @@ func (c *Catalog) CompareSchema(id string, other []byte) ([]SchemaDiff, error) {
 		return nil, err
 	}
 
-	canonicalCatalog, err := loadAndNormalize(desc.Path)
+	original, err := os.ReadFile(desc.Path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load schema %s: %w", id, err)
+		return nil, fmt.Errorf("failed to read schema %s: %w", id, err)
 	}
 
-	canonicalOther, err := normalizeSchemaBytes(other)
+	diffs, err := DiffSchemas(original, other)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse comparison schema: %w", err)
+		return nil, err
 	}
-
-	if string(canonicalCatalog) == string(canonicalOther) {
-		return nil, nil
-	}
-
-	return []SchemaDiff{
-		{
-			Path:    id,
-			Message: "schemas differ",
-		},
-	}, nil
+	return diffs, nil
 }
 
 // ValidatorByID returns (and caches) a validator for the schema ID.

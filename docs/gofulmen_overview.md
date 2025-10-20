@@ -254,7 +254,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 - [Logging](../logging/README.md) - Structured logging with progressive profiles
 - [Config](../config/README.md) - Configuration management, XDG paths, and three-layer loader (preview)
-- [Schema](../schema/README.md) - JSON Schema validation
+- [Schema](../schema/README.md) - JSON Schema validation, catalog discovery, composition/diff helpers
 - [Crucible](../crucible/README.md) - Access to Crucible SSOT assets
 - [Bootstrap](../bootstrap/README.md) - Tool installation and management
 - [Pathfinder](../pathfinder/README.md) - Safe filesystem discovery

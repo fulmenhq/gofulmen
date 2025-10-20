@@ -211,6 +211,17 @@ Calibrate your terminal for proper Unicode display:
 go run ./cmd/terminal-calibrate
 ```
 
+### Schema Validation Shim
+
+Demonstrate the schema validation APIs without installing goneat:
+
+```bash
+go run ./cmd/gofulmen-schema -- schema validate \
+  --schema-id pathfinder/v1.0.0/path-result ./path-result.json
+
+go run ./cmd/gofulmen-schema -- schema validate-schema ./schema.json
+```
+
 ### Bootstrap
 
 Install external tools using goneat bootstrap pattern:

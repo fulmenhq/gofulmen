@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Schema** - Catalog metadata, offline metaschema validation, structured diagnostics, and shared validator cache
+- **Schema** - Catalog metadata, offline metaschema validation, structured diagnostics, shared validator cache, and schema composition/diff helpers
 - **Config** - Three-layer configuration loader (defaults → user → runtime) with schema validation helpers and environment override parsing
 
 ### Changed

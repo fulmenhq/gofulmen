@@ -115,6 +115,33 @@ func newCompiler(metaDir string) (*jsonschema.Compiler, error) {
 	return compiler, nil
 }
 
+// ValidateSchemaBytes validates a schema document against the embedded metaschema bundles.
+func ValidateSchemaBytes(schemaBytes []byte) ([]Diagnostic, error) {
+	metaDir := filepath.Join(resolveDefaultBaseDir(), metaDirName)
+	compiler, err := newCompiler(metaDir)
+	if err != nil {
+		return nil, err
+	}
+
+	const schemaURL = "memory://schema.json"
+	if err := compiler.AddResource(schemaURL, strings.NewReader(string(schemaBytes))); err != nil {
+		return nil, fmt.Errorf("failed to add schema resource: %w", err)
+	}
+
+	_, err = compiler.Compile(schemaURL)
+	if err == nil {
+		return nil, nil
+	}
+
+	if schemaErr, ok := err.(*jsonschema.SchemaError); ok {
+		if validationErr, ok := schemaErr.Err.(*jsonschema.ValidationError); ok {
+			return diagnosticsFromValidationError(validationErr, sourceGoFulmen), nil
+		}
+		return nil, schemaErr.Err
+	}
+	return nil, err
+}
+
 // ValidateSchemaByID validates the schema definition referenced by ID.
 func (c *Catalog) ValidateSchemaByID(id string) ([]Diagnostic, error) {
 	desc, err := c.GetSchema(id)
