@@ -96,3 +96,32 @@ func SaveConfig(config *Config, path string) error {
 
 	return nil
 }
+
+// DefaultUserConfigPaths builds candidate file paths (in priority order) for the provided
+// application name and file names. Useful when layering user configuration over defaults.
+func DefaultUserConfigPaths(appName string, files []string) []string {
+	if len(files) == 0 {
+		return nil
+	}
+
+	var dirs []string
+	xdg := GetXDGBaseDirs()
+	if xdg.ConfigHome != "" {
+		dirs = append(dirs, filepath.Join(xdg.ConfigHome, appName))
+	}
+	if home := os.Getenv("HOME"); home != "" {
+		dirs = append(dirs,
+			filepath.Join(home, "."+appName),
+			home,
+		)
+	}
+	dirs = append(dirs, ".")
+
+	var paths []string
+	for _, dir := range dirs {
+		for _, name := range files {
+			paths = append(paths, filepath.Join(dir, name))
+		}
+	}
+	return paths
+}

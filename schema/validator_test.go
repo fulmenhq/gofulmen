@@ -40,16 +40,18 @@ func TestValidate(t *testing.T) {
 		"age":  30,
 	}
 
-	if err := validator.Validate(validData); err != nil {
-		t.Errorf("Valid data should pass validation: %v", err)
+	if diags, err := validator.ValidateData(validData); err != nil || len(diags) > 0 {
+		t.Fatalf("Valid data should pass validation, err=%v diagnostics=%v", err, diags)
 	}
 
 	invalidData := map[string]interface{}{
 		"age": 30,
 	}
 
-	if err := validator.Validate(invalidData); err == nil {
-		t.Error("Invalid data should fail validation")
+	if diags, err := validator.ValidateData(invalidData); err != nil {
+		t.Fatalf("unexpected error validating data: %v", err)
+	} else if len(diags) == 0 {
+		t.Error("expected diagnostics for invalid data")
 	}
 }
 
@@ -60,12 +62,14 @@ func TestValidateJSON(t *testing.T) {
 	}
 
 	validJSON := `{"name": "Jane", "age": 25}`
-	if err := validator.ValidateJSON([]byte(validJSON)); err != nil {
-		t.Errorf("Valid JSON should pass: %v", err)
+	if diags, err := validator.ValidateJSON([]byte(validJSON)); err != nil || len(diags) > 0 {
+		t.Fatalf("Valid JSON should pass: err=%v diagnostics=%v", err, diags)
 	}
 
 	invalidJSON := `{"age": 25}`
-	if err := validator.ValidateJSON([]byte(invalidJSON)); err == nil {
-		t.Error("Invalid JSON should fail")
+	if diags, err := validator.ValidateJSON([]byte(invalidJSON)); err != nil {
+		t.Fatalf("unexpected error validating json: %v", err)
+	} else if len(diags) == 0 {
+		t.Error("Invalid JSON should produce diagnostics")
 	}
 }

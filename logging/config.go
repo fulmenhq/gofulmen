@@ -112,10 +112,13 @@ func ValidateConfig(jsonData []byte) error {
 	}
 
 	// Validate
-	if err := validator.ValidateJSON(jsonData); err != nil {
+	diags, err := validator.ValidateJSON(jsonData)
+	if err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
-
+	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
+		return verrs
+	}
 	return nil
 }
 

@@ -323,7 +323,14 @@ func ValidateFindQuery(query FindQuery) error {
 		return fmt.Errorf("failed to create validator: %w", err)
 	}
 
-	return validator.Validate(query)
+	diags, err := validator.ValidateData(query)
+	if err != nil {
+		return fmt.Errorf("failed to validate query: %w", err)
+	}
+	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
+		return verrs
+	}
+	return nil
 }
 
 // ValidatePathResult validates a PathResult against the schema
@@ -343,7 +350,14 @@ func ValidatePathResult(result PathResult) error {
 		return fmt.Errorf("failed to create validator: %w", err)
 	}
 
-	return validator.Validate(result)
+	diags, err := validator.ValidateData(result)
+	if err != nil {
+		return fmt.Errorf("failed to validate path result: %w", err)
+	}
+	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
+		return verrs
+	}
+	return nil
 }
 
 // ValidatePathResults validates multiple PathResult objects

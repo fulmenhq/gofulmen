@@ -1,0 +1,6 @@
+version: "v1.0.0"
+settings:
+  retries: 3
+  endpoints:
+    - "https://api.fulmen.dev"
+    - "https://api.backup.fulmen.dev"

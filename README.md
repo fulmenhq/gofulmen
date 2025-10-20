@@ -97,9 +97,14 @@ if err != nil {
 }
 
 // Validate data
-err = validator.Validate("hello")
+diagnostics, err := validator.ValidateData("hello")
 if err != nil {
-    fmt.Printf("Validation failed: %v\n", err)
+    log.Fatal(err)
+}
+if len(diagnostics) > 0 {
+    for _, d := range diagnostics {
+        fmt.Printf("%s: %s\n", d.Pointer, d.Message)
+    }
 }
 ```
 
@@ -117,6 +122,37 @@ if err != nil {
 // Get XDG directories
 xdg := config.GetXDGBaseDirs()
 fmt.Printf("Config dir: %s\n", xdg.ConfigHome)
+
+// Three-layer configuration (defaults + user + runtime)
+opts := config.LayeredConfigOptions{
+    Category:     "sample",
+    Version:      "v1.0.0",
+    DefaultsFile: "sample-defaults.yaml",
+    SchemaID:     "sample/v1.0.0/schema",
+}
+
+merged, diagnostics, err := config.LoadLayeredConfig(opts,
+    map[string]any{"settings": map[string]any{"retries": 5}},
+)
+if err != nil {
+    log.Fatal(err)
+}
+if len(diagnostics) > 0 {
+    log.Fatalf("validation issues: %v", diagnostics)
+}
+
+fmt.Printf("Retries => %v\n", merged["settings"].(map[string]any)["retries"])
+
+// Environment variable overrides
+envOverrides, err := config.LoadEnvOverrides([]config.EnvVarSpec{
+    {Name: "APP_RETRIES", Path: []string{"settings", "retries"}, Type: config.EnvInt},
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+merged, _, _ = config.LoadLayeredConfig(opts, envOverrides)
+fmt.Printf("Retries (env) => %v\n", merged["settings"].(map[string]any)["retries"])
 ```
 
 ### Foundry Package

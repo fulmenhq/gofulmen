@@ -144,6 +144,48 @@ The library searches for configuration files in the following order:
 go test ./config/...
 ```
 
+## Three-Layer Configuration (Preview)
+
+Use `LoadLayeredConfig` to merge Crucible defaults, user overrides, and runtime overrides while validating against the synced schema catalog:
+
+```go
+opts := config.LayeredConfigOptions{
+    Category:     "sample",
+    Version:      "v1.0.0",
+    DefaultsFile: "sample-defaults.yaml",
+    SchemaID:     "sample/v1.0.0/schema",
+}
+
+overrides := map[string]any{
+    "settings": map[string]any{
+        "retries": 5,
+    },
+}
+
+merged, diagnostics, err := config.LoadLayeredConfig(opts, overrides)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, d := range diagnostics {
+    fmt.Printf("%s: %s\n", d.Pointer, d.Message)
+}
+
+fmt.Printf("Retries => %v\n", merged["settings"].(map[string]any)["retries"])
+
+envOverrides, err := config.LoadEnvOverrides([]config.EnvVarSpec{
+    {Name: "APP_RETRIES", Path: []string{"settings", "retries"}, Type: config.EnvInt},
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+merged, _, _ = config.LoadLayeredConfig(opts, envOverrides)
+fmt.Printf("Retries (env) => %v\n", merged["settings"].(map[string]any)["retries"])
+```
+
+Advanced scenarios can set `DefaultsRoot`, `UserPaths`, or pass a custom `*schema.Catalog` through `LayeredConfigOptions`.
+
 ## Future Enhancements
 
 - Schema validation for configuration files

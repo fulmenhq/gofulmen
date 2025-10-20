@@ -115,7 +115,7 @@ Policy files are resolved in order:
 **In Progress** (v0.1.0 Upscaling):
 
 - 🚧 Foundry module implementation (cloud storage, country codes, HTTP status, MIME types)
-- 🚧 Enhanced schema validation (Draft 2020-12 full support, composition utilities)
+- 🚧 Schema validation module alignment (catalog discovery, offline metas, structured diagnostics)
 - 🚧 Improved terminal catalog (dynamic detection, runtime configuration)
 - 🚧 Progressive logging implementation (profile-based configuration, middleware pipeline)
 
@@ -129,7 +129,7 @@ Policy files are resolved in order:
 ### Known Gaps
 
 1. **Foundry Module**: Not yet implemented - required for enterprise cloud storage operations
-2. **Advanced Schema Validation**: Current implementation is basic; needs Draft 2020-12 full support
+2. **Advanced Schema Validation**: Catalog + diagnostics in flight; remaining work includes composition helpers and drift tooling
 3. **Terminal Catalog**: Static configuration only; needs dynamic detection
 4. **Progressive Logging**: Interface defined but not yet implemented with profiles
 5. **Metrics/Tracing**: Not yet started - planned for v0.2.0
@@ -253,7 +253,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 ### Package Documentation
 
 - [Logging](../logging/README.md) - Structured logging with progressive profiles
-- [Config](../config/README.md) - Configuration management and XDG paths
+- [Config](../config/README.md) - Configuration management, XDG paths, and three-layer loader (preview)
 - [Schema](../schema/README.md) - JSON Schema validation
 - [Crucible](../crucible/README.md) - Access to Crucible SSOT assets
 - [Bootstrap](../bootstrap/README.md) - Tool installation and management

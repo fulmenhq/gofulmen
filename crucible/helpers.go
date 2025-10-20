@@ -36,10 +36,13 @@ func ValidateAgainstSchema(schemaData []byte, jsonData []byte) error {
 		return fmt.Errorf("failed to create validator: %w", err)
 	}
 
-	if err := validator.ValidateJSON(jsonData); err != nil {
+	diags, err := validator.ValidateJSON(jsonData)
+	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
-
+	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
+		return verrs
+	}
 	return nil
 }
 
