@@ -573,11 +573,356 @@ logging, _ := crucible.SchemaRegistry.Observability().Logging().V1_0_0()
 schemaData, _ := logging.LoggerConfig()
 ```
 
-## Future Enhancements
+## Progressive Logging Profiles
 
-- Sampling for high-volume logs
-- Log aggregation integration (Loki, CloudWatch)
-- OpenTelemetry bridge
-- Custom sink plugins
-- Correlation ID middleware
-- Rate limiting/throttling
+The logging library supports progressive complexity through four profiles: SIMPLE, STRUCTURED, ENTERPRISE, and CUSTOM.
+
+### Profile: SIMPLE
+
+Minimal logging for simple applications and CLIs.
+
+**Features:**
+
+- Console output only (stderr)
+- No middleware
+- No throttling
+- Human-readable format
+- Minimal overhead
+
+**Example:**
+
+```go
+config := &logging.LoggerConfig{
+    Profile:      logging.ProfileSimple,
+    DefaultLevel: "INFO",
+    Service:      "my-cli",
+    Environment:  "development",
+    Sinks: []logging.SinkConfig{
+        {Type: "console", Format: "console"},
+    },
+}
+logger, _ := logging.New(config)
+logger.Info("Application started")
+```
+
+### Profile: STRUCTURED
+
+JSON logging with optional middleware for production services.
+
+**Features:**
+
+- JSON format for log aggregation
+- Optional correlation middleware
+- Optional throttling (recommended: 1000 logs/sec)
+- Max 2 middleware recommended
+- Static field enrichment
+
+**Example:**
+
+```go
+config := &logging.LoggerConfig{
+    Profile:      logging.ProfileStructured,
+    DefaultLevel: "INFO",
+    Service:      "api-service",
+    Environment:  "production",
+    Middleware: []logging.MiddlewareConfig{
+        {Name: "correlation", Enabled: true, Order: 100},
+    },
+    Throttling: &logging.ThrottlingConfig{
+        Enabled:    true,
+        MaxRate:    1000,
+        BurstSize:  2000,
+        DropPolicy: "drop-oldest",
+    },
+    StaticFields: map[string]any{
+        "app_version": "2.0.0",
+        "region":      "us-east-1",
+    },
+    Sinks: []logging.SinkConfig{
+        {Type: "console", Format: "json"},
+    },
+}
+logger, _ := logging.New(config)
+```
+
+### Profile: ENTERPRISE
+
+Full-featured logging with policy enforcement for enterprise applications.
+
+**Features:**
+
+- JSON format required
+- At least 1 enabled middleware required
+- Throttling required
+- Policy file enforcement required
+- Full observability envelope
+- Caller and stacktrace tracking
+- Multiple sinks supported
+
+**Example:**
+
+```go
+config := &logging.LoggerConfig{
+    Profile:      logging.ProfileEnterprise,
+    DefaultLevel: "INFO",
+    Service:      "secure-service",
+    Component:    "api-gateway",
+    Environment:  "production",
+    PolicyFile:   "/etc/fulmen/logging-policy.yaml",
+    Middleware: []logging.MiddlewareConfig{
+        {Name: "correlation", Enabled: true, Order: 100},
+        {Name: "redaction", Enabled: true, Order: 200},
+    },
+    Throttling: &logging.ThrottlingConfig{
+        Enabled:    true,
+        MaxRate:    5000,
+        BurstSize:  10000,
+        DropPolicy: "drop-oldest",
+    },
+    EnableCaller:     true,
+    EnableStacktrace: true,
+    Sinks: []logging.SinkConfig{
+        {Type: "console", Format: "json"},
+        {Type: "file", Format: "json", File: &logging.FileSinkConfig{Path: "/var/log/app.log"}},
+    },
+}
+logger, _ := logging.New(config)
+```
+
+### Profile: CUSTOM
+
+Maximum flexibility for specialized use cases.
+
+**Features:**
+
+- No restrictions on format, middleware, or throttling
+- Full control over all settings
+- Suitable for debugging, specialized pipelines, or migration scenarios
+
+**Example:**
+
+```go
+config := &logging.LoggerConfig{
+    Profile:      logging.ProfileCustom,
+    DefaultLevel: "DEBUG",
+    Service:      "debug-service",
+    Environment:  "development",
+    Sinks: []logging.SinkConfig{
+        {Type: "console", Format: "text"},
+    },
+    EnableCaller: true,
+}
+logger, _ := logging.New(config)
+```
+
+## Middleware System
+
+The logging library supports a pluggable middleware system for processing log events.
+
+### Built-in Middleware
+
+#### Correlation Middleware
+
+Injects UUIDv7 correlation IDs into log events for request tracing.
+
+```go
+{Name: "correlation", Enabled: true, Order: 100}
+```
+
+#### Redaction Middleware
+
+Redacts sensitive fields matching configured patterns.
+
+```go
+{
+    Name: "redaction",
+    Enabled: true,
+    Order: 200,
+    Config: map[string]any{
+        "patterns": []string{"password", "secret", "api_key", "bearer"},
+    },
+}
+```
+
+#### Throttling Middleware
+
+Rate-limits log output to prevent flooding.
+
+```go
+{Name: "throttling", Enabled: true, Order: 300}
+```
+
+### Middleware Ordering
+
+Middleware executes in ascending order (lower Order values first):
+
+- **100**: Correlation (inject IDs early)
+- **200**: Redaction (sanitize before output)
+- **300**: Throttling (filter after processing)
+
+### Custom Middleware
+
+Implement the `Middleware` interface:
+
+```go
+type Middleware interface {
+    Process(event *LogEvent)
+    Order() int
+    Name() string
+}
+```
+
+Register with the global registry:
+
+```go
+logging.DefaultRegistry().Register("my-middleware", factory)
+```
+
+## Config Normalization
+
+The library automatically normalizes configurations before validation:
+
+### Profile Normalization
+
+- Case-insensitive: `simple` → `SIMPLE`
+- Default: empty → `SIMPLE`
+- Validation: warns on invalid profiles
+
+### Middleware Normalization
+
+- Deduplicates by name (last definition wins)
+- Initializes nil Config to empty map
+- Preserves order
+
+### Throttling Normalization
+
+- Default maxRate: 1000 logs/sec
+- Default burstSize: 2x maxRate
+- Default dropPolicy: "drop-oldest"
+- Validates dropPolicy (drop-oldest|drop-newest|block)
+
+### Profile-Specific Defaults
+
+**SIMPLE:**
+
+- Removes all middleware
+- Disables throttling
+- Adds default console sink if missing
+
+**STRUCTURED:**
+
+- Warns if >2 middleware configured
+
+**ENTERPRISE:**
+
+- Adds throttling if missing
+- Adds correlation middleware if no enabled middleware
+- Warns if policyFile missing
+
+**CUSTOM:**
+
+- No automatic adjustments
+
+## Migration Guide
+
+### From Basic Logging
+
+**Before:**
+
+```go
+config := logging.DefaultConfig("my-service")
+logger, _ := logging.New(config)
+```
+
+**After (Explicit Profile):**
+
+```go
+config := &logging.LoggerConfig{
+    Profile:     logging.ProfileSimple,  // or STRUCTURED
+    Service:     "my-service",
+    Environment: "production",
+    Sinks:       []logging.SinkConfig{{Type: "console", Format: "console"}},
+}
+logger, _ := logging.New(config)
+```
+
+### Adding Correlation
+
+```go
+config.Profile = logging.ProfileStructured
+config.Middleware = []logging.MiddlewareConfig{
+    {Name: "correlation", Enabled: true, Order: 100},
+}
+```
+
+### Enabling Throttling
+
+```go
+config.Throttling = &logging.ThrottlingConfig{
+    Enabled:    true,
+    MaxRate:    1000,
+    BurstSize:  2000,
+    DropPolicy: "drop-oldest",
+}
+```
+
+### Policy Enforcement
+
+```go
+config.Profile = logging.ProfileEnterprise
+config.PolicyFile = "/etc/fulmen/logging-policy.yaml"
+```
+
+## Policy Files
+
+Enterprise profile requires a policy file for governance:
+
+```yaml
+# /etc/fulmen/logging-policy.yaml
+strictMode: true
+allowedProfiles:
+  - STRUCTURED
+  - ENTERPRISE
+minimumLevel: INFO
+requiredFields:
+  - service
+  - environment
+  - correlation_id
+maxEventSize: 32768
+environments:
+  production:
+    minimumLevel: WARN
+    requireThrottling: true
+```
+
+## Cross-Language Compatibility
+
+Log events use standardized field names for compatibility with pyfulmen and tsfulmen:
+
+- `timestamp`: RFC3339Nano format
+- `severity`: Uppercase severity levels (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+- `correlationId`: UUIDv7 format (camelCase per JSON conventions)
+- `service`, `environment`, `component`: Standard metadata fields
+
+## Testing
+
+Run the full test suite:
+
+```bash
+go test ./logging/...
+```
+
+Run specific test categories:
+
+```bash
+go test ./logging -run TestIntegration  # Integration tests
+go test ./logging -run TestGolden       # Cross-language compatibility
+go test ./logging -run Example          # Godoc examples
+```
+
+Check test coverage:
+
+```bash
+go test ./logging -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
