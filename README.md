@@ -153,6 +153,13 @@ if err != nil {
 
 merged, _, _ = config.LoadLayeredConfig(opts, envOverrides)
 fmt.Printf("Retries (env) => %v\n", merged["settings"].(map[string]any)["retries"])
+
+// Merge schemas at runtime (base + overlay)
+mergedSchema, _ := schema.MergeJSONSchemas(
+    []byte(`{"type":"object"}`),
+    []byte(`{"properties":{"name":{"type":"string"}}}`),
+)
+fmt.Printf("Merged schema: %s\n", string(mergedSchema))
 ```
 
 ### Foundry Package

@@ -7,7 +7,7 @@ import (
 
 func TestMergeJSONSchemas(t *testing.T) {
 	base := []byte(`{"type":"object","properties":{"name":{"type":"string"}}}`)
-	overlay := []byte(`{"properties":{"age":{"type":"integer"}}}`)
+	overlay := []byte(`{"properties":{"age":{"type":"integer"}},"required":["name","age"]}`)
 
 	mergedBytes, err := MergeJSONSchemas(base, overlay)
 	if err != nil {
@@ -25,6 +25,11 @@ func TestMergeJSONSchemas(t *testing.T) {
 	}
 	if _, ok := props["age"]; !ok {
 		t.Fatalf("expected age property merged")
+	}
+
+	required := merged["required"].([]any)
+	if len(required) != 2 {
+		t.Fatalf("expected required array to be replaced, got %v", required)
 	}
 }
 
