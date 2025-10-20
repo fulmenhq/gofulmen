@@ -286,7 +286,7 @@ func globalCatalog() *Catalog {
 }
 
 func loadAndNormalize(path string) ([]byte, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- Schema path is from catalog registry
 	if err != nil {
 		return nil, err
 	}

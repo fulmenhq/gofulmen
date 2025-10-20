@@ -144,7 +144,7 @@ func schemaValidateSchema(args []string) error {
 		}
 	}
 
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(path) // #nosec G304 -- User-provided path is intentional for CLI tool
 	if err != nil {
 		return fmt.Errorf("read schema: %w", err)
 	}
@@ -207,7 +207,7 @@ func runGoneat(args ...string) (string, error) {
 		binary = "goneat"
 	}
 
-	cmd := exec.Command(binary, args...)
+	cmd := exec.Command(binary, args...) // #nosec G204 -- Binary path from env var is expected for goneat integration
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

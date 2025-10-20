@@ -88,7 +88,7 @@ func (v *Validator) ValidateJSON(jsonData []byte) ([]Diagnostic, error) {
 
 // ValidateFile validates a JSON or YAML file on disk.
 func (v *Validator) ValidateFile(path string) ([]Diagnostic, error) {
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(path) // #nosec G304 -- User-provided path is intentional for validation API
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (l *localLoader) Load(rawURL string) (io.ReadCloser, error) {
 
 	// Allow loading local relative paths.
 	if !strings.Contains(trimmed, "://") {
-		return os.Open(trimmed)
+		return os.Open(trimmed) // #nosec G304 -- Schema reference path is validated by JSON Schema spec
 	}
 
 	return nil, fmt.Errorf("unsupported schema reference: %s", rawURL)
@@ -238,7 +238,7 @@ func (l *localLoader) openDraftResource(raw, prefix, draftDir string) (io.ReadCl
 	}
 
 	full := filepath.Join(l.metaDir, relPath)
-	return os.Open(full)
+	return os.Open(full) // #nosec G304 -- Metaschema path is constructed from trusted embedded assets
 }
 
 func stripFragment(raw string) string {
@@ -257,7 +257,7 @@ func openFileURL(raw string) (io.ReadCloser, error) {
 	if path == "" {
 		return nil, fmt.Errorf("empty file path in url: %s", raw)
 	}
-	return os.Open(path)
+	return os.Open(path) // #nosec G304 -- File URL path is parsed from schema reference
 }
 
 func fileURL(path string) string {

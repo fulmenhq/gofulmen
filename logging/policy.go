@@ -66,7 +66,7 @@ func LoadPolicy(policyFile string) (*LoggingPolicy, error) {
 }
 
 func loadPolicyFromPath(path string) (*LoggingPolicy, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- Policy path is from predefined search paths
 	if err != nil {
 		return nil, err
 	}

@@ -89,7 +89,7 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 }
 
 func loadConfigFile(path string) (map[string]any, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- Config path is from trusted XDG directories
 	if err != nil {
 		return nil, err
 	}
