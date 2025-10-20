@@ -1,0 +1,10 @@
+profile: SIMPLE
+defaultLevel: INFO
+service: test-simple-service
+environment: development
+sinks:
+  - type: console
+    format: console
+    console:
+      stream: stderr
+      colorize: false

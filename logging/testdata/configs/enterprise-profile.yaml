@@ -1,0 +1,48 @@
+profile: ENTERPRISE
+defaultLevel: INFO
+service: test-enterprise-service
+component: api-gateway
+environment: production
+policyFile: ../policies/strict-enterprise-policy.yaml
+sinks:
+  - type: console
+    format: json
+    console:
+      stream: stderr
+      colorize: false
+  - type: file
+    format: json
+    file:
+      path: /var/log/app/enterprise.log
+      maxSize: 100
+      maxAge: 30
+      maxBackups: 10
+      compress: true
+middleware:
+  - name: correlation
+    enabled: true
+    order: 100
+  - name: redaction
+    enabled: true
+    order: 200
+    config:
+      patterns:
+        - 'password'
+        - 'api_key'
+        - 'bearer'
+  - name: throttling
+    enabled: true
+    order: 300
+throttling:
+  enabled: true
+  maxRate: 5000
+  burstSize: 10000
+  windowSize: 1
+  dropPolicy: drop-oldest
+staticFields:
+  app_version: "2.5.1"
+  deployment: production
+  region: us-east-1
+  cluster: prod-cluster-01
+enableCaller: true
+enableStacktrace: true

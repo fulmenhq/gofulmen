@@ -1,0 +1,29 @@
+profile: STRUCTURED
+defaultLevel: INFO
+service: test-structured-service
+environment: production
+sinks:
+  - type: console
+    format: json
+    console:
+      stream: stderr
+      colorize: false
+middleware:
+  - name: correlation
+    enabled: true
+    order: 100
+  - name: redaction
+    enabled: true
+    order: 200
+    config:
+      patterns:
+        - 'password'
+        - 'secret'
+throttling:
+  enabled: true
+  maxRate: 1000
+  burstSize: 2000
+  dropPolicy: drop-oldest
+staticFields:
+  app_version: "1.0.0"
+  deployment: canary

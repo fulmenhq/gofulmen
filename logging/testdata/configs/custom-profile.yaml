@@ -1,0 +1,32 @@
+profile: CUSTOM
+defaultLevel: DEBUG
+service: test-custom-service
+environment: development
+sinks:
+  - type: console
+    format: text
+    console:
+      stream: stderr
+      colorize: true
+  - type: file
+    format: json
+    file:
+      path: /tmp/custom-debug.log
+      maxSize: 50
+      maxAge: 7
+      maxBackups: 3
+      compress: false
+middleware:
+  - name: correlation
+    enabled: true
+    order: 50
+  - name: custom-enricher
+    enabled: true
+    order: 150
+    config:
+      add_hostname: true
+      add_pid: true
+staticFields:
+  environment_type: custom
+  debug_mode: true
+enableCaller: true
