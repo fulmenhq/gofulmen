@@ -2,7 +2,115 @@
 
 This document tracks release notes and checklists for gofulmen releases.
 
+> **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
+
 ## [Unreleased]
+
+## [0.1.3] - 2025-10-21
+
+### Docscribe Module + Crucible SSOT Sync
+
+**Release Type**: Feature Release
+**Release Date**: October 21, 2025
+**Status**: ✅ Ready for Release
+
+#### Features
+
+**Docscribe Module (Complete)**:
+
+- ✅ **Frontmatter Processing**: Extract YAML frontmatter with metadata and clean content separation
+- ✅ **Header Extraction**: ATX (#) and Setext (===) style headers with anchors and line numbers
+- ✅ **Format Detection**: Heuristic-based detection for markdown, YAML, JSON, TOML formats
+- ✅ **Multi-Document Splitting**: Handle YAML streams and concatenated markdown with smart delimiter parsing
+- ✅ **Document Inspection**: Fast metadata extraction (<1ms for 100KB documents)
+- ✅ **Source-Agnostic Design**: Works with Crucible, Cosmography, local files, or any content source
+- ✅ **Crucible Integration**: Integrates with `crucible.GetDoc()` for SSOT asset access
+- ✅ **Performance Optimized**: InspectDocument <1ms, ParseFrontmatter <5ms, SplitDocuments <10ms
+- ✅ **Comprehensive Tests**: 14 test functions with 56 assertions, all passing
+- ✅ **Test Fixtures**: 13 fixtures covering frontmatter, headers, format detection, multi-doc scenarios
+- ✅ **Code-Block Awareness**: Correctly handles fenced code blocks, ignoring delimiters inside code
+- ✅ **Error Handling**: Typed errors (ParseError, FormatError) with line numbers and helpful messages
+
+**Crucible SSOT Sync (2025.10.2)**:
+
+- ✅ **Docscribe Module Standard**: Complete specification in `docs/crucible-go/standards/library/modules/docscribe.md`
+- ✅ **Module Manifest**: Updated `config/crucible-go/library/v1.0.0/module-manifest.yaml` with docscribe entry
+- ✅ **Helper Library Standard**: Updated with Crucible Overview requirement for all helper libraries
+- ✅ **Fulmen Forge Standard**: Added `docs/crucible-go/architecture/fulmen-forge-workhorse-standard.md`
+- ✅ **Module Catalog**: Updated module index and discovery metadata
+
+**Documentation Compliance**:
+
+- ✅ **Crucible Overview Section**: Added to README.md explaining SSOT relationship and shim/docscribe purpose
+- ✅ **Package Documentation**: Comprehensive doc.go with usage examples and design principles
+- ✅ **Integration Examples**: Shows docscribe + crucible.GetDoc() workflow
+
+#### Quality Metrics
+
+- ✅ **Test Coverage**: 100% for core functions (ParseFrontmatter, ExtractHeaders, SplitDocuments)
+- ✅ **All Tests Passing**: 14 test functions, 56 assertions
+- ✅ **Code Quality**: `make check-all` passing (format, lint, tests)
+- ✅ **Performance Validated**: All performance targets met
+
+#### Breaking Changes
+
+- None (fully backward compatible with v0.1.2)
+
+#### Migration Notes
+
+Docscribe is a new module with no migration required. To use:
+
+```go
+import (
+    "github.com/fulmenhq/gofulmen/docscribe"
+    "github.com/fulmenhq/gofulmen/crucible"
+)
+
+// Get documentation from Crucible
+content, err := crucible.GetDoc("standards/coding/go.md")
+if err != nil {
+    return err
+}
+
+// Extract frontmatter and content
+body, metadata, err := docscribe.ParseFrontmatter([]byte(content))
+if err != nil {
+    return err
+}
+
+// Extract headers for TOC generation
+headers, err := docscribe.ExtractHeaders([]byte(content))
+if err != nil {
+    return err
+}
+```
+
+See `docscribe/doc.go` for comprehensive examples.
+
+#### Quality Gates
+
+- [x] All tests passing (14 functions, 56 assertions)
+- [x] 100% coverage on core functions
+- [x] `make check-all` passed
+- [x] Code formatted with goneat
+- [x] No linting issues
+- [x] Documentation complete
+- [x] Crucible sync to 2025.10.2 complete
+- [x] Performance targets validated
+
+#### Release Checklist
+
+- [x] Version number set in VERSION (0.1.3)
+- [x] CHANGELOG.md updated with v0.1.3 release notes
+- [x] RELEASE_NOTES.md updated
+- [x] README.md updated with Crucible Overview
+- [x] All tests passing
+- [x] Code quality checks passing
+- [x] docs/releases/v0.1.3.md created
+- [ ] Git tag created (v0.1.3) - pending
+- [ ] Tag pushed to GitHub - pending
+
+---
 
 ## [0.1.2] - 2025-10-20
 
@@ -222,36 +330,3 @@ All existing APIs remain stable. New Foundry package is additive.
 - [x] Crucible sync to 2025.10.2 complete
 - [x] Git tag created (v0.1.1)
 - [x] Tag pushed to GitHub
-
----
-
-## [0.1.0] - 2025-10-13
-
-### Initial Foundation Release
-
-**Release Type**: Foundation Bootstrap
-**Release Date**: October 13, 2025
-**Status**: ✅ Released
-
-#### Features
-
-- ✅ **Bootstrap** package - goneat installation with download, link, and verify methods
-- ✅ **Config** package - XDG Base Directory support and Fulmen configuration paths
-- ✅ **Logging** package - Structured logging with RFC3339Nano timestamps and severity filtering
-- ✅ **Schema** package - JSON Schema validation (draft 2020-12) with Crucible integration
-- ✅ **Crucible** package - Embedded access to SSOT assets (docs, schemas, config)
-- ✅ **Pathfinder** package - Safe filesystem discovery with path traversal prevention
-- ✅ **ASCII** package - Terminal utilities, box drawing, Unicode analysis, and terminal overrides
-- ✅ Comprehensive test coverage (85% average across all packages)
-- ✅ Goneat integration for SSOT sync and version management
-- ✅ Documentation, operational runbooks, and MIT licensing
-- ✅ Repository safety protocols and agent attribution standards
-
-#### Quality Gates
-
-- [x] 7 core packages implemented
-- [x] 85% average test coverage
-- [x] All tests passing
-- [x] Documentation complete
-- [x] Crucible integration verified
-- [x] Repository structure compliant with standards

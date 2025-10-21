@@ -19,6 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.3] - 2025-10-21
+
+### Added
+
+- **Docscribe** package - Lightweight markdown and YAML documentation processing
+  - Frontmatter extraction and metadata parsing (YAML frontmatter with error recovery)
+  - Markdown header extraction with anchors and line numbers (ATX and Setext styles)
+  - Format detection (markdown, YAML, JSON, TOML) with heuristic-based sniffing
+  - Multi-document splitting (YAML streams, concatenated markdown with double-delimiter handling)
+  - Document inspection with <1ms performance target for 100KB documents
+  - Source-agnostic design works with Crucible, Cosmography, or any content source
+  - Integrates with crucible.GetDoc() for SSOT asset access
+  - Performance targets: InspectDocument <1ms, ParseFrontmatter <5ms, SplitDocuments <10ms
+  - Comprehensive test coverage (14 test functions, 56 assertions)
+  - Test fixtures for frontmatter, headers, format detection, and multi-doc scenarios
+- **Crucible Overview** section added to README.md per helper library standard
+  - Explains what Crucible is and why the shim/docscribe module matters
+  - Provides learning resources for SSOT relationship
+- **Crucible SSOT Sync** to version 2025.10.2
+  - Docscribe module manifest entry and standard documentation
+  - Updated helper library standard with Crucible Overview requirement
+  - Added Fulmen Forge workhorse standard
+  - Module catalog updates
+
+### Fixed
+
+- **Docscribe** - Double-delimiter pattern handling (---\n\n---) for proper markdown document separation in multi-document splits
+
 ## [0.1.2] - 2025-10-20
 
 ### Added

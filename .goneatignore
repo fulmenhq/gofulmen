@@ -1,0 +1,17 @@
+# Goneat Ignore File
+# Exclude files and directories from goneat formatting and linting
+
+# Crucible SSOT Assets - Managed by Crucible, do not format
+docs/crucible-go/
+schemas/crucible-go/
+config/crucible-go/
+
+# Vendor and dependencies
+vendor/
+
+# Build artifacts
+dist/
+bin/
+
+# Test fixtures (keep our own fixtures, but exclude crucible synced ones)
+test/fixtures/crucible/

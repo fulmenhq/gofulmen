@@ -18,6 +18,22 @@ Gofulmen is the Go foundation library for the FulmenHQ ecosystem, providing ente
 
 **Design Philosophy**: Progressive complexity with enterprise-grade defaults. Simple use cases require minimal configuration, while complex applications have access to full enterprise features.
 
+## Crucible Overview
+
+**What is Crucible?**
+
+Crucible is the FulmenHQ single source of truth (SSOT) for schemas, standards, and configuration templates. It ensures consistent APIs, documentation structures, and behavioral contracts across all language foundations (gofulmen, pyfulmen, tsfulmen, etc.).
+
+**Why the Shim & Docscribe Module?**
+
+Rather than copying Crucible assets into every project, helper libraries provide idiomatic access through shim APIs. This keeps your application lightweight, versioned correctly, and aligned with ecosystem-wide standards. The docscribe module lets you discover, parse, and validate Crucible content programmatically without manual file management.
+
+**Where to Learn More:**
+
+- [Crucible Repository](https://github.com/fulmenhq/crucible) - SSOT schemas, docs, and configs
+- [Fulmen Technical Manifesto](crucible-go/architecture/fulmen-technical-manifesto.md) - Philosophy and design principles
+- [SSOT Sync Standard](crucible-go/standards/library/modules/ssot-sync.md) - How libraries stay synchronized
+
 ## Module Catalog
 
 | Module          | Status    | Specification                                                                   | Purpose                                                            |
@@ -26,6 +42,7 @@ Gofulmen is the Go foundation library for the FulmenHQ ecosystem, providing ente
 | **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE) |
 | **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support        |
 | **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards           |
+| **docscribe/**  | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing    |
 | **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories              |
 | **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection           |
 | **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing         |
