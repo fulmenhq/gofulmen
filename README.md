@@ -6,6 +6,21 @@ Gofulmen is a collection of Go packages that provide consistent, high-quality im
 
 📖 **[Read the complete library overview](docs/gofulmen_overview.md)** for comprehensive documentation including module catalog, dependency map, and roadmap.
 
+## Crucible Overview
+
+**What is Crucible?**
+
+Crucible is the FulmenHQ single source of truth (SSOT) for schemas, standards, and configuration templates. It ensures consistent APIs, documentation structures, and behavioral contracts across all language foundations (gofulmen, pyfulmen, tsfulmen, etc.).
+
+**Why the Shim & Docscribe Module?**
+
+Rather than copying Crucible assets into every project, helper libraries provide idiomatic access through shim APIs. This keeps your application lightweight, versioned correctly, and aligned with ecosystem-wide standards. The docscribe module lets you discover, parse, and validate Crucible content programmatically without manual file management.
+
+**Where to Learn More:**
+
+- [Crucible Repository](https://github.com/fulmenhq/crucible) - SSOT schemas, docs, and configs
+- [Fulmen Technical Manifesto](docs/crucible-go/architecture/fulmen-technical-manifesto.md) - Philosophy and design principles
+
 ## Packages
 
 ### ASCII (`ascii/`)

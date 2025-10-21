@@ -1,6 +1,6 @@
 # Fulmen helper module manifest (v2025.10.2)
 version: "2025.10.2"
-lastUpdated: "2025-10-09"
+lastUpdated: "2025-10-20"
 modules:
   - id: config-path-api
     tier: core
@@ -97,6 +97,17 @@ modules:
     coverage:
       - language: go
         target: 95
+      - language: python
+        target: 95
+      - language: typescript
+        target: 90
+  - id: docscribe
+    tier: core
+    requirement: mandatory
+    description: Standalone lightweight processing for markdown/YAML documentation from any source with frontmatter extraction and header parsing.
+    coverage:
+      - language: go
+        target: 90
       - language: python
         target: 95
       - language: typescript

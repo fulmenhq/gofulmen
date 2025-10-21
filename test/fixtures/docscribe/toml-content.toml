@@ -1,0 +1,9 @@
+[package]
+name = "test-package"
+version = "1.0.0"
+
+[dependencies]
+example = "^1.0.0"
+
+[build]
+target = "x86_64"

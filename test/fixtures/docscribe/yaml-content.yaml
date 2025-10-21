@@ -1,0 +1,11 @@
+name: test-config
+version: 1.0.0
+description: A test YAML document
+settings:
+  enabled: true
+  timeout: 30
+  retries: 3
+items:
+  - item1
+  - item2
+  - item3

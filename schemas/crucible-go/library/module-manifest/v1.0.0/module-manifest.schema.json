@@ -16,6 +16,7 @@
         "ssot-sync",
         "observability-logging",
         "foundry-patterns",
+        "docscribe",
         "cloud-storage",
         "error-handling-propagation",
         "pathfinder",
@@ -104,9 +105,7 @@
           },
           "unsupported": {
             "type": "array",
-            "items": {
-              "$ref": "#/$defs/moduleId"
-            }
+            "items": {}
           },
           "planned": {
             "type": "array",
