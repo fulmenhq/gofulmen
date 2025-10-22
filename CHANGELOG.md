@@ -19,10 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-## [0.1.3] - 2025-10-21
+## [0.1.3] - 2025-10-22
 
 ### Added
 
+- **Similarity** package - Text similarity scoring and normalization utilities (foundry/similarity)
+  - Levenshtein distance calculation with Wagner-Fischer algorithm (Unicode-aware via rune counting)
+  - Normalized similarity scoring (0.0 to 1.0 range) with score formula: 1 - distance/max(len(a), len(b))
+  - Suggestion API with ranked fuzzy matching and configurable thresholds (MinScore=0.6, MaxSuggestions=3)
+  - Unicode-aware text normalization (trim → casefold → optional accent stripping)
+  - Turkish locale support for dotted/dotless i case folding (İ→i, I→ı)
+  - Accent stripping via NFD decomposition and combining mark filtering
+  - Case-insensitive comparison helpers (EqualsIgnoreCase, Casefold, StripAccents)
+  - Performance: ~28 μs/op for 128-char strings (17x faster than 0.5ms target)
+  - 100% test coverage on all implementation files (similarity.go, normalize.go, suggest.go)
+  - 15 benchmark functions for ongoing performance regression testing
+  - 26 Crucible fixture tests passing (distance, normalization, suggestions)
+  - Cross-language API parity with pyfulmen and tsfulmen
+  - golang.org/x/text v0.30.0 dependency for Unicode normalization
 - **Docscribe** package - Lightweight markdown and YAML documentation processing
   - Frontmatter extraction and metadata parsing (YAML frontmatter with error recovery)
   - Markdown header extraction with anchors and line numbers (ATX and Setext styles)
@@ -38,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Explains what Crucible is and why the shim/docscribe module matters
   - Provides learning resources for SSOT relationship
 - **Crucible SSOT Sync** to version 2025.10.2
+  - Similarity module with fixtures, schema, and standard documentation
   - Docscribe module manifest entry and standard documentation
   - Updated helper library standard with Crucible Overview requirement
   - Added Fulmen Forge workhorse standard

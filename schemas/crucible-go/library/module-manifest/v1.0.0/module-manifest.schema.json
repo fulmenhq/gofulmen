@@ -105,8 +105,7 @@
           },
           "unsupported": {
             "type": "array",
-            "items": {
-            }
+            "items": {}
           },
           "planned": {
             "type": "array",

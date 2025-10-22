@@ -70,6 +70,7 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 - **MIME Type Detection**: Content-based detection and extension lookup
 - **HTTP Status Helpers**: Status code grouping and validation
 - **Country Code Validation**: ISO 3166-1 country codes (Alpha2, Alpha3, Numeric)
+- **Text Similarity** (`foundry/similarity/`): Levenshtein distance, normalized scoring, fuzzy matching suggestions, Unicode-aware normalization
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
 
@@ -221,6 +222,26 @@ fmt.Printf("%s (%s)\n", country.Name, country.Alpha3)
 if foundry.ValidateCountryCode("usa") {
     fmt.Println("Valid country code")
 }
+
+// Text similarity and fuzzy matching
+import "github.com/fulmenhq/gofulmen/foundry/similarity"
+
+distance := similarity.Distance("kitten", "sitting") // 3
+score := similarity.Score("kitten", "sitting")       // 0.5714...
+
+// Suggest corrections for typos
+candidates := []string{"config", "configure", "conform"}
+opts := similarity.DefaultSuggestOptions()
+suggestions := similarity.Suggest("confg", candidates, opts)
+for _, s := range suggestions {
+    fmt.Printf("%s (%.0f%% match)\n", s.Value, s.Score*100)
+}
+// Output: config (83% match)
+
+// Unicode-aware normalization
+normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
+    StripAccents: true,
+}) // "cafe"
 ```
 
 ## CLI Tools
