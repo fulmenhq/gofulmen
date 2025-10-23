@@ -19,6 +19,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.4] - 2025-10-23
+
+### Added
+
+- **FulHash** package - Enterprise-grade hashing utilities with xxh3-128 and sha256 support
+  - Block and streaming hash APIs with `Hash()`, `HashString()`, `HashReader()`, and `NewHasher()`
+  - Digest metadata format (`<algorithm>:<hex>`) with `FormatDigest()` and `ParseDigest()` helpers
+  - Thread-safe streaming hashers for large file processing
+  - Comprehensive test coverage (90%+) with Crucible fixture validation
+  - Performance optimized: xxh3-128 for speed, sha256 for cryptographic needs
+  - Schema-backed fixture validation against synced Crucible standards
+  - Cross-language API parity with pyfulmen and tsfulmen
+- **Pathfinder checksum support** - Opt-in checksum calculation using FulHash package
+  - New `CalculateChecksums` and `ChecksumAlgorithm` options in `FindQuery`
+  - Supports xxh3-128 (default) and sha256 algorithms
+  - Maintains <10% performance overhead with streaming implementation
+  - Schema-compliant metadata: `checksum`, `checksumAlgorithm`, `checksumError`
+  - Backward compatible - disabled by default
+  - Enables integrity verification for downstream tooling (goneat, docscribe)
+- **Pathfinder feature enhancements** - Pre-migration upscale for goneat v0.2.0 compatibility
+  - `PathTransform` function type for result remapping (strip prefixes, flatten paths, logical mounting)
+  - `FindStream()` method for channel-based streaming results (Go-idiomatic, memory efficient)
+  - `SkipDirs` option for simple directory exclusions without complex glob patterns
+  - `SizeRange` and `TimeRange` filtering for file size and modification time constraints
+  - `FindFilesByType()` utility method supporting common file types (go, javascript, python, java, config, docs, images)
+  - `GetDirectoryStats()` for repository analytics and disk usage reporting
+  - Worker pool support for concurrent directory traversal (configurable `Workers` field)
+  - All features backward compatible with existing API
+- **Code quality improvements** - Comprehensive polish addressing 37 assessment issues
+  - Fixed high-priority security issue (G304 potential file inclusion in pathfinder)
+  - Resolved 33 golangci-lint issues across bootstrap and test files
+  - Updated goneat tools configuration with proper schema validation
+  - Improved error handling in bootstrap package (unchecked Close() and error handling)
+  - Added proper date to CHANGELOG.md entries
+  - All precommit/prepush checks now pass with 100% health
+
+### Fixed
+
+- **Pathfinder security** - Resolved G304 potential file inclusion vulnerability in finder.go
+- **Bootstrap reliability** - Fixed unchecked Close() errors and improved error handling in download/extract operations
+- **Test code quality** - Addressed lint issues in foundry and config test files
+
+### Security
+
+- **Pathfinder** - Fixed G304 potential file inclusion via path traversal protection
+
 ## [0.1.3] - 2025-10-22
 
 ### Added

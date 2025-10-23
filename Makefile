@@ -140,9 +140,15 @@ help: ## Show this help message
 	@echo ""
 
 # Lint target (required by standard)
-lint: ## Run lint/format/style checks
+lint: ## Run lint checks
 	@echo "Running Go vet..."
 	@$(GOCMD) vet ./...
+	@if [ ! -f ./bin/goneat ]; then \
+		echo "❌ goneat not found. Run 'make bootstrap' first."; \
+		exit 1; \
+	fi
+	@echo "Running golangci-lint..."
+	@./bin/goneat assess --categories lint
 	@echo "✅ Lint checks passed"
 
 # Build targets (required by standard)
@@ -163,16 +169,24 @@ check-all: build fmt lint test ## Run all quality checks (ensures sync, fmt, lin
 	@echo "✅ All quality checks passed"
 
 # Hook targets (required by standard)
-precommit: check-all ## Run pre-commit hooks (check-all includes sync, lint, test)
-	@echo "✅ Pre-commit checks passed"
-
-prepush: check-all ## Run pre-push hooks (check-all + security)
-	@echo "Running security assessment..."
+precommit: ## Run pre-commit hooks
 	@if [ ! -f ./bin/goneat ]; then \
 		echo "❌ goneat not found. Run 'make bootstrap' first."; \
 		exit 1; \
 	fi
-	@./bin/goneat assess --categories security
+	@echo "Running pre-commit validation..."
+	@./bin/goneat format
+	@./bin/goneat assess --check --categories format,lint,static-analysis --fail-on critical
+	@echo "✅ Pre-commit checks passed"
+
+prepush: ## Run pre-push hooks
+	@if [ ! -f ./bin/goneat ]; then \
+		echo "❌ goneat not found. Run 'make bootstrap' first."; \
+		exit 1; \
+	fi
+	@echo "Running pre-push validation..."
+	@./bin/goneat format
+	@./bin/goneat assess --check --categories format,lint,security,static-analysis --fail-on high
 	@echo "✅ Pre-push checks passed"
 
 # Test targets

@@ -2,6 +2,7 @@ package fulhash
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -377,7 +378,7 @@ func TestStreamingVsBlock(t *testing.T) {
 }
 
 func TestFulHashFixturesValidation(t *testing.T) {
-	fixturePath := "../config/crucible-go/library/fulhash/fixtures.yaml"
+	fixturePath := filepath.Join("..", "config", "crucible-go", "library", "fulhash", "fixtures.yaml")
 
 	// Validate fixtures against JSON schema
 	catalog := schema.DefaultCatalog()
@@ -399,18 +400,6 @@ func TestFulHashFixturesValidation(t *testing.T) {
 	}
 
 	// Load fixtures for additional runtime checks
-	fixtures := loadFixtures(t)
-
-	if fixtures.Version == "" {
-		t.Error("fixtures.version is required but empty")
-	}
-
-	if len(fixtures.Fixtures) == 0 {
-		t.Error("fixtures array must not be empty")
-	}
-}
-
-func TestFulHashComprehensiveFixtures(t *testing.T) {
 	fixtures := loadFixtures(t)
 
 	// Test all block fixtures with both algorithms

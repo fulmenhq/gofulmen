@@ -33,13 +33,13 @@ func extractTarGz(archivePath, destDir string) error {
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer f.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
+	defer func() { _ = f.Close() }()
 
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer gzr.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 
@@ -90,10 +90,10 @@ func extractTarGz(archivePath, destDir string) error {
 
 			// #nosec G110 -- decompression bomb protected by totalSize check above
 			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close() //nolint:errcheck // Close() error ignored during error cleanup
+				_ = outFile.Close()
 				return &ExtractionError{Archive: archivePath, Err: err}
 			}
-			outFile.Close() //nolint:errcheck // Close() error is commonly ignored in Go
+			_ = outFile.Close()
 		}
 	}
 
@@ -105,7 +105,7 @@ func extractZip(archivePath, destDir string) error {
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer r.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
+	defer func() { _ = r.Close() }()
 
 	var totalSize int64
 
@@ -151,14 +151,14 @@ func extractZip(archivePath, destDir string) error {
 		// #nosec G304 -- target path is validated above to prevent traversal
 		outFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR|os.O_TRUNC, f.Mode())
 		if err != nil {
-			rc.Close() //nolint:errcheck // Close() error ignored during error cleanup
+			_ = rc.Close()
 			return &ExtractionError{Archive: archivePath, Err: err}
 		}
 
 		// #nosec G110 -- decompression bomb protected by totalSize check above
 		_, err = io.Copy(outFile, rc)
-		rc.Close()      //nolint:errcheck // Close() error is commonly ignored in Go
-		outFile.Close() //nolint:errcheck // Close() error is commonly ignored in Go
+		_ = rc.Close()
+		_ = outFile.Close()
 
 		if err != nil {
 			return &ExtractionError{Archive: archivePath, Err: err}
