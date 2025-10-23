@@ -36,7 +36,7 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 		h.Write(data)
 		bytes = h.Sum(nil)
 	default:
-		return Digest{}, fmt.Errorf("%w: %q", ErrUnsupportedAlgorithm, o.algorithm)
+		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, o.algorithm, XXH3_128, SHA256)
 	}
 
 	return Digest{algorithm: o.algorithm, bytes: bytes}, nil
@@ -93,7 +93,7 @@ func newHasher(alg Algorithm) (Hasher, error) {
 	case SHA256:
 		return &sha256Hasher{hasher: sha256.New()}, nil
 	default:
-		return nil, fmt.Errorf("%w: %q", ErrUnsupportedAlgorithm, alg)
+		return nil, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, alg, XXH3_128, SHA256)
 	}
 }
 

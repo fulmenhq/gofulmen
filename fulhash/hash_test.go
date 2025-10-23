@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fulmenhq/gofulmen/schema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -216,6 +217,39 @@ func TestUnsupportedAlgorithm(t *testing.T) {
 	}
 }
 
+func TestErrorFixtures(t *testing.T) {
+	fixtures := loadFixtures(t)
+
+	for _, ef := range fixtures.ErrorFixtures {
+		t.Run("error/"+ef.Name, func(t *testing.T) {
+			var err error
+			switch {
+			case ef.Algorithm != "":
+				// Test Hash with unsupported algorithm
+				_, err = Hash([]byte(ef.Input), WithAlgorithm(Algorithm(ef.Algorithm)))
+			case ef.Checksum != "":
+				// Test ParseDigest with invalid checksum
+				_, err = ParseDigest(ef.Checksum)
+			default:
+				t.Fatalf("error fixture %s has no algorithm or checksum", ef.Name)
+			}
+
+			if err == nil {
+				t.Errorf("expected error %s, got nil", ef.ExpectedError)
+				return
+			}
+
+			// Check if error message contains expected strings
+			errMsg := err.Error()
+			for _, contains := range ef.ErrorMessageContains {
+				if !strings.Contains(errMsg, contains) {
+					t.Errorf("error message %q does not contain %q", errMsg, contains)
+				}
+			}
+		})
+	}
+}
+
 func TestHashReader(t *testing.T) {
 	reader := strings.NewReader("Hello, World!")
 	digest, err := HashReader(reader, WithAlgorithm(XXH3_128))
@@ -343,11 +377,29 @@ func TestStreamingVsBlock(t *testing.T) {
 }
 
 func TestFulHashFixturesValidation(t *testing.T) {
-	fixtures := loadFixtures(t)
+	fixturePath := "../config/crucible-go/library/fulhash/fixtures.yaml"
 
-	// Validate fixtures structure matches schema requirements
-	// Note: Using manual validation due to schema reference resolution issues
-	// TODO: Replace with schema.ValidatorByID once schema references are fixed
+	// Validate fixtures against JSON schema
+	catalog := schema.DefaultCatalog()
+	validator, err := catalog.ValidatorByID("library/fulhash/v1.0.0/fixtures")
+	if err != nil {
+		t.Fatalf("Failed to get schema validator: %v", err)
+	}
+
+	diagnostics, err := validator.ValidateFile(fixturePath)
+	if err != nil {
+		t.Fatalf("Schema validation failed with error: %v", err)
+	}
+	if len(diagnostics) > 0 {
+		t.Errorf("Fixtures violate schema:")
+		for _, diag := range diagnostics {
+			t.Errorf("  %s (%s): %s", diag.Pointer, diag.Keyword, diag.Message)
+		}
+		t.Fatalf("Schema validation failed with %d diagnostics", len(diagnostics))
+	}
+
+	// Load fixtures for additional runtime checks
+	fixtures := loadFixtures(t)
 
 	if fixtures.Version == "" {
 		t.Error("fixtures.version is required but empty")
@@ -355,60 +407,6 @@ func TestFulHashFixturesValidation(t *testing.T) {
 
 	if len(fixtures.Fixtures) == 0 {
 		t.Error("fixtures array must not be empty")
-	}
-
-	// Validate each block fixture
-	for i, f := range fixtures.Fixtures {
-		if f.Name == "" {
-			t.Errorf("fixture[%d].name is required", i)
-		}
-		if f.Encoding == "" {
-			t.Errorf("fixture[%d].encoding is required", i)
-		}
-		if f.XXH3_128 == "" {
-			t.Errorf("fixture[%d].xxh3_128 is required", i)
-		}
-		if f.SHA256 == "" {
-			t.Errorf("fixture[%d].sha256 is required", i)
-		}
-
-		// Validate checksum format using more robust parsing
-		if !isValidChecksum(f.XXH3_128) {
-			t.Errorf("fixture[%d].xxh3_128 does not match required format: %s", i, f.XXH3_128)
-		}
-		if !isValidChecksum(f.SHA256) {
-			t.Errorf("fixture[%d].sha256 does not match required format: %s", i, f.SHA256)
-		}
-
-		// Validate input: either input or input_bytes must be present
-		hasInput := f.Input != "" || f.InputBytes != nil
-		if !hasInput {
-			t.Errorf("fixture[%d] must have either input or input_bytes", i)
-		}
-	}
-
-	// Validate streaming fixtures
-	for i, sf := range fixtures.StreamingFixtures {
-		if sf.Name == "" {
-			t.Errorf("streaming_fixture[%d].name is required", i)
-		}
-		if len(sf.Chunks) == 0 {
-			t.Errorf("streaming_fixture[%d].chunks must not be empty", i)
-		}
-		if sf.ExpectedXXH3_128 == "" {
-			t.Errorf("streaming_fixture[%d].expected_xxh3_128 is required", i)
-		}
-		if sf.ExpectedSHA256 == "" {
-			t.Errorf("streaming_fixture[%d].expected_sha256 is required", i)
-		}
-
-		// Validate expected checksums
-		if !isValidChecksum(sf.ExpectedXXH3_128) {
-			t.Errorf("streaming_fixture[%d].expected_xxh3_128 does not match required format: %s", i, sf.ExpectedXXH3_128)
-		}
-		if !isValidChecksum(sf.ExpectedSHA256) {
-			t.Errorf("streaming_fixture[%d].expected_sha256 does not match required format: %s", i, sf.ExpectedSHA256)
-		}
 	}
 }
 

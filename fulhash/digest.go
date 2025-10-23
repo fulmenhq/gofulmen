@@ -41,14 +41,14 @@ func FormatDigest(d Digest) string {
 func ParseDigest(s string) (Digest, error) {
 	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 {
-		return Digest{}, fmt.Errorf("%w: expected 'algorithm:hex', got %q", ErrInvalidDigestFormat, s)
+		return Digest{}, fmt.Errorf("%w: expected format 'algorithm:hex', got %q", ErrInvalidDigestFormat, s)
 	}
 
 	alg := Algorithm(parts[0])
 	hexStr := parts[1]
 
 	if alg != XXH3_128 && alg != SHA256 {
-		return Digest{}, fmt.Errorf("%w: %q (supported: %s, %s)", ErrUnsupportedAlgorithm, alg, XXH3_128, SHA256)
+		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, alg, XXH3_128, SHA256)
 	}
 
 	bytes, err := hex.DecodeString(hexStr)

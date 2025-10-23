@@ -86,15 +86,17 @@ All functions return typed errors for unsupported algorithms, invalid formats, a
 
 The package includes comprehensive tests using canonical fixtures synced from Crucible:
 
-- **Fixture Validation**: Tests validate fixtures against FulHash schema requirements (checksum patterns, required fields, structure)
+- **Schema Validation**: Fixtures are validated against the JSON schema at `schemas/crucible-go/library/fulhash/v1.0.0/fixtures.schema.json` to ensure compliance with required fields and formats
+- **Fixture Coverage**: Tests exercise all block, streaming, error, and format fixtures with real digest values
 - **Cross-Language Parity**: Fixtures ensure identical outputs across Go, Python, and TypeScript implementations
-- **Block & Streaming**: Tests cover both hashing modes with real digest values
 
 Run tests with schema validation:
 
 ```bash
 go test ./fulhash/...
 ```
+
+Schema requirements are documented in [`docs/crucible-go/standards/library/modules/fulhash.md`](docs/crucible-go/standards/library/modules/fulhash.md). When adding new fixtures, ensure they validate against the schema and include required fields like `xxh3_128`, `sha256` for block fixtures, and `expected_xxh3_128`, `expected_sha256` for streaming fixtures.
 
 ## Integration
 

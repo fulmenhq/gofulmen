@@ -215,6 +215,12 @@ func (l *localLoader) Load(rawURL string) (io.ReadCloser, error) {
 			return l.openDraftResource(trimmed, prefix, "draft-07")
 		}
 	}
+	if strings.HasPrefix(trimmed, "https://schemas.fulmenhq.dev/") {
+		remainder := strings.TrimPrefix(trimmed, "https://schemas.fulmenhq.dev/")
+		baseDir := filepath.Dir(l.metaDir) // schemas/crucible-go
+		localPath := filepath.Join(baseDir, remainder)
+		return os.Open(localPath) // #nosec G304 -- Local schema path constructed from trusted prefix
+	}
 
 	// Allow loading local relative paths.
 	if !strings.Contains(trimmed, "://") {
