@@ -3,6 +3,7 @@ package pathfinder
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -470,5 +471,143 @@ func TestFindFiles_PathResult(t *testing.T) {
 	// Check Metadata is initialized
 	if result.Metadata == nil {
 		t.Error("PathResult.Metadata is nil")
+	}
+}
+
+// TestFindFiles_Checksums tests checksum calculation functionality
+func TestFindFiles_Checksums(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name            string
+		query           FindQuery
+		expectChecksum  bool
+		expectAlgorithm bool
+		expectError     bool
+	}{
+		{
+			name: "checksums disabled",
+			query: FindQuery{
+				Root:               "testdata/basic",
+				Include:            []string{"*.go"},
+				CalculateChecksums: false,
+			},
+			expectChecksum:  false,
+			expectAlgorithm: false,
+			expectError:     false,
+		},
+		{
+			name: "checksums enabled xxh3-128",
+			query: FindQuery{
+				Root:               "testdata/basic",
+				Include:            []string{"*.go"},
+				CalculateChecksums: true,
+				ChecksumAlgorithm:  "xxh3-128",
+			},
+			expectChecksum:  true,
+			expectAlgorithm: true,
+			expectError:     false,
+		},
+		{
+			name: "checksums enabled sha256",
+			query: FindQuery{
+				Root:               "testdata/basic",
+				Include:            []string{"*.go"},
+				CalculateChecksums: true,
+				ChecksumAlgorithm:  "sha256",
+			},
+			expectChecksum:  true,
+			expectAlgorithm: true,
+			expectError:     false,
+		},
+		{
+			name: "checksums enabled default algorithm",
+			query: FindQuery{
+				Root:               "testdata/basic",
+				Include:            []string{"*.go"},
+				CalculateChecksums: true,
+				// ChecksumAlgorithm empty - should default to xxh3-128
+			},
+			expectChecksum:  true,
+			expectAlgorithm: true,
+			expectError:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			finder := NewFinder()
+
+			results, err := finder.FindFiles(ctx, tt.query)
+			if err != nil {
+				t.Fatalf("FindFiles() error = %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("FindFiles() returned no results")
+			}
+
+			for _, result := range results {
+				// Check metadata exists
+				if result.Metadata == nil {
+					t.Error("PathResult.Metadata is nil")
+					continue
+				}
+
+				// Check checksum field
+				checksum, hasChecksum := result.Metadata["checksum"]
+				if tt.expectChecksum && !hasChecksum {
+					t.Errorf("Expected checksum field but not found")
+				}
+				if !tt.expectChecksum && hasChecksum {
+					t.Errorf("Unexpected checksum field: %v", checksum)
+				}
+
+				// Check checksumAlgorithm field
+				algorithm, hasAlgorithm := result.Metadata["checksumAlgorithm"]
+				if tt.expectAlgorithm && !hasAlgorithm {
+					t.Errorf("Expected checksumAlgorithm field but not found")
+				}
+				if !tt.expectAlgorithm && hasAlgorithm {
+					t.Errorf("Unexpected checksumAlgorithm field: %v", algorithm)
+				}
+
+				// Check checksumError field
+				checksumError, hasError := result.Metadata["checksumError"]
+				if tt.expectError && !hasError {
+					t.Errorf("Expected checksumError field but not found")
+				}
+				if !tt.expectError && hasError {
+					t.Errorf("Unexpected checksumError field: %v", checksumError)
+				}
+
+				// Validate checksum format if present
+				if hasChecksum {
+					checksumStr, ok := checksum.(string)
+					if !ok {
+						t.Errorf("Checksum is not a string: %T", checksum)
+						continue
+					}
+
+					// Should match pattern: algorithm:hex
+					if !strings.Contains(checksumStr, ":") {
+						t.Errorf("Checksum format invalid, expected 'algorithm:hex', got: %s", checksumStr)
+					}
+				}
+
+				// Validate algorithm value if present
+				if hasAlgorithm {
+					algStr, ok := algorithm.(string)
+					if !ok {
+						t.Errorf("ChecksumAlgorithm is not a string: %T", algorithm)
+						continue
+					}
+
+					if algStr != "xxh3-128" && algStr != "sha256" {
+						t.Errorf("Invalid checksumAlgorithm: %s", algStr)
+					}
+				}
+			}
+		})
 	}
 }

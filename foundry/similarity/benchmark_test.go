@@ -31,7 +31,7 @@ func BenchmarkDistance_Medium(b *testing.B) {
 // Target: ≤0.5ms p95 per Crucible standard
 func BenchmarkDistance_128Chars(b *testing.B) {
 	// Create two similar 128-character strings
-	a := strings.Repeat("abcdefgh", 16) // "abcdefgh" x 16 = 128 chars
+	a := strings.Repeat("abcdefgh", 16)  // "abcdefgh" x 16 = 128 chars
 	b2 := strings.Repeat("abcdxfgh", 16) // Similar with one char different per block
 
 	b.ResetTimer()

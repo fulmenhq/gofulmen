@@ -137,6 +137,45 @@ func main() {
 }
 ```
 
+### Checksum Calculation Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/fulmenhq/gofulmen/pathfinder"
+)
+
+func main() {
+    ctx := context.Background()
+    finder := pathfinder.NewFinder()
+
+    // Discovery with checksum calculation
+    query := pathfinder.FindQuery{
+        Root:               ".",
+        Include:            []string{"*.go"},
+        CalculateChecksums: true,
+        ChecksumAlgorithm:  "xxh3-128", // or "sha256"
+    }
+
+    results, err := finder.FindFiles(ctx, query)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Found %d Go files with checksums:\n", len(results))
+    for _, result := range results {
+        checksum := result.Metadata["checksum"]
+        algorithm := result.Metadata["checksumAlgorithm"]
+        fmt.Printf("  %s: %s (%s)\n", result.RelativePath, checksum, algorithm)
+    }
+}
+```
+
 ## API Reference
 
 ### Core Functions
@@ -254,14 +293,16 @@ Specifies parameters for file discovery operations.
 
 ```go
 type FindQuery struct {
-    Root             string                                      // Root directory to search from
-    Include          []string                                    // Patterns to include (e.g., "*.go")
-    Exclude          []string                                    // Patterns to exclude
-    MaxDepth         int                                         // Maximum directory depth (0 = unlimited)
-    FollowSymlinks   bool                                        // Whether to follow symbolic links
-    IncludeHidden    bool                                        // Whether to include hidden files/directories
-    ErrorHandler     func(path string, err error) error          // Error handler function
-    ProgressCallback func(processed int, total int, currentPath string) // Progress callback
+    Root               string                                      // Root directory to search from
+    Include            []string                                    // Patterns to include (e.g., "*.go")
+    Exclude            []string                                    // Patterns to exclude
+    MaxDepth           int                                         // Maximum directory depth (0 = unlimited)
+    FollowSymlinks     bool                                        // Whether to follow symbolic links
+    IncludeHidden      bool                                        // Whether to include hidden files/directories
+    CalculateChecksums bool                                        // Whether to calculate file checksums
+    ChecksumAlgorithm  string                                      // Checksum algorithm ("xxh3-128" or "sha256", default "xxh3-128")
+    ErrorHandler       func(path string, err error) error          // Error handler function
+    ProgressCallback   func(processed int, total int, currentPath string) // Progress callback
 }
 ```
 
@@ -275,9 +316,17 @@ type PathResult struct {
     SourcePath   string            // Absolute path to the file
     LogicalPath  string            // Logical path (defaults to RelativePath)
     LoaderType   string            // Type of loader used ("local")
-    Metadata     map[string]any    // Additional metadata
+    Metadata     map[string]any    // Additional metadata (size, mtime, checksum, checksumAlgorithm)
 }
 ```
+
+**Metadata Fields:**
+
+- `size`: File size in bytes (int64)
+- `mtime`: File modification time in RFC3339Nano format (string)
+- `checksum`: File checksum in "algorithm:hex" format (string, when CalculateChecksums=true)
+- `checksumAlgorithm`: Checksum algorithm used ("xxh3-128" or "sha256", when CalculateChecksums=true)
+- `checksumError`: Error message if checksum calculation failed (string, optional)
 
 ## Security Considerations
 

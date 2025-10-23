@@ -108,3 +108,36 @@ func ExampleFinder_FindFiles_maxDepth() {
 	// Output:
 	// Found 1 file(s) at depth 1
 }
+
+// ExampleFinder_FindFiles_withChecksums demonstrates checksum calculation
+func ExampleFinder_FindFiles_withChecksums() {
+	ctx := context.Background()
+	finder := pathfinder.NewFinder()
+
+	// Find files with checksum calculation
+	query := pathfinder.FindQuery{
+		Root:               "testdata/basic",
+		Include:            []string{"*.go"},
+		CalculateChecksums: true,
+		ChecksumAlgorithm:  "xxh3-128",
+	}
+
+	results, err := finder.FindFiles(ctx, query)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	if len(results) > 0 {
+		result := results[0]
+		checksum := result.Metadata["checksum"]
+		algorithm := result.Metadata["checksumAlgorithm"]
+		fmt.Printf("File: %s\n", result.RelativePath)
+		fmt.Printf("Checksum: %s\n", checksum)
+		fmt.Printf("Algorithm: %s\n", algorithm)
+	}
+	// Output:
+	// File: file1.go
+	// Checksum: xxh3-128:8754591d28adc9bc021db81a6d87be18
+	// Algorithm: xxh3-128
+}

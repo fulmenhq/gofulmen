@@ -9,6 +9,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/fulmenhq/crucible"
+	"github.com/fulmenhq/gofulmen/fulhash"
 	"github.com/fulmenhq/gofulmen/schema"
 )
 
@@ -32,14 +33,16 @@ type FinderConfig struct {
 
 // FindQuery specifies the parameters for discovery
 type FindQuery struct {
-	Root             string                                             `json:"root"`
-	Include          []string                                           `json:"include"`
-	Exclude          []string                                           `json:"exclude,omitempty"`
-	MaxDepth         int                                                `json:"maxDepth,omitempty"`
-	FollowSymlinks   bool                                               `json:"followSymlinks,omitempty"`
-	IncludeHidden    bool                                               `json:"includeHidden,omitempty"`
-	ErrorHandler     func(path string, err error) error                 `json:"-"`
-	ProgressCallback func(processed int, total int, currentPath string) `json:"-"`
+	Root               string                                             `json:"root"`
+	Include            []string                                           `json:"include"`
+	Exclude            []string                                           `json:"exclude,omitempty"`
+	MaxDepth           int                                                `json:"maxDepth,omitempty"`
+	FollowSymlinks     bool                                               `json:"followSymlinks,omitempty"`
+	IncludeHidden      bool                                               `json:"includeHidden,omitempty"`
+	CalculateChecksums bool                                               `json:"calculateChecksums,omitempty"`
+	ChecksumAlgorithm  string                                             `json:"checksumAlgorithm,omitempty"`
+	ErrorHandler       func(path string, err error) error                 `json:"-"`
+	ProgressCallback   func(processed int, total int, currentPath string) `json:"-"`
 }
 
 // PathResult represents a discovered path along with logical mapping information
@@ -216,8 +219,40 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 			metadata["size"] = info.Size()
 			metadata["mtime"] = info.ModTime().Format("2006-01-02T15:04:05.000000000Z07:00") // RFC3339Nano
 
-			// TODO: Add optional checksum calculation (SHA-256) when config flag is added
-			// For now, omit checksum to avoid performance penalty on large file trees
+			// Optional checksum calculation using FulHash
+			if query.CalculateChecksums {
+				algorithm := query.ChecksumAlgorithm
+				if algorithm == "" {
+					algorithm = "xxh3-128" // default
+				}
+
+				var alg fulhash.Algorithm
+				switch algorithm {
+				case "xxh3-128":
+					alg = fulhash.XXH3_128
+				case "sha256":
+					alg = fulhash.SHA256
+				default:
+					// This should be caught by validation, but handle gracefully
+					metadata["checksumError"] = fmt.Sprintf("unsupported algorithm: %s", algorithm)
+				}
+
+				if metadata["checksumError"] == nil {
+					file, err := os.Open(absMatch)
+					if err != nil {
+						metadata["checksumError"] = fmt.Sprintf("failed to open file: %v", err)
+					} else {
+						digest, err := fulhash.HashReader(file, fulhash.WithAlgorithm(alg))
+						if err != nil {
+							metadata["checksumError"] = fmt.Sprintf("checksum calculation failed: %v", err)
+						} else {
+							metadata["checksum"] = digest.String()
+							metadata["checksumAlgorithm"] = string(digest.Algorithm())
+						}
+						_ = file.Close()
+					}
+				}
+			}
 
 			result := PathResult{
 				RelativePath: relPath,
@@ -306,8 +341,40 @@ func (f *Finder) FindByExtension(ctx context.Context, root string, exts []string
 	return f.FindFiles(ctx, query)
 }
 
+// FindGoFilesWithChecksums finds Go source files with optional checksum calculation
+func (f *Finder) FindGoFilesWithChecksums(ctx context.Context, root string, calculateChecksums bool, algorithm string) ([]PathResult, error) {
+	query := FindQuery{
+		Root:               root,
+		Include:            []string{"**/*.go"},
+		CalculateChecksums: calculateChecksums,
+		ChecksumAlgorithm:  algorithm,
+	}
+	return f.FindFiles(ctx, query)
+}
+
+// FindConfigFilesWithChecksums finds common configuration files with optional checksum calculation
+func (f *Finder) FindConfigFilesWithChecksums(ctx context.Context, root string, calculateChecksums bool, algorithm string) ([]PathResult, error) {
+	query := FindQuery{
+		Root:               root,
+		Include:            []string{"**/*.json", "**/*.yaml", "**/*.yml", "**/*.toml", "**/*.config", "**/*.conf"},
+		CalculateChecksums: calculateChecksums,
+		ChecksumAlgorithm:  algorithm,
+	}
+	return f.FindFiles(ctx, query)
+}
+
 // ValidateFindQuery validates a FindQuery against the schema
 func ValidateFindQuery(query FindQuery) error {
+	// Validate checksum algorithm if checksums are enabled
+	if query.CalculateChecksums {
+		switch query.ChecksumAlgorithm {
+		case "", "xxh3-128", "sha256":
+			// Valid algorithms
+		default:
+			return fmt.Errorf("invalid checksumAlgorithm %q: must be one of 'xxh3-128', 'sha256', or empty (defaults to 'xxh3-128')", query.ChecksumAlgorithm)
+		}
+	}
+
 	pathfinderSchemas, err := crucible.SchemaRegistry.Pathfinder().V1_0_0()
 	if err != nil {
 		return fmt.Errorf("failed to get pathfinder schemas: %w", err)
