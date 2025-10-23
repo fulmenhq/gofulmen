@@ -94,7 +94,7 @@ func DetectMimeTypeFromFile(path string) (*MimeType, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	// Read first 512 bytes for detection (standard magic number size)
 	buf := make([]byte, 512)

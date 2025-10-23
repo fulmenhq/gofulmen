@@ -529,7 +529,7 @@ func BenchmarkNewTimestamp(b *testing.B) {
 func BenchmarkTimestampRFC3339Nano_MarshalJSON(b *testing.B) {
 	ts := Now()
 	for i := 0; i < b.N; i++ {
-		json.Marshal(ts)
+		_, _ = json.Marshal(ts)
 	}
 }
 
@@ -537,7 +537,7 @@ func BenchmarkTimestampRFC3339Nano_UnmarshalJSON(b *testing.B) {
 	data := []byte(`"2025-10-14T14:32:15.123456789Z"`)
 	for i := 0; i < b.N; i++ {
 		var ts TimestampRFC3339Nano
-		json.Unmarshal(data, &ts)
+		_ = json.Unmarshal(data, &ts)
 	}
 }
 

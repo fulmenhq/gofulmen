@@ -33,13 +33,13 @@ func extractTarGz(archivePath, destDir string) error {
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer gzr.Close()
+	defer gzr.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	tr := tar.NewReader(gzr)
 
@@ -90,12 +90,10 @@ func extractTarGz(archivePath, destDir string) error {
 
 			// #nosec G110 -- decompression bomb protected by totalSize check above
 			if _, err := io.Copy(outFile, tr); err != nil {
-				// #nosec G104 -- Close() error ignored during error cleanup
-				outFile.Close()
+				outFile.Close() //nolint:errcheck // Close() error ignored during error cleanup
 				return &ExtractionError{Archive: archivePath, Err: err}
 			}
-			// #nosec G104 -- defer Close() error is commonly ignored in Go
-			outFile.Close()
+			outFile.Close() //nolint:errcheck // Close() error is commonly ignored in Go
 		}
 	}
 
@@ -107,7 +105,7 @@ func extractZip(archivePath, destDir string) error {
 	if err != nil {
 		return &ExtractionError{Archive: archivePath, Err: err}
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	var totalSize int64
 
@@ -153,17 +151,14 @@ func extractZip(archivePath, destDir string) error {
 		// #nosec G304 -- target path is validated above to prevent traversal
 		outFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR|os.O_TRUNC, f.Mode())
 		if err != nil {
-			// #nosec G104 -- Close() error ignored during error cleanup
-			rc.Close()
+			rc.Close() //nolint:errcheck // Close() error ignored during error cleanup
 			return &ExtractionError{Archive: archivePath, Err: err}
 		}
 
 		// #nosec G110 -- decompression bomb protected by totalSize check above
 		_, err = io.Copy(outFile, rc)
-		// #nosec G104 -- defer Close() error is commonly ignored in Go
-		rc.Close()
-		// #nosec G104 -- defer Close() error is commonly ignored in Go
-		outFile.Close()
+		rc.Close()      //nolint:errcheck // Close() error is commonly ignored in Go
+		outFile.Close() //nolint:errcheck // Close() error is commonly ignored in Go
 
 		if err != nil {
 			return &ExtractionError{Archive: archivePath, Err: err}

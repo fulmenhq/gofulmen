@@ -14,7 +14,7 @@ func VerifySHA256(filePath string, expectedHex string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file for checksum verification: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -39,7 +39,7 @@ func ComputeSHA256(filePath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {

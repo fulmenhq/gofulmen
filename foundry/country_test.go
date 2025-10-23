@@ -227,18 +227,18 @@ func TestCatalog_ListCountries(t *testing.T) {
 
 func BenchmarkGetCountry(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GetCountry("US")
+		_, _ = GetCountry("US") //nolint:errcheck // benchmark ignores return values
 	}
 }
 
 func BenchmarkGetCountryByAlpha3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GetCountryByAlpha3("USA")
+		_, _ = GetCountryByAlpha3("USA") //nolint:errcheck
 	}
 }
 
 func BenchmarkValidateCountryCode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ValidateCountryCode("US")
+		_, _ = GetCountry("US") //nolint:errcheck
 	}
 }

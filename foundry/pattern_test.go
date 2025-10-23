@@ -340,6 +340,6 @@ func BenchmarkPattern_Match_Regex(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pattern.Match(value)
+		_, _ = pattern.Match(value)
 	}
 }

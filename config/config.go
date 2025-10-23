@@ -92,7 +92,7 @@ func SaveConfig(config *Config, path string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	return nil
 }

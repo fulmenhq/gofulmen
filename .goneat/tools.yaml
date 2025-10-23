@@ -1,16 +1,14 @@
-version: v0.3.0
-binDir: ./bin
+scopes:
+  bootstrap:
+    description: "Essential bootstrap and tooling dependencies"
+    tools:
+      - goneat
 tools:
-  - id: goneat
-    description: Fulmen schema validation and automation CLI
-    required: true
-    install:
-      type: download
-      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.0/goneat-{{os}}-{{arch}}
-      binName: goneat
-      destination: ./bin
-      checksum:
-        darwin-arm64: "0" # TODO: Replace with actual checksums from goneat release
-        darwin-amd64: "0" # TODO: Replace with actual checksums from goneat release
-        linux-amd64: "0" # TODO: Replace with actual checksums from goneat release
-        linux-arm64: "0" # TODO: Replace with actual checksums from goneat release
+  goneat:
+    name: goneat
+    description: "Fulmen schema validation and automation CLI"
+    kind: go
+    detect_command: goneat --version
+    install_package: github.com/fulmenhq/goneat@latest
+    version_scheme: semver
+    minimum_version: "0.3.0"

@@ -283,7 +283,7 @@ func BenchmarkDetectMimeType_JSON(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		DetectMimeType(data)
+		_, _ = DetectMimeType(data) //nolint:errcheck
 	}
 }
 
@@ -292,7 +292,7 @@ func BenchmarkDetectMimeType_YAML(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		DetectMimeType(data)
+		_, _ = DetectMimeType(data) //nolint:errcheck
 	}
 }
 
@@ -304,6 +304,6 @@ func BenchmarkIsSupportedMimeType(b *testing.B) {
 
 func BenchmarkGetMimeTypeByExtension(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GetMimeTypeByExtension("json")
+		_, _ = GetMimeTypeByExtension("json") //nolint:errcheck
 	}
 }

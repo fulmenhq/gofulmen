@@ -238,7 +238,7 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 				}
 
 				if metadata["checksumError"] == nil {
-					file, err := os.Open(absMatch)
+					file, err := os.Open(absMatch) // #nosec G304 -- absMatch is validated with ValidatePathWithinRoot to prevent path traversal
 					if err != nil {
 						metadata["checksumError"] = fmt.Sprintf("failed to open file: %v", err)
 					} else {

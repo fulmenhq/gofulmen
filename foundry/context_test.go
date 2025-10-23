@@ -605,7 +605,7 @@ func TestCorrelationIDRoundTripper_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Client.Do() error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Response status = %d, want %d", resp.StatusCode, http.StatusOK)
@@ -624,6 +624,6 @@ func BenchmarkCorrelationIDRoundTripper(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		transport.RoundTrip(req)
+		_, _ = transport.RoundTrip(req)
 	}
 }

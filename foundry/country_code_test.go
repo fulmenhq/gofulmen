@@ -640,21 +640,21 @@ func TestCountryCode_IntegrationExample(t *testing.T) {
 
 func BenchmarkNewCountryCode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewCountryCode("US")
+		_, _ = NewCountryCode("US")
 	}
 }
 
 func BenchmarkCountryCode_Validate(b *testing.B) {
 	code := CountryCode("US")
 	for i := 0; i < b.N; i++ {
-		code.Validate()
+		_ = code.Validate()
 	}
 }
 
 func BenchmarkCountryCode_JSONMarshal(b *testing.B) {
 	code := CountryCode("US")
 	for i := 0; i < b.N; i++ {
-		json.Marshal(code)
+		_, _ = json.Marshal(code)
 	}
 }
 
@@ -662,14 +662,14 @@ func BenchmarkCountryCode_JSONUnmarshal(b *testing.B) {
 	data := []byte(`"US"`)
 	for i := 0; i < b.N; i++ {
 		var code CountryCode
-		json.Unmarshal(data, &code)
+		_ = json.Unmarshal(data, &code)
 	}
 }
 
 func BenchmarkCountryCode_DatabaseValue(b *testing.B) {
 	code := CountryCode("US")
 	for i := 0; i < b.N; i++ {
-		code.Value()
+		_, _ = code.Value()
 	}
 }
 
@@ -677,7 +677,7 @@ func BenchmarkCountryCode_DatabaseScan(b *testing.B) {
 	value := driver.Value("US")
 	for i := 0; i < b.N; i++ {
 		var code CountryCode
-		code.Scan(value)
+		_ = code.Scan(value)
 	}
 }
 

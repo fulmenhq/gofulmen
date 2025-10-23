@@ -185,7 +185,7 @@ func BenchmarkParseCorrelationID(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		ParseCorrelationID(id)
+		_, _ = ParseCorrelationID(id)
 	}
 }
 
@@ -359,6 +359,6 @@ func BenchmarkNewCorrelationIDValue(b *testing.B) {
 func BenchmarkCorrelationIDValue_Validate(b *testing.B) {
 	id := NewCorrelationIDValue()
 	for i := 0; i < b.N; i++ {
-		id.Validate()
+		_ = id.Validate()
 	}
 }

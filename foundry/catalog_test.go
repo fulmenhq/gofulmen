@@ -549,7 +549,7 @@ func BenchmarkCatalog_GetPattern(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		catalog.GetPattern("slug")
+		_, _ = catalog.GetPattern("slug")
 	}
 }
 
@@ -558,6 +558,6 @@ func BenchmarkCatalog_GetMimeType(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		catalog.GetMimeType("json")
+		_, _ = catalog.GetMimeType("json")
 	}
 }

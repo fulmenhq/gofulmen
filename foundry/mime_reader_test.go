@@ -455,7 +455,7 @@ func BenchmarkDetectMimeTypeFromReader_JSON(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		reader := bytes.NewReader(input)
-		DetectMimeTypeFromReader(reader, 512)
+		_, _, _ = DetectMimeTypeFromReader(reader, 512) //nolint:errcheck
 	}
 }
 
@@ -470,7 +470,7 @@ func BenchmarkDetectMimeTypeFromReader_LargeJSON(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		reader := bytes.NewReader(input)
-		DetectMimeTypeFromReader(reader, 512)
+		_, _, _ = DetectMimeTypeFromReader(reader, 512) //nolint:errcheck
 	}
 }
 
@@ -486,6 +486,6 @@ func BenchmarkDetectMimeTypeFromFile(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		DetectMimeTypeFromFile(filename)
+		_, _ = DetectMimeTypeFromFile(filename) //nolint:errcheck
 	}
 }

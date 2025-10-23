@@ -410,36 +410,6 @@ func TestFulHashFixturesValidation(t *testing.T) {
 	}
 }
 
-// isValidChecksum validates checksum format: algorithm:hex
-func isValidChecksum(checksum string) bool {
-	parts := strings.Split(checksum, ":")
-	if len(parts) != 2 {
-		return false
-	}
-
-	algorithm := parts[0]
-	hex := parts[1]
-
-	switch algorithm {
-	case "xxh3-128":
-		return len(hex) == 32 && isHex(hex)
-	case "sha256":
-		return len(hex) == 64 && isHex(hex)
-	default:
-		return false
-	}
-}
-
-// isHex checks if string contains only hexadecimal characters
-func isHex(s string) bool {
-	for _, r := range s {
-		if r < '0' || (r > '9' && r < 'a') || r > 'f' {
-			return false
-		}
-	}
-	return true
-}
-
 func TestFulHashComprehensiveFixtures(t *testing.T) {
 	fixtures := loadFixtures(t)
 

@@ -26,7 +26,7 @@ func installDownload(tool *Tool, platform Platform) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir) //nolint:errcheck // defer RemoveAll error is commonly ignored in Go
 
 	archiveName := filepath.Base(url)
 	archivePath := filepath.Join(tempDir, archiveName)
@@ -83,7 +83,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
@@ -94,7 +94,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer out.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	_, err = io.Copy(out, resp.Body)
 	return err
@@ -137,14 +137,14 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer sourceFile.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	// #nosec G304 -- dst path is controlled in bootstrap file operations
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
+	defer destFile.Close() //nolint:errcheck // defer Close() error is commonly ignored in Go
 
 	_, err = io.Copy(destFile, sourceFile)
 	return err
