@@ -14,6 +14,7 @@ import (
 	"github.com/fulmenhq/gofulmen/fulhash"
 	"github.com/fulmenhq/gofulmen/schema"
 	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 )
 
 // FinderConfig holds default settings for the FinderFacade
@@ -89,13 +90,13 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 // FindFilesWithEnvelope performs file discovery based on the query with structured error reporting
 func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, correlationID string) ([]PathResult, error) {
 	start := time.Now()
-	status := "success"
+	status := metrics.StatusSuccess
 	defer func() {
 		if f.telemetrySystem != nil {
 			duration := time.Since(start)
-			_ = f.telemetrySystem.Histogram("pathfinder_find_ms", duration, map[string]string{
-				"root":   query.Root,
-				"status": status,
+			_ = f.telemetrySystem.Histogram(metrics.PathfinderFindMs, duration, map[string]string{
+				metrics.TagRoot:   query.Root,
+				metrics.TagStatus: status,
 			})
 		}
 	}()
@@ -103,7 +104,7 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 	// Validate input if enabled
 	if f.config.ValidateInputs {
 		if err := ValidateFindQuery(query); err != nil {
-			status = "error"
+			status = metrics.StatusError
 			envelope := errors.NewErrorEnvelope("PATHFINDER_INPUT_VALIDATION_ERROR", "Input validation failed for pathfinder query")
 			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
 			envelope = envelope.WithCorrelationID(correlationID)
@@ -135,7 +136,7 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 	// Convert root to absolute path for relative path calculations
 	absRoot, err := filepath.Abs(query.Root)
 	if err != nil {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("PATHFINDER_ROOT_PATH_ERROR", fmt.Sprintf("Failed to get absolute root path for %s", query.Root))
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)

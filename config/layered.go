@@ -11,6 +11,7 @@ import (
 	"github.com/fulmenhq/gofulmen/errors"
 	"github.com/fulmenhq/gofulmen/schema"
 	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,21 +39,21 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID string, runtimeOverrides ...map[string]any) (map[string]any, []schema.Diagnostic, error) {
 	start := time.Now()
 	telSys := getTelemetrySystem()
-	status := "success"
+	status := metrics.StatusSuccess
 
 	defer func() {
 		if telSys != nil {
 			duration := time.Since(start)
-			_ = telSys.Histogram("config_load_ms", duration, map[string]string{
-				"category": opts.Category,
-				"version":  opts.Version,
-				"status":   status,
+			_ = telSys.Histogram(metrics.ConfigLoadMs, duration, map[string]string{
+				metrics.TagCategory: opts.Category,
+				metrics.TagStatus:   status,
+				metrics.TagVersion:  "v1.0.0",
 			})
 		}
 	}()
 
 	if opts.Category == "" || opts.Version == "" || opts.DefaultsFile == "" {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("CONFIG_LOAD_ERROR", "Configuration loading failed: missing required parameters")
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)
@@ -76,7 +77,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		return nil, nil, envelope
 	}
 	if opts.SchemaID == "" {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("CONFIG_VALIDATION_ERROR", "Configuration validation failed: schema ID is required")
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)
@@ -105,7 +106,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 	defaultsPath := filepath.Join(defaultsRoot, opts.Category, opts.Version, opts.DefaultsFile)
 	defaultLayer, err := loadConfigFile(defaultsPath)
 	if err != nil {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("CONFIG_DEFAULTS_LOAD_ERROR", fmt.Sprintf("Failed to load configuration defaults from %s", defaultsPath))
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)
@@ -141,7 +142,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 				if os.IsNotExist(err) {
 					continue
 				}
-				status = "error"
+				status = metrics.StatusError
 				envelope := errors.NewErrorEnvelope("CONFIG_USER_LOAD_ERROR", fmt.Sprintf("Failed to load user configuration from %s", path))
 				envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
 				envelope = envelope.WithCorrelationID(correlationID)
@@ -177,7 +178,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 
 	payload, err := json.Marshal(merged)
 	if err != nil {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("CONFIG_ENCODE_ERROR", "Failed to encode merged configuration")
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)
@@ -206,7 +207,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 
 	diags, err := catalog.ValidateDataByID(opts.SchemaID, payload)
 	if err != nil {
-		status = "error"
+		status = metrics.StatusError
 		envelope := errors.NewErrorEnvelope("CONFIG_VALIDATION_ERROR", "Configuration validation failed")
 		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
 		envelope = envelope.WithCorrelationID(correlationID)
