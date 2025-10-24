@@ -11,6 +11,8 @@ The config library addresses common configuration needs in Go applications:
 - **File Discovery**: Automatic discovery of configuration files in standard locations
 - **Legacy Support**: Backward compatibility with old config locations
 - **Ecosystem Conventions**: Optional Fulmen ecosystem defaults
+- **Structured Error Reporting**: Error envelopes with correlation ID tracking
+- **Telemetry Integration**: Automatic metrics emission for config operations
 
 ## Key Features
 
@@ -19,6 +21,8 @@ The config library addresses common configuration needs in Go applications:
 - **Config Discovery**: Searches multiple standard locations for config files
 - **Fulmen Defaults**: Convenience functions for Fulmen ecosystem tools
 - **No Hard-Coded Names**: Library doesn't force "gofulmen" or "fulmen" on consumers
+- **Error Envelopes**: Structured error reporting with detailed context
+- **Telemetry Metrics**: Automatic emission of config load duration and errors
 
 ## Basic Usage
 
@@ -185,6 +189,66 @@ fmt.Printf("Retries (env) => %v\n", merged["settings"].(map[string]any)["retries
 ```
 
 Advanced scenarios can set `DefaultsRoot`, `UserPaths`, or pass a custom `*schema.Catalog` through `LayeredConfigOptions`.
+
+## Telemetry and Error Handling
+
+### Structured Error Envelopes
+
+The config package returns structured error envelopes (`*errors.ErrorEnvelope`) for comprehensive error tracking:
+
+```go
+import (
+    "fmt"
+
+    "github.com/fulmenhq/gofulmen/config"
+    "github.com/fulmenhq/gofulmen/errors"
+)
+
+func example() {
+    opts := config.LayeredConfigOptions{
+        Category:     "myapp",
+        Version:      "v1.0.0",
+        DefaultsFile: "defaults.yaml",
+        SchemaID:     "myapp/v1.0.0/schema",
+    }
+
+    merged, diags, err := config.LoadLayeredConfigWithEnvelope(opts, "req-123")
+    if err != nil {
+        if envelope, ok := err.(*errors.ErrorEnvelope); ok {
+            fmt.Printf("Error Code: %s\n", envelope.Code)
+            fmt.Printf("Severity: %s\n", envelope.Severity)
+            fmt.Printf("Correlation ID: %s\n", envelope.CorrelationID)
+            fmt.Printf("Context: %+v\n", envelope.Context)
+        }
+        return err
+    }
+}
+```
+
+### Metrics Emission
+
+Config operations automatically emit telemetry metrics:
+
+- `config_load_ms`: Histogram of config loading duration (tagged by category, version, status)
+- `config_load_errors`: Counter of config loading errors (tagged by category, version, error_type, error_code)
+
+All metrics include relevant tags for filtering and aggregation.
+
+### Envelope Variants
+
+Functions provide both simple and envelope variants:
+
+```go
+// Simple variants (backward compatible)
+merged, diags, err := config.LoadLayeredConfig(opts)
+overrides, err := config.LoadEnvOverrides(specs)
+xdg := config.GetXDGBaseDirs()
+
+// Envelope variants with structured errors
+merged, diags, err := config.LoadLayeredConfigWithEnvelope(opts, correlationID)
+overrides, err := config.LoadEnvOverridesWithEnvelope(specs, correlationID)
+xdg, err := config.GetXDGBaseDirsWithEnvelope(correlationID)
+```
 
 ## Future Enhancements
 

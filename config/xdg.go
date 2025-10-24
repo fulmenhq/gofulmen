@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/fulmenhq/gofulmen/errors"
 )
 
 // XDGBaseDirs provides XDG Base Directory paths
@@ -19,6 +21,25 @@ func GetXDGBaseDirs() XDGBaseDirs {
 		DataHome:   getXDGDataHome(),
 		CacheHome:  getXDGCacheHome(),
 	}
+}
+
+// GetXDGBaseDirsWithEnvelope returns the XDG Base Directory paths with structured error reporting.
+// Returns an error envelope if HOME environment variable is not set.
+func GetXDGBaseDirsWithEnvelope(correlationID string) (XDGBaseDirs, error) {
+	home := os.Getenv("HOME")
+	if home == "" {
+		envelope := errors.NewErrorEnvelope("CONFIG_XDG_ERROR", "HOME environment variable not set")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "config",
+			"operation":  "get_xdg_dirs",
+			"error_type": "missing_home_env",
+		})
+		return XDGBaseDirs{}, envelope
+	}
+
+	return GetXDGBaseDirs(), nil
 }
 
 func getXDGConfigHome() string {

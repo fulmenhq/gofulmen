@@ -44,10 +44,14 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 	defer func() {
 		if telSys != nil {
 			duration := time.Since(start)
+			version := opts.Version
+			if version == "" {
+				version = "unknown"
+			}
 			_ = telSys.Histogram(metrics.ConfigLoadMs, duration, map[string]string{
 				metrics.TagCategory: opts.Category,
 				metrics.TagStatus:   status,
-				metrics.TagVersion:  "v1.0.0",
+				metrics.TagVersion:  version,
 			})
 		}
 	}()
@@ -67,7 +71,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		})
 		// Emit error metric
 		if telSys != nil {
-			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+			_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 				"category":   opts.Category,
 				"version":    opts.Version,
 				"error_type": "missing_parameters",
@@ -88,7 +92,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		})
 		// Emit error metric
 		if telSys != nil {
-			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+			_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 				"category":   opts.Category,
 				"version":    opts.Version,
 				"error_type": "missing_schema_id",
@@ -120,7 +124,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		envelope = envelope.WithOriginal(err)
 		// Emit error metric
 		if telSys != nil {
-			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+			_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 				"category":   opts.Category,
 				"version":    opts.Version,
 				"error_type": "file_load_error",
@@ -155,7 +159,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 				envelope = envelope.WithOriginal(err)
 				// Emit error metric
 				if telSys != nil {
-					_ = telSys.Counter("config_load_errors", 1, map[string]string{
+					_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 						"category":   opts.Category,
 						"version":    opts.Version,
 						"error_type": "file_load_error",
@@ -190,7 +194,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		envelope = envelope.WithOriginal(err)
 		// Emit error metric
 		if telSys != nil {
-			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+			_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 				"category":   opts.Category,
 				"version":    opts.Version,
 				"error_type": "json_encode_error",
@@ -221,7 +225,7 @@ func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID stri
 		envelope = envelope.WithOriginal(err)
 		// Emit error metric
 		if telSys != nil {
-			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+			_ = telSys.Counter(metrics.ConfigLoadErrors, 1, map[string]string{
 				"category":   opts.Category,
 				"version":    opts.Version,
 				"error_type": "validation_error",
