@@ -1,16 +1,19 @@
 package pathfinder
 
 import (
-	"errors"
+	goerrors "errors"
+	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/fulmenhq/gofulmen/errors"
 )
 
-// Common safety errors
+// Common safety errors (sentinel errors for errors.Is compatibility)
 var (
-	ErrPathTraversal = errors.New("path traversal detected")
-	ErrInvalidPath   = errors.New("invalid path")
-	ErrEscapesRoot   = errors.New("path escapes root directory")
+	ErrPathTraversal = goerrors.New("path traversal detected")
+	ErrInvalidPath   = goerrors.New("invalid path")
+	ErrEscapesRoot   = goerrors.New("path escapes root directory")
 )
 
 // ValidatePath checks if a path is safe to access
@@ -42,29 +45,82 @@ func IsSafePath(path string) bool {
 }
 
 // ValidatePathWithinRoot ensures a path doesn't escape the given root directory
-// This is critical for security - prevents path traversal attacks via glob patterns
 func ValidatePathWithinRoot(absPath, absRoot string) error {
+	return ValidatePathWithinRootWithEnvelope(absPath, absRoot, "")
+}
+
+// ValidatePathWithinRootWithEnvelope ensures a path doesn't escape the given root directory with structured error reporting
+// This is critical for security - prevents path traversal attacks via glob patterns
+func ValidatePathWithinRootWithEnvelope(absPath, absRoot, correlationID string) error {
 	// Both paths must be absolute for reliable comparison
 	if !filepath.IsAbs(absPath) || !filepath.IsAbs(absRoot) {
-		return ErrInvalidPath
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Path validation requires absolute paths")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":        "pathfinder",
+			"operation":        "validate_path_within_root",
+			"error_type":       "invalid_path",
+			"abs_path":         absPath,
+			"abs_root":         absRoot,
+			"path_is_absolute": filepath.IsAbs(absPath),
+			"root_is_absolute": filepath.IsAbs(absRoot),
+		})
+		envelope = envelope.WithOriginal(ErrInvalidPath)
+		return envelope
 	}
 
 	// Get relative path from root to target
 	relPath, err := filepath.Rel(absRoot, absPath)
 	if err != nil {
-		return err
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", fmt.Sprintf("Failed to compute relative path from %s to %s", absRoot, absPath))
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_path_within_root",
+			"error_type": "path_resolution_error",
+			"abs_path":   absPath,
+			"abs_root":   absRoot,
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	// If relative path starts with "..", it's outside the root
 	// This catches cases like: /repo/../etc/passwd -> ../etc/passwd
 	if strings.HasPrefix(relPath, "..") {
-		return ErrEscapesRoot
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SECURITY_ERROR", fmt.Sprintf("Path %s escapes root directory %s", absPath, absRoot))
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityCritical)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":     "pathfinder",
+			"operation":     "validate_path_within_root",
+			"error_type":    "path_escape",
+			"abs_path":      absPath,
+			"abs_root":      absRoot,
+			"relative_path": relPath,
+		})
+		envelope = envelope.WithOriginal(ErrEscapesRoot)
+		return envelope
 	}
 
 	// Additional check: ensure the path doesn't contain .. anywhere
 	// This catches cases like: foo/../../../etc/passwd
 	if strings.Contains(relPath, "..") {
-		return ErrPathTraversal
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SECURITY_ERROR", fmt.Sprintf("Path traversal detected in %s", absPath))
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityCritical)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":     "pathfinder",
+			"operation":     "validate_path_within_root",
+			"error_type":    "path_traversal",
+			"abs_path":      absPath,
+			"abs_root":      absRoot,
+			"relative_path": relPath,
+		})
+		envelope = envelope.WithOriginal(ErrPathTraversal)
+		return envelope
 	}
 
 	return nil

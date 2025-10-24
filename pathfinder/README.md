@@ -341,6 +341,65 @@ type PathResult struct {
 go test ./pathfinder/...
 ```
 
+## Telemetry and Error Handling
+
+### Structured Error Envelopes
+
+The pathfinder package returns structured error envelopes (`*errors.ErrorEnvelope`) for comprehensive error tracking:
+
+```go
+import (
+    "context"
+    "fmt"
+
+    "github.com/fulmenhq/gofulmen/errors"
+    "github.com/fulmenhq/gofulmen/pathfinder"
+)
+
+func example() {
+    ctx := context.Background()
+    finder := pathfinder.NewFinder()
+
+    results, err := finder.FindFiles(ctx, query)
+    if err != nil {
+        if envelope, ok := err.(*errors.ErrorEnvelope); ok {
+            fmt.Printf("Error Code: %s\n", envelope.Code)
+            fmt.Printf("Severity: %s\n", envelope.Severity)
+            fmt.Printf("Context: %+v\n", envelope.Context)
+        }
+        return err
+    }
+}
+```
+
+### Metrics Emission
+
+Pathfinder automatically emits telemetry metrics:
+
+- `pathfinder_find_ms`: Histogram of file discovery duration
+- `pathfinder_validation_errors`: Counter of validation failures
+- `pathfinder_security_warnings`: Counter of security events (path traversal attempts)
+
+All metrics include relevant tags (root, status, error_type) for filtering and aggregation.
+
+### Validation Functions with Envelopes
+
+Validation functions provide both simple and envelope variants:
+
+```go
+// Simple validation (backward compatible)
+err := pathfinder.ValidatePathResult(result)
+
+// With structured error envelope
+err := pathfinder.ValidatePathResultWithEnvelope(result, correlationID)
+
+// Batch validation
+err := pathfinder.ValidatePathResultsWithEnvelope(results, correlationID)
+
+// Security validation
+err := pathfinder.ValidatePathWithinRootWithEnvelope(absPath, absRoot, correlationID)
+```
+
 ## Future Enhancements
 
 - Advanced pattern matching with regular expressions

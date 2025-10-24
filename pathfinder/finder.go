@@ -124,7 +124,7 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 
 			// Emit error metric
 			if f.telemetrySystem != nil {
-				_ = f.telemetrySystem.Counter("pathfinder_validation_errors", 1, map[string]string{
+				_ = f.telemetrySystem.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
 					"root":       query.Root,
 					"error_type": "validation_error",
 				})
@@ -149,7 +149,7 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 		envelope = envelope.WithOriginal(err)
 		// Emit error metric
 		if f.telemetrySystem != nil {
-			_ = f.telemetrySystem.Counter("pathfinder_validation_errors", 1, map[string]string{
+			_ = f.telemetrySystem.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
 				"root":       query.Root,
 				"error_type": "path_resolution_error",
 			})
@@ -196,7 +196,7 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 			// Log security warning for path traversal attempt
 			// Emit security warning metric
 			if f.telemetrySystem != nil {
-				_ = f.telemetrySystem.Counter("pathfinder_security_warnings", 1, map[string]string{
+				_ = f.telemetrySystem.Counter(metrics.PathfinderSecurityWarnings, 1, map[string]string{
 					"root":         query.Root,
 					"warning_type": "path_traversal",
 				})
@@ -320,17 +320,10 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 					file, err := os.Open(absMatch) // #nosec G304 -- absMatch is validated with ValidatePathWithinRoot to prevent path traversal
 					if err != nil {
 						metadata["checksumError"] = fmt.Sprintf("failed to open file: %v", err)
-						// Log structured error for file access failure
-						// Error is logged via metadata, envelope creation was for structured logging
-						_ = correlationID // Use correlationID to avoid unused variable warning
-						// Continue processing - checksum error is non-fatal
 					} else {
 						digest, err := fulhash.HashReader(file, fulhash.WithAlgorithm(alg))
 						if err != nil {
 							metadata["checksumError"] = fmt.Sprintf("checksum calculation failed: %v", err)
-							// Log structured error for checksum calculation failure
-							// Error is logged via metadata, envelope creation was for structured logging
-							_ = correlationID // Use correlationID to avoid unused variable warning
 						} else {
 							metadata["checksum"] = digest.String()
 							metadata["checksumAlgorithm"] = string(digest.Algorithm())
@@ -378,8 +371,22 @@ func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, cor
 
 	// Validate outputs if enabled
 	if f.config.ValidateOutputs {
-		if err := ValidatePathResults(results); err != nil {
-			return nil, fmt.Errorf("output validation failed: %w", err)
+		for i, result := range results {
+			if err := validatePathResultWithTelemetry(result, correlationID, f.telemetrySystem); err != nil {
+				status = metrics.StatusError
+				envelope := errors.NewErrorEnvelope("PATHFINDER_OUTPUT_VALIDATION_ERROR", fmt.Sprintf("Output validation failed at index %d", i))
+				envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+				envelope = envelope.WithCorrelationID(correlationID)
+				envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+					"component":     "pathfinder",
+					"operation":     "validate_outputs",
+					"error_type":    "validation_error",
+					"result_index":  i,
+					"total_results": len(results),
+				})
+				envelope = envelope.WithOriginal(err)
+				return nil, envelope
+			}
 		}
 	}
 
@@ -547,36 +554,133 @@ func ValidateFindQueryWithEnvelope(query FindQuery, correlationID string) error 
 
 // ValidatePathResult validates a PathResult against the schema
 func ValidatePathResult(result PathResult) error {
+	return ValidatePathResultWithEnvelope(result, "")
+}
+
+// ValidatePathResultWithEnvelope validates a PathResult against the schema with structured error reporting
+func ValidatePathResultWithEnvelope(result PathResult, correlationID string) error {
+	return validatePathResultWithTelemetry(result, correlationID, nil)
+}
+
+// validatePathResultWithTelemetry validates a PathResult with optional telemetry system
+func validatePathResultWithTelemetry(result PathResult, correlationID string, telSys *telemetry.System) error {
 	pathfinderSchemas, err := crucible.SchemaRegistry.Pathfinder().V1_0_0()
 	if err != nil {
-		return fmt.Errorf("failed to get pathfinder schemas: %w", err)
+		if telSys != nil {
+			_ = telSys.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
+				"error_type": "registry_error",
+			})
+		}
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SCHEMA_ERROR", "Failed to get pathfinder schemas from registry")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_path_result",
+			"error_type": "registry_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	schemaData, err := pathfinderSchemas.PathResult()
 	if err != nil {
-		return fmt.Errorf("failed to load path-result schema: %w", err)
+		if telSys != nil {
+			_ = telSys.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
+				"error_type": "schema_load_error",
+			})
+		}
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SCHEMA_ERROR", "Failed to load path-result schema")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_path_result",
+			"error_type": "schema_load_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	validator, err := schema.NewValidator(schemaData)
 	if err != nil {
-		return fmt.Errorf("failed to create validator: %w", err)
+		if telSys != nil {
+			_ = telSys.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
+				"error_type": "validator_creation_error",
+			})
+		}
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Failed to create schema validator")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_path_result",
+			"error_type": "validator_creation_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	diags, err := validator.ValidateData(result)
 	if err != nil {
-		return fmt.Errorf("failed to validate path result: %w", err)
+		if telSys != nil {
+			_ = telSys.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
+				"error_type": "validation_error",
+			})
+		}
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Failed to validate path result data")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_path_result",
+			"error_type": "validation_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
-		return verrs
+		if telSys != nil {
+			_ = telSys.Counter(metrics.PathfinderValidationErrors, 1, map[string]string{
+				"error_type": "schema_validation_error",
+			})
+		}
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "PathResult validation failed with schema errors")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":              "pathfinder",
+			"operation":              "validate_path_result",
+			"error_type":             "schema_validation_error",
+			"validation_diagnostics": schema.DiagnosticsToStringSlice(diags),
+		})
+		envelope = envelope.WithOriginal(verrs)
+		return envelope
 	}
 	return nil
 }
 
 // ValidatePathResults validates multiple PathResult objects
 func ValidatePathResults(results []PathResult) error {
+	return ValidatePathResultsWithEnvelope(results, "")
+}
+
+// ValidatePathResultsWithEnvelope validates multiple PathResult objects with structured error reporting
+func ValidatePathResultsWithEnvelope(results []PathResult, correlationID string) error {
 	for i, result := range results {
-		if err := ValidatePathResult(result); err != nil {
-			return fmt.Errorf("result %d validation failed: %w", i, err)
+		if err := ValidatePathResultWithEnvelope(result, correlationID); err != nil {
+			envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", fmt.Sprintf("PathResult validation failed at index %d", i))
+			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+			envelope = envelope.WithCorrelationID(correlationID)
+			envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+				"component":     "pathfinder",
+				"operation":     "validate_path_results",
+				"error_type":    "validation_error",
+				"result_index":  i,
+				"total_results": len(results),
+			})
+			envelope = envelope.WithOriginal(err)
+			return envelope
 		}
 	}
 	return nil
