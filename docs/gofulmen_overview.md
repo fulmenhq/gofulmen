@@ -40,6 +40,8 @@ Rather than copying Crucible assets into every project, helper libraries provide
 | --------------- | --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | **config/**     | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading |
 | **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE) |
+| **errors/**     | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support |
+| **telemetry/**  | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters  |
 | **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support        |
 | **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards           |
 | **docscribe/**  | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing    |
@@ -132,6 +134,8 @@ Policy files are resolved in order:
 - ✅ Three-layer configuration loading
 - ✅ Pathfinder security with path traversal protection
 - ✅ Foundry utilities (time, correlation IDs, patterns, MIME, HTTP, country codes)
+- ✅ Error handling with structured envelopes and validation strategies
+- ✅ Telemetry with counters, gauges, histograms, and Prometheus exporter
 
 **Planned** (v0.1.3+):
 
@@ -139,6 +143,15 @@ Policy files are resolved in order:
 - 📋 Additional coverage improvements for bootstrap package
 - 📋 Performance optimizations
 - 📋 Additional middleware (sampling, batching)
+
+**Completed** (v0.1.5):
+
+- ✅ Error handling with structured envelopes, severity levels, and validation strategies
+- ✅ Telemetry system with counters, gauges, histograms, and custom exporters
+- ✅ Prometheus exporter with proper metric formatting and HTTP server
+- ✅ Metric type routing ensuring proper backend method calls
+- ✅ +Inf histogram bucket for complete sample coverage
+- ✅ Cross-language implementation patterns for ecosystem consistency
 
 **Planned** (v0.2.0):
 
@@ -267,6 +280,8 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 ### Package Documentation
 
 - [Logging](../logging/README.md) - Structured logging with progressive profiles
+- [Errors](../errors/README.md) - Structured error handling with severity levels and validation strategies
+- [Telemetry](../telemetry/README.md) - Metrics emission with counters, gauges, histograms, and custom exporters
 - [Config](../config/README.md) - Configuration management, XDG paths, and three-layer loader (preview)
 - [Schema](../schema/README.md) - JSON Schema validation, catalog discovery, composition/diff helpers, CLI shim (`gofulmen-schema`)
 - [Crucible](../crucible/README.md) - Access to Crucible SSOT assets
@@ -276,7 +291,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.2
+- **Current Version**: 0.1.5
 - **Crucible Version**: 2025.10.2
 - **Go Version**: 1.21+
 - **License**: MIT

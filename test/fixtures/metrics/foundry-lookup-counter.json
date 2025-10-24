@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-23T18:33:00Z",
+  "name": "foundry_lookup_count",
+  "value": 5,
+  "tags": {
+    "component": "foundry",
+    "operation": "lookup",
+    "catalog": "country-codes"
+  },
+  "unit": "count"
+}

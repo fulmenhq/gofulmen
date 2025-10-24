@@ -22,3 +22,16 @@ func ValidateFileByID(id, path string) ([]Diagnostic, error) {
 func CatalogForRoot(root string) *Catalog {
 	return NewCatalog(root)
 }
+
+// DiagnosticsToStringSlice converts a slice of diagnostics to a slice of strings for error context.
+func DiagnosticsToStringSlice(diags []Diagnostic) []string {
+	if len(diags) == 0 {
+		return nil
+	}
+
+	result := make([]string, len(diags))
+	for i, diag := range diags {
+		result[i] = diag.Message
+	}
+	return result
+}

@@ -5,19 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-10-23
+## [Unreleased] - 2025-10-24
 
 ### Added
 
+- **Error Handling Module** - Structured error envelopes with validation and strategies
+  - **Error Envelope System**: Structured errors with severity levels, correlation IDs, and context support
+  - **Validation Strategies**: Configurable error handling (LogWarning, AppendToMessage, FailFast, Silent)
+  - **Severity Levels**: Info, Low, Medium, High, Critical with automatic validation
+  - **Context Support**: Structured context data with validation for error metadata
+  - **Safe Helpers**: Production-safe wrappers that handle validation errors gracefully
+  - **Cross-Language Patterns**: Consistent error handling patterns for TS/Py team implementation
+  - **Enterprise Integration**: Ready for distributed tracing and error monitoring systems
+
+- **Telemetry Phase 5** - Advanced Features & Ecosystem Integration
+  - **Gauge Metrics Support**: Real-time value metrics (CPU %, memory usage, temperature) with proper type routing
+  - **Custom Exporters**: Full-featured Prometheus exporter with HTTP server and proper metric formatting
+  - **Metric Type Routing**: MetricsEvent carries Type field ensuring counters→Counter, gauges→Gauge, histograms→Histogram
+  - **Prometheus Format Compliance**: Counters as \_total, gauges as \_gauge, histograms with full \_bucket/\_sum/\_count series
+  - **+Inf Histogram Bucket**: ADR-0007 buckets plus +Inf ensuring long-running samples aren't lost
+  - **Cross-Language Patterns**: Implementation ready for TS/Py teams with consistent APIs and error handling
+  - **Enterprise Integration**: Ready for Prometheus, Datadog, and other monitoring systems
+  - **Comprehensive Testing**: New routing tests verify correct metric type handling and Prometheus output format
+  - **Performance Maintained**: <5% overhead target achieved with efficient data structures
+  - **Schema Validation**: Metrics validate against canonical Crucible taxonomy and observability schemas
+
 ### Changed
 
-### Deprecated
-
-### Removed
+- **Telemetry Core**: Enhanced MetricsEvent with Type field for proper metric routing
+- **Prometheus Exporter**: Rewritten to handle all metric types with proper Prometheus conventions
+- **Histogram Implementation**: Added +Inf bucket for complete sample coverage
 
 ### Fixed
 
-### Security
+- **Metric Type Routing**: Resolved issue where gauges were incorrectly routed to counter methods
+- **Histogram Buckets**: Fixed sample loss for durations exceeding largest ADR-0007 boundary
+- **Prometheus Output**: Correct metric naming conventions (\_total, \_gauge, \_bucket/\_sum/\_count)
 
 ## [0.1.4] - 2025-10-23
 

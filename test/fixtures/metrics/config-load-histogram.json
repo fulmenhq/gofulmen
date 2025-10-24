@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-23T18:31:00Z",
+  "name": "config_load_ms",
+  "value": 45.2,
+  "tags": {
+    "component": "config",
+    "operation": "load",
+    "format": "yaml"
+  },
+  "unit": "ms"
+}

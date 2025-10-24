@@ -1,0 +1,19 @@
+{
+  "code": "VALIDATION_FAILED",
+  "message": "Schema validation failed for input data",
+  "details": {
+    "field": "username",
+    "constraint": "required"
+  },
+  "path": "/api/users",
+  "timestamp": "2025-10-23T17:15:00Z",
+  "severity": "high",
+  "severity_level": 3,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "context": {
+    "component": "schema-validator",
+    "operation": "validate-user-input"
+  },
+  "original": "validation error at username: required field is missing"
+}

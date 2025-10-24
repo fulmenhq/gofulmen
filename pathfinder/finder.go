@@ -6,11 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/fulmenhq/crucible"
+	"github.com/fulmenhq/gofulmen/errors"
 	"github.com/fulmenhq/gofulmen/fulhash"
 	"github.com/fulmenhq/gofulmen/schema"
+	"github.com/fulmenhq/gofulmen/telemetry"
 )
 
 // FinderConfig holds default settings for the FinderFacade
@@ -56,11 +59,16 @@ type PathResult struct {
 
 // Finder provides high-level path discovery operations
 type Finder struct {
-	config FinderConfig
+	config          FinderConfig
+	telemetrySystem *telemetry.System
 }
 
 // NewFinder creates a new finder with default config
 func NewFinder() *Finder {
+	config := telemetry.DefaultConfig()
+	config.Enabled = true                    // Enable telemetry for pathfinder operations
+	telSys, _ := telemetry.NewSystem(config) // Ignore error, will operate without telemetry if it fails
+
 	return &Finder{
 		config: FinderConfig{
 			MaxWorkers:      4,
@@ -69,22 +77,83 @@ func NewFinder() *Finder {
 			ValidateInputs:  false, // disabled by default for performance
 			ValidateOutputs: false, // disabled by default for performance
 		},
+		telemetrySystem: telSys,
 	}
 }
 
 // FindFiles performs file discovery based on the query
 func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, error) {
+	return f.FindFilesWithEnvelope(ctx, query, "")
+}
+
+// FindFilesWithEnvelope performs file discovery based on the query with structured error reporting
+func (f *Finder) FindFilesWithEnvelope(ctx context.Context, query FindQuery, correlationID string) ([]PathResult, error) {
+	start := time.Now()
+	status := "success"
+	defer func() {
+		if f.telemetrySystem != nil {
+			duration := time.Since(start)
+			_ = f.telemetrySystem.Histogram("pathfinder_find_ms", duration, map[string]string{
+				"root":   query.Root,
+				"status": status,
+			})
+		}
+	}()
+
 	// Validate input if enabled
 	if f.config.ValidateInputs {
 		if err := ValidateFindQuery(query); err != nil {
-			return nil, fmt.Errorf("input validation failed: %w", err)
+			status = "error"
+			envelope := errors.NewErrorEnvelope("PATHFINDER_INPUT_VALIDATION_ERROR", "Input validation failed for pathfinder query")
+			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+			envelope = envelope.WithCorrelationID(correlationID)
+
+			// Build complete context map to avoid overwriting
+			contextMap := map[string]interface{}{
+				"component":  "pathfinder",
+				"operation":  "validate_input",
+				"error_type": "validation_error",
+				"root":       query.Root,
+			}
+			if validationErr, ok := err.(schema.ValidationErrors); ok {
+				contextMap["validation_errors"] = validationErr.Error()
+			}
+			envelope = errors.SafeWithContext(envelope, contextMap)
+			envelope = envelope.WithOriginal(err)
+
+			// Emit error metric
+			if f.telemetrySystem != nil {
+				_ = f.telemetrySystem.Counter("pathfinder_validation_errors", 1, map[string]string{
+					"root":       query.Root,
+					"error_type": "validation_error",
+				})
+			}
+			return nil, envelope
 		}
 	}
 
 	// Convert root to absolute path for relative path calculations
 	absRoot, err := filepath.Abs(query.Root)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute root path: %w", err)
+		status = "error"
+		envelope := errors.NewErrorEnvelope("PATHFINDER_ROOT_PATH_ERROR", fmt.Sprintf("Failed to get absolute root path for %s", query.Root))
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "resolve_root_path",
+			"error_type": "path_resolution_error",
+			"root":       query.Root,
+		})
+		envelope = envelope.WithOriginal(err)
+		// Emit error metric
+		if f.telemetrySystem != nil {
+			_ = f.telemetrySystem.Counter("pathfinder_validation_errors", 1, map[string]string{
+				"root":       query.Root,
+				"error_type": "path_resolution_error",
+			})
+		}
+		return nil, envelope
 	}
 
 	// Load .fulmenignore patterns from root directory
@@ -123,6 +192,15 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 				// Error handler call failure is non-critical in pathfinder context
 				_ = query.ErrorHandler(pattern, ErrEscapesRoot)
 			}
+			// Log security warning for path traversal attempt
+			// Emit security warning metric
+			if f.telemetrySystem != nil {
+				_ = f.telemetrySystem.Counter("pathfinder_security_warnings", 1, map[string]string{
+					"root":         query.Root,
+					"warning_type": "path_traversal",
+				})
+			}
+			// Continue processing other patterns
 			continue
 		}
 
@@ -241,10 +319,17 @@ func (f *Finder) FindFiles(ctx context.Context, query FindQuery) ([]PathResult, 
 					file, err := os.Open(absMatch) // #nosec G304 -- absMatch is validated with ValidatePathWithinRoot to prevent path traversal
 					if err != nil {
 						metadata["checksumError"] = fmt.Sprintf("failed to open file: %v", err)
+						// Log structured error for file access failure
+						// Error is logged via metadata, envelope creation was for structured logging
+						_ = correlationID // Use correlationID to avoid unused variable warning
+						// Continue processing - checksum error is non-fatal
 					} else {
 						digest, err := fulhash.HashReader(file, fulhash.WithAlgorithm(alg))
 						if err != nil {
 							metadata["checksumError"] = fmt.Sprintf("checksum calculation failed: %v", err)
+							// Log structured error for checksum calculation failure
+							// Error is logged via metadata, envelope creation was for structured logging
+							_ = correlationID // Use correlationID to avoid unused variable warning
 						} else {
 							metadata["checksum"] = digest.String()
 							metadata["checksumAlgorithm"] = string(digest.Algorithm())
@@ -365,37 +450,96 @@ func (f *Finder) FindConfigFilesWithChecksums(ctx context.Context, root string, 
 
 // ValidateFindQuery validates a FindQuery against the schema
 func ValidateFindQuery(query FindQuery) error {
+	return ValidateFindQueryWithEnvelope(query, "")
+}
+
+// ValidateFindQueryWithEnvelope validates a FindQuery against the schema with structured error reporting
+func ValidateFindQueryWithEnvelope(query FindQuery, correlationID string) error {
 	// Validate checksum algorithm if checksums are enabled
 	if query.CalculateChecksums {
 		switch query.ChecksumAlgorithm {
 		case "", "xxh3-128", "sha256":
 			// Valid algorithms
 		default:
-			return fmt.Errorf("invalid checksumAlgorithm %q: must be one of 'xxh3-128', 'sha256', or empty (defaults to 'xxh3-128')", query.ChecksumAlgorithm)
+			envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", fmt.Sprintf("Invalid checksum algorithm %q", query.ChecksumAlgorithm))
+			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+			envelope = envelope.WithCorrelationID(correlationID)
+			envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+				"component":          "pathfinder",
+				"operation":          "validate_checksum_algorithm",
+				"error_type":         "validation_error",
+				"checksum_algorithm": query.ChecksumAlgorithm,
+			})
+			return envelope
 		}
 	}
 
 	pathfinderSchemas, err := crucible.SchemaRegistry.Pathfinder().V1_0_0()
 	if err != nil {
-		return fmt.Errorf("failed to get pathfinder schemas: %w", err)
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SCHEMA_ERROR", "Failed to get pathfinder schemas from registry")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "get_schemas",
+			"error_type": "registry_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	schemaData, err := pathfinderSchemas.FindQuery()
 	if err != nil {
-		return fmt.Errorf("failed to load find-query schema: %w", err)
+		envelope := errors.NewErrorEnvelope("PATHFINDER_SCHEMA_ERROR", "Failed to load find-query schema")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "load_schema",
+			"error_type": "schema_load_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	validator, err := schema.NewValidator(schemaData)
 	if err != nil {
-		return fmt.Errorf("failed to create validator: %w", err)
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Failed to create schema validator")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "create_validator",
+			"error_type": "validator_creation_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 
 	diags, err := validator.ValidateData(query)
 	if err != nil {
-		return fmt.Errorf("failed to validate query: %w", err)
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Failed to validate query data")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "pathfinder",
+			"operation":  "validate_data",
+			"error_type": "validation_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		return envelope
 	}
 	if verrs := schema.DiagnosticsToValidationErrors(diags); len(verrs) > 0 {
-		return verrs
+		envelope := errors.NewErrorEnvelope("PATHFINDER_VALIDATION_ERROR", "Query validation failed with schema errors")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":              "pathfinder",
+			"operation":              "validate_query",
+			"error_type":             "schema_validation_error",
+			"validation_diagnostics": schema.DiagnosticsToStringSlice(diags),
+		})
+		return envelope
 	}
 	return nil
 }

@@ -2,13 +2,15 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/fulmenhq/gofulmen/errors"
 	"github.com/fulmenhq/gofulmen/schema"
+	"github.com/fulmenhq/gofulmen/telemetry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,12 +27,74 @@ type LayeredConfigOptions struct {
 
 // LoadLayeredConfig loads defaults, applies user overrides, then applies runtime overrides.
 // Returns merged configuration map and validation diagnostics (empty when valid).
+// Enhanced with structured error envelopes for better error reporting and telemetry.
 func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string]any) (map[string]any, []schema.Diagnostic, error) {
+	return LoadLayeredConfigWithEnvelope(opts, "", runtimeOverrides...)
+}
+
+// LoadLayeredConfigWithEnvelope loads defaults, applies user overrides, then applies runtime overrides.
+// Returns merged configuration map and validation diagnostics (empty when valid).
+// Provides structured error envelopes with correlation ID for better error tracking.
+func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID string, runtimeOverrides ...map[string]any) (map[string]any, []schema.Diagnostic, error) {
+	start := time.Now()
+	telSys := getTelemetrySystem()
+	status := "success"
+
+	defer func() {
+		if telSys != nil {
+			duration := time.Since(start)
+			_ = telSys.Histogram("config_load_ms", duration, map[string]string{
+				"category": opts.Category,
+				"version":  opts.Version,
+				"status":   status,
+			})
+		}
+	}()
+
 	if opts.Category == "" || opts.Version == "" || opts.DefaultsFile == "" {
-		return nil, nil, errors.New("category, version, and defaults file are required")
+		status = "error"
+		envelope := errors.NewErrorEnvelope("CONFIG_LOAD_ERROR", "Configuration loading failed: missing required parameters")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":     "config",
+			"operation":     "load_layered_config",
+			"error_type":    "missing_parameters",
+			"category":      opts.Category,
+			"version":       opts.Version,
+			"defaults_file": opts.DefaultsFile,
+		})
+		// Emit error metric
+		if telSys != nil {
+			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+				"category":   opts.Category,
+				"version":    opts.Version,
+				"error_type": "missing_parameters",
+				"error_code": "CONFIG_LOAD_ERROR",
+			})
+		}
+		return nil, nil, envelope
 	}
 	if opts.SchemaID == "" {
-		return nil, nil, errors.New("schema id is required for validation")
+		status = "error"
+		envelope := errors.NewErrorEnvelope("CONFIG_VALIDATION_ERROR", "Configuration validation failed: schema ID is required")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "config",
+			"operation":  "load_layered_config",
+			"error_type": "missing_schema_id",
+		})
+		// Emit error metric
+		if telSys != nil {
+			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+				"category":   opts.Category,
+				"version":    opts.Version,
+				"error_type": "missing_schema_id",
+				"error_code": "CONFIG_VALIDATION_ERROR",
+			})
+		}
+		return nil, nil, envelope
 	}
 
 	defaultsRoot := opts.DefaultsRoot
@@ -41,7 +105,28 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 	defaultsPath := filepath.Join(defaultsRoot, opts.Category, opts.Version, opts.DefaultsFile)
 	defaultLayer, err := loadConfigFile(defaultsPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("load defaults %s: %w", defaultsPath, err)
+		status = "error"
+		envelope := errors.NewErrorEnvelope("CONFIG_DEFAULTS_LOAD_ERROR", fmt.Sprintf("Failed to load configuration defaults from %s", defaultsPath))
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":     "config",
+			"operation":     "load_defaults",
+			"error_type":    "file_load_error",
+			"defaults_path": defaultsPath,
+			"defaults_root": defaultsRoot,
+		})
+		envelope = envelope.WithOriginal(err)
+		// Emit error metric
+		if telSys != nil {
+			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+				"category":   opts.Category,
+				"version":    opts.Version,
+				"error_type": "file_load_error",
+				"error_code": "CONFIG_DEFAULTS_LOAD_ERROR",
+			})
+		}
+		return nil, nil, envelope
 	}
 
 	merged := defaultLayer
@@ -56,7 +141,27 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 				if os.IsNotExist(err) {
 					continue
 				}
-				return nil, nil, fmt.Errorf("load user config %s: %w", path, err)
+				status = "error"
+				envelope := errors.NewErrorEnvelope("CONFIG_USER_LOAD_ERROR", fmt.Sprintf("Failed to load user configuration from %s", path))
+				envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+				envelope = envelope.WithCorrelationID(correlationID)
+				envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+					"component":  "config",
+					"operation":  "load_user_config",
+					"error_type": "file_load_error",
+					"user_path":  path,
+				})
+				envelope = envelope.WithOriginal(err)
+				// Emit error metric
+				if telSys != nil {
+					_ = telSys.Counter("config_load_errors", 1, map[string]string{
+						"category":   opts.Category,
+						"version":    opts.Version,
+						"error_type": "file_load_error",
+						"error_code": "CONFIG_USER_LOAD_ERROR",
+					})
+				}
+				return nil, nil, envelope
 			}
 			merged = mergeMaps(merged, data)
 			break
@@ -72,7 +177,26 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 
 	payload, err := json.Marshal(merged)
 	if err != nil {
-		return nil, nil, fmt.Errorf("encode merged config: %w", err)
+		status = "error"
+		envelope := errors.NewErrorEnvelope("CONFIG_ENCODE_ERROR", "Failed to encode merged configuration")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":  "config",
+			"operation":  "encode_config",
+			"error_type": "json_encode_error",
+		})
+		envelope = envelope.WithOriginal(err)
+		// Emit error metric
+		if telSys != nil {
+			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+				"category":   opts.Category,
+				"version":    opts.Version,
+				"error_type": "json_encode_error",
+				"error_code": "CONFIG_ENCODE_ERROR",
+			})
+		}
+		return nil, nil, envelope
 	}
 
 	catalog := opts.Catalog
@@ -82,7 +206,28 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 
 	diags, err := catalog.ValidateDataByID(opts.SchemaID, payload)
 	if err != nil {
-		return nil, diags, fmt.Errorf("config validation failed: %w", err)
+		status = "error"
+		envelope := errors.NewErrorEnvelope("CONFIG_VALIDATION_ERROR", "Configuration validation failed")
+		envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+		envelope = envelope.WithCorrelationID(correlationID)
+		envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+			"component":   "config",
+			"operation":   "validate_config",
+			"error_type":  "validation_error",
+			"schema_id":   opts.SchemaID,
+			"diagnostics": schema.DiagnosticsToStringSlice(diags),
+		})
+		envelope = envelope.WithOriginal(err)
+		// Emit error metric
+		if telSys != nil {
+			_ = telSys.Counter("config_load_errors", 1, map[string]string{
+				"category":   opts.Category,
+				"version":    opts.Version,
+				"error_type": "validation_error",
+				"error_code": "CONFIG_VALIDATION_ERROR",
+			})
+		}
+		return nil, diags, envelope
 	}
 
 	return merged, diags, nil
@@ -172,7 +317,7 @@ func normalizeToStringMap(value any) (map[string]any, error) {
 		}
 		return result, nil
 	default:
-		return nil, errors.New("config file must contain an object at top level")
+		return nil, fmt.Errorf("config file must contain an object at top level")
 	}
 }
 
@@ -238,6 +383,8 @@ var (
 	configDefaultsDir  string
 	schemaCatalogOnce  sync.Once
 	schemaCatalogInst  *schema.Catalog
+	telemetrySystem    *telemetry.System
+	telemetryOnce      sync.Once
 )
 
 func defaultConfigBaseDir() string {
@@ -285,4 +432,20 @@ func schemaCatalog() *schema.Catalog {
 		schemaCatalogInst = schema.DefaultCatalog()
 	})
 	return schemaCatalogInst
+}
+
+func getTelemetrySystem() *telemetry.System {
+	telemetryOnce.Do(func() {
+		config := telemetry.DefaultConfig()
+		config.Enabled = true // Enable telemetry for config operations
+		sys, err := telemetry.NewSystem(config)
+		if err != nil {
+			// If telemetry initialization fails, we'll operate without it
+			// This ensures the config loader remains functional
+			telemetrySystem = nil
+		} else {
+			telemetrySystem = sys
+		}
+	})
+	return telemetrySystem
 }

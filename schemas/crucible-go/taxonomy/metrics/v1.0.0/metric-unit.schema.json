@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.fulmenhq.dev/taxonomy/metrics/v1.0.0/metric-unit.schema.json",
+  "title": "Fulmen Metric Unit",
+  "description": "Enum of canonical Fulmen metric units",
+  "type": "string",
+  "enum": [
+    "count",
+    "ms",
+    "bytes",
+    "percent"
+  ],
+  "examples": [
+    "ms"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "code": "FILE_NOT_FOUND",
+  "message": "The requested file does not exist",
+  "path": "/tmp/missing-file.txt",
+  "timestamp": "2025-10-23T17:15:00Z",
+  "severity": "medium",
+  "severity_level": 2,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440001",
+  "context": {
+    "component": "file-handler",
+    "operation": "read-file"
+  }
+}

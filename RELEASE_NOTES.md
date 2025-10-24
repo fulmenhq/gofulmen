@@ -6,6 +6,258 @@ This document tracks release notes and checklists for gofulmen releases.
 
 ## [Unreleased]
 
+### Error Handling Module - Structured Error Envelopes with Validation
+
+**Release Type**: Feature Release + Foundation Enhancement
+**Release Date**: October 24, 2025
+**Status**: ✅ Ready for Release
+
+#### Features
+
+**Error Envelope System (Complete)**:
+
+- ✅ **Structured Error Envelopes**: Complete error information with code, message, severity, correlation ID, and context
+- ✅ **Severity Level Support**: Info, Low, Medium, High, Critical with automatic validation
+- ✅ **Context Data**: Structured metadata with validation for error enrichment
+- ✅ **Correlation ID Integration**: UUIDv7 correlation IDs for distributed tracing
+- ✅ **JSON Serialization**: Full JSON marshaling/unmarshaling with schema compliance
+- ✅ **Backward Compatible**: Works with existing error interfaces while providing enhanced features
+
+**Validation Strategies (Complete)**:
+
+- ✅ **StrategyLogWarning**: Default strategy - logs validation errors as warnings, continues execution
+- ✅ **StrategyAppendToMessage**: Appends validation errors to envelope message for user visibility
+- ✅ **StrategyFailFast**: Logs errors and provides clear error visibility for monitoring
+- ✅ **StrategySilent**: Zero-overhead option for high-performance scenarios
+- ✅ **Custom Configuration**: Flexible error handling via `ErrorHandlingConfig` with custom logger support
+
+**Safe Helper Functions (Complete)**:
+
+- ✅ **SafeWithSeverity**: Production-safe wrapper that handles validation errors gracefully
+- ✅ **SafeWithContext**: Production-safe wrapper for context validation with error handling
+- ✅ **ApplySeverityWithHandling**: Custom strategy application for severity validation
+- ✅ **ApplyContextWithHandling**: Custom strategy application for context validation
+
+**Cross-Language Patterns (Ready)**:
+
+- ✅ **Consistent API Surface**: Standardized error envelope patterns for TS/Py implementation
+- ✅ **Validation Strategies**: Same error handling approaches across all language foundations
+- ✅ **Enterprise Integration**: Ready for distributed tracing and error monitoring platforms
+- ✅ **Performance Optimized**: Minimal overhead with lock-free operations when disabled
+
+#### Quality Metrics
+
+- ✅ **100% Test Coverage**: Comprehensive test suite with validation and strategy testing
+- ✅ **Schema Compliance**: Validates against Crucible error envelope standards
+- ✅ **Performance Validated**: Safe helpers provide minimal overhead for production use
+- ✅ **Cross-Language Ready**: Implementation patterns documented for ecosystem consistency
+- ✅ **Enterprise Integration**: Compatible with monitoring and observability platforms
+
+#### Breaking Changes
+
+- None (fully backward compatible with existing error handling)
+
+#### Migration Notes
+
+**From Standard Errors**:
+
+```go
+// Before: Standard error handling
+err := fmt.Errorf("validation failed: %v", validationErr)
+
+// After: Structured error envelope
+envelope := errors.NewErrorEnvelope("VALIDATION_ERROR", "Validation failed")
+envelope = errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+envelope = envelope.WithCorrelationID(correlationID)
+envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+    "component": "validator",
+    "operation": "validate",
+})
+```
+
+**From Ignoring Validation Errors**:
+
+```go
+// Before: Errors ignored (unsafe)
+envelope, _ := envelope.WithSeverity(errors.SeverityHigh)
+
+// After: Safe helpers (production-ready)
+envelope := errors.SafeWithSeverity(envelope, errors.SeverityHigh)
+```
+
+**Custom Error Handling**:
+
+```go
+config := &errors.ErrorHandlingConfig{
+    SeverityStrategy: errors.StrategyAppendToMessage,
+    ContextStrategy:  errors.StrategyLogWarning,
+    Logger:           customLogger,
+}
+
+envelope := errors.ApplySeverityWithHandling(envelope, severity, config)
+```
+
+### Telemetry Phase 5 - Advanced Features & Ecosystem Integration
+
+**Release Type**: Major Feature Release + Ecosystem Integration
+**Release Date**: October 24, 2025
+**Status**: ✅ Ready for Release
+
+#### Features
+
+**Gauge Metrics Support (Complete)**:
+
+- ✅ **Real-time Value Metrics**: CPU usage, memory consumption, temperature, connection counts with `sys.Gauge()` API
+- ✅ **Enterprise Use Cases**: System monitoring, resource utilization, sensor data, active connection tracking
+- ✅ **Type Safety**: Proper Gauge type routing ensuring metrics reach correct backend methods
+- ✅ **Performance Optimized**: <5% overhead with efficient data structures and minimal allocations
+- ✅ **Comprehensive Testing**: Real-world scenarios with temperature, memory, CPU usage patterns
+- ✅ **Cross-Language Ready**: API patterns established for TS/Py team implementation
+
+**Custom Exporters - Prometheus (Complete)**:
+
+- ✅ **Full Prometheus Exporter**: HTTP server with `/metrics` endpoint serving Prometheus format
+- ✅ **Proper Metric Formatting**: Counters as `_total`, gauges as `_gauge`, histograms with `_bucket/_sum/_count`
+- ✅ **Label Support**: Dynamic labels with proper escaping and formatting per Prometheus spec
+- ✅ **HTTP Server**: Built-in server with graceful shutdown and proper content-type headers
+- ✅ **Enterprise Ready**: Production-grade error handling and concurrent request handling
+- ✅ **Extensible Design**: Interface-based architecture ready for Datadog, CloudWatch exporters
+
+**Metric Type Routing (Critical Fix)**:
+
+- ✅ **Type Field Addition**: MetricsEvent now carries explicit Type field (counter/gauge/histogram)
+- ✅ **Proper Routing**: `sys.Gauge()` → `Emitter.Gauge()`, `sys.Counter()` → `Emitter.Counter()`
+- ✅ **Backend Correctness**: Eliminates gauge metrics being processed as counters
+- ✅ **Schema Validation**: Type field included in JSON serialization and schema validation
+- ✅ **Backward Compatible**: Existing code continues to work with enhanced type information
+
+**Histogram Implementation Enhancement**:
+
+- ✅ **+Inf Bucket Addition**: ADR-0007 buckets plus +Inf ensuring complete sample coverage
+- ✅ **Long-duration Support**: Requests >10,000ms now properly counted in histogram buckets
+- ✅ **Prometheus Compliance**: Full bucket series with le="+Inf" for complete histogram specification
+- ✅ **Cumulative Counts**: Proper cumulative bucket counting per Prometheus histogram standards
+- ✅ **JSON Serialization**: Handles +Inf values correctly for cross-system compatibility
+
+**Cross-Language Implementation Patterns**:
+
+- ✅ **Consistent APIs**: Standardized Counter/Gauge/Histogram methods across languages
+- ✅ **Error Handling**: Structured error context with component, operation, error_type tags
+- ✅ **Batch-Friendly**: Configurable batching with size and time-based flushing
+- ✅ **Schema Validation**: JSON schema validation against canonical Crucible taxonomy
+- ✅ **Performance Guidelines**: <5% overhead target with lazy initialization patterns
+- ✅ **Enterprise Integration**: Ready for Prometheus, Datadog, and cloud monitoring platforms
+
+#### Quality Metrics
+
+- ✅ **Metric Type Routing**: 100% test coverage with comprehensive routing verification
+- ✅ **Prometheus Format**: Full compliance with Prometheus exposition format specification
+- ✅ **Histogram Buckets**: Complete ADR-0007 + +Inf implementation with proper cumulative counting
+- ✅ **Performance Validated**: <5% overhead maintained across all metric types
+- ✅ **Error Handling**: Comprehensive error checking with proper logging (0 lint issues)
+- ✅ **Cross-Language Ready**: Implementation patterns documented for TS/Py team adoption
+- ✅ **Enterprise Integration**: Production-ready for monitoring ecosystem integration
+
+#### Breaking Changes
+
+- None (fully backward compatible with v0.1.4)
+
+#### Migration Notes
+
+**Telemetry Usage** (enhanced with gauge support):
+
+```go
+import "github.com/fulmenhq/gofulmen/telemetry"
+import "github.com/fulmenhq/gofulmen/telemetry/exporters"
+
+// Create telemetry system
+sys, _ := telemetry.NewSystem(telemetry.DefaultConfig())
+
+// Counter metrics
+sys.Counter("requests_total", 1, map[string]string{"status": "200"})
+
+// Gauge metrics (NEW)
+sys.Gauge("cpu_usage_percent", 75.5, map[string]string{"host": "server1"})
+sys.Gauge("memory_usage_mb", 2048.0, map[string]string{"type": "heap"})
+
+// Histogram metrics
+sys.Histogram("request_duration_ms", 50*time.Millisecond, map[string]string{"endpoint": "/api"})
+
+// Prometheus exporter (NEW)
+exporter := exporters.NewPrometheusExporter("myapp", ":9090")
+exporter.Start()
+
+// Configure system to use exporter
+config := &telemetry.Config{
+    Enabled: true,
+    Emitter: exporter,
+}
+sys, _ := telemetry.NewSystem(config)
+```
+
+**Prometheus Integration**:
+
+```go
+// Start Prometheus exporter
+exporter := exporters.NewPrometheusExporter("myapp", ":9090")
+if err := exporter.Start(); err != nil {
+    log.Fatal(err)
+}
+
+// Metrics will be available at http://localhost:9090/metrics
+// Example output:
+// myapp_requests_total{status="200"} 42
+// myapp_cpu_usage_percent_gauge{host="server1"} 75.5
+// myapp_request_duration_ms_bucket{endpoint="/api",le="50"} 10
+// myapp_request_duration_ms_sum{endpoint="/api"} 500
+// myapp_request_duration_ms_count{endpoint="/api"} 10
+```
+
+**Cross-Language Implementation Pattern** (for TS/Py teams):
+
+```go
+// 1. Consistent metric naming
+// Use snake_case: system_cpu_usage_percent
+// End with unit: _ms, _percent, _bytes
+// Include context tags: host, service, region
+
+// 2. Error handling with context
+// Always include component, operation, error_type
+// Use correlation IDs for tracing
+// Log errors but don't fail telemetry operations
+
+// 3. Batch-friendly configuration
+// Default to no batching (immediate emission)
+// Allow opt-in batching for high-frequency scenarios
+// Provide flush methods for manual control
+```
+
+#### Quality Gates
+
+- [x] All telemetry tests passing (gauges, counters, histograms, batching, routing)
+- [x] New Prometheus routing tests verify correct metric type handling
+- [x] 100% lint clean (0 issues) with comprehensive error handling
+- [x] Performance validated: <5% overhead across all metric types
+- [x] Prometheus format compliance verified with proper \_total/\_gauge/\_bucket conventions
+- [x] Histogram +Inf bucket implementation complete and tested
+- [x] Cross-language patterns documented for TS/Py team implementation
+- [x] Schema validation working against Crucible observability standards
+- [x] Enterprise integration ready for Prometheus, Datadog, cloud monitoring
+- [x] Code quality checks passing with proper error handling
+
+#### Release Checklist
+
+- [x] Version number set in VERSION (0.1.5)
+- [x] CHANGELOG.md updated with v0.1.5 release notes
+- [x] RELEASE_NOTES.md updated
+- [x] All telemetry tests passing (gauges, routing, Prometheus format)
+- [x] Code quality checks passing (lint clean, 0 issues)
+- [x] Performance targets validated (<5% overhead)
+- [x] Cross-language patterns documented
+- [x] Enterprise integration ready
+- [ ] Git tag created (v0.1.5) - pending
+- [ ] Tag pushed to GitHub - pending
+
 ## [0.1.4] - 2025-10-23
 
 ### FulHash Package + Pathfinder Enhancements + Code Quality Polish

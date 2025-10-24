@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-23T18:32:00Z",
+  "name": "schema_validation_errors",
+  "value": 1,
+  "tags": {
+    "component": "schema",
+    "operation": "validate",
+    "error_type": "invalid_schema"
+  },
+  "unit": "count"
+}
