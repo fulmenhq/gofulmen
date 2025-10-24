@@ -4,9 +4,9 @@ This directory contains **local ADRs** specific to gofulmen implementation decis
 
 ## 📋 ADR Index
 
-| ID                  | Title | Status | Date | Tags |
-| ------------------- | ----- | ------ | ---- | ---- |
-| _No local ADRs yet_ |       |        |      |      |
+| ID                                                  | Title                                                                   | Status   | Date       | Tags                                                   |
+| --------------------------------------------------- | ----------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------ |
+| [ADR-0001](./ADR-0001-base-layer-error-wrapping.md) | Base Layer Packages Use Standard Go Errors, Callers Wrap with Envelopes | accepted | 2025-10-24 | error-handling, architecture, import-cycles, telemetry |
 
 ## 🎯 When to Write a Local ADR
 
