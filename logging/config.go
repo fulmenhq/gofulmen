@@ -24,6 +24,8 @@ type LoggerConfig struct {
 	StaticFields     map[string]any     `json:"staticFields,omitempty"`
 	EnableCaller     bool               `json:"enableCaller"`
 	EnableStacktrace bool               `json:"enableStacktrace"`
+	EnableTelemetry  bool               `json:"-"`
+	TelemetrySystem  interface{}        `json:"-"`
 }
 
 // MiddlewareConfig defines middleware pipeline configuration

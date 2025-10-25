@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -12,11 +15,13 @@ import (
 
 // Logger wraps zap with Fulmen configuration and middleware
 type Logger struct {
-	zap          *zap.Logger
-	config       *LoggerConfig
-	atomicLevel  zap.AtomicLevel
-	staticFields map[string]any
-	pipeline     *MiddlewarePipeline
+	zap             *zap.Logger
+	config          *LoggerConfig
+	atomicLevel     zap.AtomicLevel
+	staticFields    map[string]any
+	pipeline        *MiddlewarePipeline
+	telemetrySystem interface{}
+	inTelemetry     bool
 }
 
 // New creates a new logger from configuration
@@ -101,12 +106,22 @@ func New(config *LoggerConfig) (*Logger, error) {
 	// Combine cores
 	core := zapcore.NewTee(cores...)
 
+	// Wrap core with telemetry if enabled
+	if config.EnableTelemetry && config.TelemetrySystem != nil {
+		core = &telemetryCore{
+			Core:            core,
+			config:          config,
+			telemetrySystem: config.TelemetrySystem,
+		}
+	}
+
 	// Wrap core with middleware pipeline if present
 	if pipeline != nil && len(pipeline.middleware) > 0 {
 		core = &middlewareCore{
-			Core:     core,
-			pipeline: pipeline,
-			config:   config,
+			Core:            core,
+			pipeline:        pipeline,
+			config:          config,
+			telemetrySystem: config.TelemetrySystem,
 		}
 	}
 
@@ -144,11 +159,13 @@ func New(config *LoggerConfig) (*Logger, error) {
 	zapLogger := zap.New(core, opts...)
 
 	return &Logger{
-		zap:          zapLogger,
-		config:       config,
-		atomicLevel:  atomicLevel,
-		staticFields: config.StaticFields,
-		pipeline:     pipeline,
+		zap:             zapLogger,
+		config:          config,
+		atomicLevel:     atomicLevel,
+		staticFields:    config.StaticFields,
+		pipeline:        pipeline,
+		telemetrySystem: config.TelemetrySystem,
+		inTelemetry:     false,
 	}, nil
 }
 
@@ -296,11 +313,13 @@ func (l *Logger) WithFields(fields map[string]any) *Logger {
 	}
 
 	return &Logger{
-		zap:          l.zap.With(zapFields...),
-		config:       l.config,
-		atomicLevel:  l.atomicLevel,
-		staticFields: l.staticFields,
-		pipeline:     l.pipeline,
+		zap:             l.zap.With(zapFields...),
+		config:          l.config,
+		atomicLevel:     l.atomicLevel,
+		staticFields:    l.staticFields,
+		pipeline:        l.pipeline,
+		telemetrySystem: l.telemetrySystem,
+		inTelemetry:     l.inTelemetry,
 	}
 }
 
@@ -310,10 +329,12 @@ func (l *Logger) WithError(err error) *Logger {
 		zap: l.zap.With(
 			zap.Error(err),
 		),
-		config:       l.config,
-		atomicLevel:  l.atomicLevel,
-		staticFields: l.staticFields,
-		pipeline:     l.pipeline,
+		config:          l.config,
+		atomicLevel:     l.atomicLevel,
+		staticFields:    l.staticFields,
+		pipeline:        l.pipeline,
+		telemetrySystem: l.telemetrySystem,
+		inTelemetry:     l.inTelemetry,
 	}
 }
 
@@ -323,10 +344,12 @@ func (l *Logger) WithComponent(component string) *Logger {
 		zap: l.zap.With(
 			zap.String("component", component),
 		),
-		config:       l.config,
-		atomicLevel:  l.atomicLevel,
-		staticFields: l.staticFields,
-		pipeline:     l.pipeline,
+		config:          l.config,
+		atomicLevel:     l.atomicLevel,
+		staticFields:    l.staticFields,
+		pipeline:        l.pipeline,
+		telemetrySystem: l.telemetrySystem,
+		inTelemetry:     l.inTelemetry,
 	}
 }
 
@@ -370,11 +393,13 @@ func (l *Logger) GetLevel() Severity {
 // Named returns a logger with the specified name
 func (l *Logger) Named(name string) *Logger {
 	return &Logger{
-		zap:          l.zap.Named(name),
-		config:       l.config,
-		atomicLevel:  l.atomicLevel,
-		staticFields: l.staticFields,
-		pipeline:     l.pipeline,
+		zap:             l.zap.Named(name),
+		config:          l.config,
+		atomicLevel:     l.atomicLevel,
+		staticFields:    l.staticFields,
+		pipeline:        l.pipeline,
+		telemetrySystem: l.telemetrySystem,
+		inTelemetry:     l.inTelemetry,
 	}
 }
 
@@ -524,44 +549,97 @@ func (m *middlewareOrderOverride) Order() int {
 	return m.order
 }
 
+// telemetryCore wraps a zapcore.Core to emit telemetry metrics
+type telemetryCore struct {
+	zapcore.Core
+	config          *LoggerConfig
+	telemetrySystem interface{}
+}
+
+// Write emits telemetry metrics for log events
+func (c *telemetryCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
+	startTime := time.Now()
+	var telemetrySys *telemetry.System
+	shouldEmitMetrics := false
+
+	if c.config.EnableTelemetry && c.telemetrySystem != nil {
+		if sys, ok := c.telemetrySystem.(*telemetry.System); ok {
+			telemetrySys = sys
+			shouldEmitMetrics = true
+		}
+	}
+
+	defer func() {
+		if shouldEmitMetrics && telemetrySys != nil {
+			duration := time.Since(startTime)
+			_ = telemetrySys.Histogram(metrics.LoggingEmitLatencyMs, duration, map[string]string{
+				metrics.TagComponent: "logging",
+				metrics.TagSeverity:  entry.Level.String(),
+			})
+		}
+	}()
+
+	if shouldEmitMetrics && telemetrySys != nil {
+		_ = telemetrySys.Counter(metrics.LoggingEmitCount, 1, map[string]string{
+			metrics.TagComponent: "logging",
+			metrics.TagSeverity:  entry.Level.String(),
+		})
+	}
+
+	return c.Core.Write(entry, fields)
+}
+
+// With adds fields to the core (pass through)
+func (c *telemetryCore) With(fields []zapcore.Field) zapcore.Core {
+	return &telemetryCore{
+		Core:            c.Core.With(fields),
+		config:          c.config,
+		telemetrySystem: c.telemetrySystem,
+	}
+}
+
+// Check determines if the entry should be logged
+func (c *telemetryCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if !c.Enabled(entry.Level) {
+		return checkedEntry
+	}
+	return checkedEntry.AddCore(entry, c)
+}
+
 // middlewareCore wraps a zapcore.Core to execute middleware pipeline
 type middlewareCore struct {
 	zapcore.Core
-	pipeline *MiddlewarePipeline
-	config   *LoggerConfig
+	pipeline        *MiddlewarePipeline
+	config          *LoggerConfig
+	telemetrySystem interface{}
 }
 
 // Write executes middleware pipeline and writes enriched/filtered events
 func (c *middlewareCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
-	// Create LogEvent from zap entry
 	event := NewLogEvent(entry, fields, c.config)
 
-	// Execute middleware pipeline
 	processedEvent := c.pipeline.Process(event)
 
-	// Drop event if middleware returned nil (throttled, filtered, etc.)
 	if processedEvent == nil {
 		return nil
 	}
 
-	// Update entry message if modified by middleware (e.g., redaction)
 	if processedEvent.Message != entry.Message {
 		entry.Message = processedEvent.Message
 	}
 
-	// Convert processed event back to zap fields
 	enrichedFields := eventToZapFields(processedEvent, fields)
 
-	// Write through underlying core with enriched fields and updated entry
 	return c.Core.Write(entry, enrichedFields)
 }
 
 // With adds fields to the core (pass through)
 func (c *middlewareCore) With(fields []zapcore.Field) zapcore.Core {
 	return &middlewareCore{
-		Core:     c.Core.With(fields),
-		pipeline: c.pipeline,
-		config:   c.config,
+		Core:            c.Core.With(fields),
+		pipeline:        c.pipeline,
+		config:          c.config,
+		telemetrySystem: c.telemetrySystem,
 	}
 }
 
