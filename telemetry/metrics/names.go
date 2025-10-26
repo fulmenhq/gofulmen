@@ -12,6 +12,8 @@ const (
 	LoggingEmitCount           = "logging_emit_count"
 	LoggingEmitLatencyMs       = "logging_emit_latency_ms"
 	GoneatCommandDurationMs    = "goneat_command_duration_ms"
+	FulHashHashCount           = "fulhash_hash_count"
+	FulHashErrorsCount         = "fulhash_errors_count"
 )
 
 const (
@@ -32,6 +34,8 @@ const (
 	TagRoot      = "root"
 	TagEndpoint  = "endpoint"
 	TagHost      = "host"
+	TagAlgorithm = "algorithm"
+	TagErrorType = "error_type"
 )
 
 const (
