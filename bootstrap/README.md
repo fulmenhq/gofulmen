@@ -179,6 +179,83 @@ func main() {
 }
 ```
 
+### Advanced Usage: Telemetry & Error Handling
+
+Bootstrap maintains a stdlib-only design (no external dependencies) to remain lightweight and dependency-free. For applications requiring telemetry and structured error handling, wrap bootstrap operations at the call site:
+
+```go
+package main
+
+import (
+    "time"
+
+    "github.com/fulmenhq/gofulmen/bootstrap"
+    "github.com/fulmenhq/gofulmen/errors"
+    "github.com/fulmenhq/gofulmen/telemetry"
+    "github.com/fulmenhq/gofulmen/telemetry/metrics"
+)
+
+func installToolsWithTelemetry(telSys *telemetry.System) error {
+    start := time.Now()
+
+    opts := bootstrap.Options{
+        ManifestPath: ".goneat/tools.yaml",
+        Verbose:      false,
+    }
+
+    // Emit attempt metric
+    tags := map[string]string{
+        metrics.TagOperation: "bootstrap_install",
+        metrics.TagStatus:    metrics.StatusSuccess,
+    }
+
+    err := bootstrap.InstallTools(opts)
+    duration := time.Since(start)
+
+    if err != nil {
+        // Track error
+        tags[metrics.TagStatus] = metrics.StatusError
+        if telSys != nil {
+            _ = telSys.Counter("bootstrap_install_errors", 1, tags)
+            _ = telSys.Histogram("bootstrap_install_ms", duration, tags)
+        }
+
+        // Wrap with error envelope
+        envelope := errors.NewErrorEnvelope(
+            "BOOTSTRAP_INSTALL_ERROR",
+            "failed to install external tools",
+        )
+        envelope = envelope.
+            WithSeverity(errors.SeverityHigh).
+            WithContext("manifest", opts.ManifestPath).
+            WithOriginal(err)
+
+        return envelope
+    }
+
+    // Track success
+    if telSys != nil {
+        _ = telSys.Histogram("bootstrap_install_ms", duration, tags)
+    }
+
+    return nil
+}
+```
+
+This pattern demonstrates:
+
+- Bootstrap remains stdlib-only (lightweight, no dependencies)
+- Application layer adds telemetry metrics (install duration, error counts)
+- Application layer wraps errors with structured envelopes
+- Original errors preserved via `WithOriginal()` for debuggability
+- Metrics are emitted at the operation boundary (before/after bootstrap call)
+
+**Recommended metrics** (if implementing):
+
+- `bootstrap_install_ms` (histogram): Tool installation duration
+- `bootstrap_install_errors` (counter): Installation failure count
+- Tags: `operation`, `status`, `tool_id` (for per-tool tracking)
+
 ## Manifest Format
 
 Create `.crucible/tools.yaml`:
@@ -407,6 +484,54 @@ type Install struct {
     Checksum    map[string]string // For type: download
 }
 ```
+
+## CLI Tools Error Handling
+
+The `cmd/bootstrap` CLI tool maintains simplicity with standard error handling. For applications requiring structured error envelopes, wrap CLI invocations:
+
+```go
+package main
+
+import (
+    "fmt"
+    "os/exec"
+
+    "github.com/fulmenhq/gofulmen/errors"
+)
+
+func runBootstrapWithErrorHandling() error {
+    cmd := exec.Command("go", "run",
+        "github.com/fulmenhq/gofulmen/cmd/bootstrap",
+        "--install",
+        "--verbose",
+    )
+
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        envelope := errors.NewErrorEnvelope(
+            "CLI_BOOTSTRAP_ERROR",
+            "bootstrap command failed",
+        )
+        envelope = envelope.
+            WithSeverity(errors.SeverityHigh).
+            WithContext("command", cmd.String()).
+            WithContext("output", string(output)).
+            WithOriginal(err)
+
+        return envelope
+    }
+
+    fmt.Println(string(output))
+    return nil
+}
+```
+
+**Design Philosophy:**
+
+- CLI tools remain simple with standard exit codes (0 = success, 1 = failure)
+- Application layers add structure (envelopes, telemetry) as needed
+- Maintains backward compatibility for scripts and automation
+- Verbose output provides human-readable context
 
 ## Examples
 
