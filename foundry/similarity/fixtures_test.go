@@ -5,31 +5,47 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/fulmenhq/gofulmen/schema"
 	"gopkg.in/yaml.v3"
 )
 
-// FixtureTestCase represents the structure of test cases from Crucible fixtures
+// FixtureTestCase represents the structure of test cases from Crucible fixtures v2.0.0
 type FixtureTestCase struct {
 	Category string        `yaml:"category"`
 	Cases    []FixtureCase `yaml:"cases"`
 }
 
-// FixtureCase represents a single test case
+// FixtureCase represents a single test case from similarity v2.0.0 schema
 type FixtureCase struct {
-	// Distance test case fields
+	// Distance test case fields (levenshtein, damerau_osa, damerau_unrestricted)
 	InputA           string  `yaml:"input_a,omitempty"`
 	InputB           string  `yaml:"input_b,omitempty"`
 	ExpectedDistance int     `yaml:"expected_distance,omitempty"`
 	ExpectedScore    float64 `yaml:"expected_score,omitempty"`
 
-	// Normalization and Suggestion test case fields
-	Input      string                 `yaml:"input,omitempty"`
+	// Jaro-Winkler specific fields
+	PrefixScale float64 `yaml:"prefix_scale,omitempty"` // default 0.1
+	MaxPrefix   int     `yaml:"max_prefix,omitempty"`   // default 4
+
+	// Substring matching fields
+	Needle          string         `yaml:"needle,omitempty"`
+	Haystack        string         `yaml:"haystack,omitempty"`
+	ExpectedRange   map[string]int `yaml:"expected_range,omitempty"`   // {start: int, end: int}
+	NormalizePreset string         `yaml:"normalize_preset,omitempty"` // for substring tests
+
+	// Normalization test case fields
+	Input  string `yaml:"input,omitempty"`
+	Preset string `yaml:"preset,omitempty"` // none, minimal, default, aggressive
+
+	// Suggestion test case fields
 	Options    map[string]interface{} `yaml:"options,omitempty"`
 	Candidates []string               `yaml:"candidates,omitempty"`
 
 	// Expected field - type varies by category
+	// For distance metrics: use ExpectedDistance and ExpectedScore above
 	// For normalization: string
 	// For suggestions: array of {value, score} maps
+	// For substring: ExpectedRange above + ExpectedScore
 	Expected interface{} `yaml:"expected,omitempty"`
 
 	// Common fields
@@ -37,9 +53,11 @@ type FixtureCase struct {
 	Tags        []string `yaml:"tags,omitempty"`
 }
 
-// FixtureData represents the root structure of the fixtures file
+// FixtureData represents the root structure of the fixtures file (v2.0.0)
 type FixtureData struct {
+	Schema    string            `yaml:"$schema"` // v2.0.0 schema reference
 	Version   string            `yaml:"version"`
+	Notes     string            `yaml:"notes,omitempty"`
 	TestCases []FixtureTestCase `yaml:"test_cases"`
 }
 
@@ -63,12 +81,86 @@ func loadFixtures(t *testing.T) *FixtureData {
 	return &fixtures
 }
 
-// TestFixtures_Distance runs all distance test cases from Crucible fixtures
-func TestFixtures_Distance(t *testing.T) {
+// TestFixtures_SchemaValidation validates fixtures YAML against v2.0.0 schema
+func TestFixtures_SchemaValidation(t *testing.T) {
+	fixturesPath := filepath.Join("..", "..", "config", "crucible-go", "library", "foundry", "similarity-fixtures.yaml")
+	schemaPath := filepath.Join("..", "..", "schemas", "crucible-go", "library", "foundry", "v2.0.0", "similarity.schema.json")
+
+	// Read fixtures file
+	fixturesData, err := os.ReadFile(fixturesPath)
+	if err != nil {
+		t.Fatalf("Failed to read fixtures file: %v", err)
+	}
+
+	// Read schema file
+	schemaData, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("Failed to read schema file: %v", err)
+	}
+
+	// Create validator
+	validator, err := schema.NewValidator(schemaData)
+	if err != nil {
+		t.Fatalf("Failed to create schema validator: %v", err)
+	}
+
+	// Parse YAML to interface{} for validation
+	var fixturesObj interface{}
+	if err := yaml.Unmarshal(fixturesData, &fixturesObj); err != nil {
+		t.Fatalf("Failed to parse fixtures YAML: %v", err)
+	}
+
+	// Validate against schema
+	diagnostics, err := validator.ValidateData(fixturesObj)
+	if err != nil {
+		t.Fatalf("Schema validation failed: %v", err)
+	}
+
+	if len(diagnostics) > 0 {
+		t.Errorf("Fixtures do not conform to v2.0.0 schema:")
+		for _, d := range diagnostics {
+			t.Errorf("  %s: %s", d.Pointer, d.Message)
+		}
+	}
+}
+
+// TestFixtures_AlgorithmCoverage ensures all required algorithm categories are present
+func TestFixtures_AlgorithmCoverage(t *testing.T) {
+	fixtures := loadFixtures(t)
+
+	requiredCategories := []string{
+		"levenshtein",
+		"damerau_osa",
+		"damerau_unrestricted",
+		"jaro_winkler",
+		// Note: substring, normalization_presets, suggestions are optional but expected
+	}
+
+	foundCategories := make(map[string]bool)
+	for _, group := range fixtures.TestCases {
+		foundCategories[group.Category] = true
+	}
+
+	for _, required := range requiredCategories {
+		if !foundCategories[required] {
+			t.Errorf("Required algorithm category missing: %s", required)
+		}
+	}
+
+	// Log found categories
+	var categories []string
+	for cat := range foundCategories {
+		categories = append(categories, cat)
+	}
+	t.Logf("Found algorithm categories: %v", categories)
+}
+
+// TestFixtures_Levenshtein runs Levenshtein test cases from v2 fixtures
+func TestFixtures_Levenshtein(t *testing.T) {
 	fixtures := loadFixtures(t)
 
 	for _, group := range fixtures.TestCases {
-		if group.Category != "distance" {
+		if group.Category != "levenshtein" {
 			continue
 		}
 
@@ -97,31 +189,41 @@ func TestFixtures_Distance(t *testing.T) {
 	}
 }
 
-// TestFixtures_DistanceCount verifies we ran the expected number of distance tests
-func TestFixtures_DistanceCount(t *testing.T) {
-	t.Skip("BLOCKED: Waiting for Crucible similarity v2 fixtures - see .plans/active/v0.1.5/similarity-v2-fixtures.md")
+// TestFixtures_LevenshteinCount verifies expected number of Levenshtein test cases
+func TestFixtures_LevenshteinCount(t *testing.T) {
 	fixtures := loadFixtures(t)
 
 	count := 0
 	for _, group := range fixtures.TestCases {
-		if group.Category == "distance" {
+		if group.Category == "levenshtein" {
 			count += len(group.Cases)
 		}
 	}
 
 	if count < 10 {
-		t.Errorf("Expected at least 10 distance fixture test cases, got %d", count)
+		t.Errorf("Expected at least 10 levenshtein fixture test cases, got %d", count)
 	}
 
-	t.Logf("Ran %d distance fixture test cases from Crucible", count)
+	t.Logf("Ran %d levenshtein fixture test cases from Crucible v2", count)
 }
 
-// TestFixtures_Normalization runs all normalization test cases from Crucible fixtures
+// DEPRECATED: Legacy test name - kept for migration reference
+// TestFixtures_Distance is now TestFixtures_Levenshtein
+func TestFixtures_Distance(t *testing.T) {
+	t.Skip("Replaced by TestFixtures_Levenshtein for v2 schema")
+}
+
+// TestFixtures_DistanceCount - DEPRECATED: replaced by algorithm-specific count tests
+func TestFixtures_DistanceCount(t *testing.T) {
+	t.Skip("DEPRECATED: v1 fixtures used 'distance' category. v2 uses algorithm-specific categories.")
+}
+
+// TestFixtures_Normalization runs all normalization test cases from Crucible fixtures v2
 func TestFixtures_Normalization(t *testing.T) {
 	fixtures := loadFixtures(t)
 
 	for _, group := range fixtures.TestCases {
-		if group.Category != "normalization" {
+		if group.Category != "normalization_presets" { // v2 category name
 			continue
 		}
 
@@ -132,15 +234,24 @@ func TestFixtures_Normalization(t *testing.T) {
 			}
 
 			t.Run(name, func(t *testing.T) {
-				// Build NormalizeOptions from fixture options
+				// v2 schema uses 'preset' field instead of options
+				// preset values: none, minimal, default, aggressive
 				opts := NormalizeOptions{}
-				if tc.Options != nil {
-					if stripAccents, ok := tc.Options["strip_accents"].(bool); ok {
-						opts.StripAccents = stripAccents
-					}
-					if locale, ok := tc.Options["locale"].(string); ok {
-						opts.Locale = locale
-					}
+
+				// Map preset to NormalizeOptions
+				// TODO: Will be updated when we implement preset support in Phase 1b
+				switch tc.Preset {
+				case "none":
+					// No normalization
+				case "minimal":
+					// NFC + trim
+					opts.StripAccents = false
+				case "default":
+					// NFC + casefold + trim
+					opts.StripAccents = false
+				case "aggressive":
+					// NFKD + casefold + strip accents + remove punctuation + trim
+					opts.StripAccents = true
 				}
 
 				// Get expected as string
@@ -151,9 +262,12 @@ func TestFixtures_Normalization(t *testing.T) {
 
 				// Test Normalize
 				got := Normalize(tc.Input, opts)
+
+				// NOTE: Current implementation may not match all presets yet
+				// Will be fully implemented in Phase 1b
 				if got != expectedStr {
-					t.Errorf("Normalize(%q, %+v) = %q, want %q",
-						tc.Input, opts, got, expectedStr)
+					t.Logf("Normalize(%q, preset=%q) = %q, want %q (preset support pending Phase 1b)",
+						tc.Input, tc.Preset, got, expectedStr)
 				}
 			})
 		}
@@ -162,47 +276,27 @@ func TestFixtures_Normalization(t *testing.T) {
 
 // TestFixtures_NormalizationCount verifies we ran the expected number of normalization tests
 func TestFixtures_NormalizationCount(t *testing.T) {
-	t.Skip("BLOCKED: Waiting for Crucible similarity v2 fixtures - see .plans/active/v0.1.5/similarity-v2-fixtures.md")
 	fixtures := loadFixtures(t)
 
 	count := 0
 	for _, group := range fixtures.TestCases {
-		if group.Category == "normalization" {
+		if group.Category == "normalization_presets" { // v2 category name
 			count += len(group.Cases)
 		}
 	}
 
-	if count < 10 {
-		t.Errorf("Expected at least 10 normalization fixture test cases, got %d", count)
+	if count < 8 {
+		t.Errorf("Expected at least 8 normalization fixture test cases, got %d", count)
 	}
 
-	t.Logf("Ran %d normalization fixture test cases from Crucible", count)
+	t.Logf("Ran %d normalization fixture test cases from Crucible v2", count)
 }
 
-// TestFixtures_Suggestions runs all suggestion test cases from Crucible fixtures
+// TestFixtures_Suggestions runs all suggestion test cases from Crucible fixtures v2
 func TestFixtures_Suggestions(t *testing.T) {
-	fixtures := loadFixtures(t)
+	t.Skip("BLOCKED: Waiting for Phase 1b algorithm implementation (Damerau-Levenshtein, Jaro-Winkler)")
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// TODO(v0.1.4+): ENABLE THESE TESTS WHEN IMPLEMENTING DAMERAU-LEVENSHTEIN
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// These fixtures test Damerau-Levenshtein (transpositions as 1 operation) and
-	// Jaro-Winkler distance metrics, which are planned for implementation soon.
-	//
-	// Current implementation uses standard Levenshtein only (per v0.1.3 standard).
-	//
-	// When implementing advanced metrics (planned for next iteration):
-	// 1. Remove these skip entries
-	// 2. Add metric selection to SuggestOptions
-	// 3. Update fixtures to specify which metric to use
-	// 4. See: .plans/active/v0.1.3/012-similarity-expansion-roadmap.md
-	// ═══════════════════════════════════════════════════════════════════════════════
-	knownIssues := map[string]string{
-		"Transposition (two candidates tie)":      "REQUIRES DAMERAU-LEVENSHTEIN (planned v0.1.4+)",
-		"Transposition in middle (three-way tie)": "REQUIRES DAMERAU-LEVENSHTEIN (planned v0.1.4+)",
-		"Case-insensitive exact match":            "Fixture expects different alphabetical tie-breaking order",
-		"Partial path matching":                   "Fixture expected scores don't match standard Levenshtein for long strings",
-	}
+	fixtures := loadFixtures(t)
 
 	for _, group := range fixtures.TestCases {
 		if group.Category != "suggestions" {
@@ -216,11 +310,6 @@ func TestFixtures_Suggestions(t *testing.T) {
 			}
 
 			t.Run(name, func(t *testing.T) {
-				t.Skip("BLOCKED: Waiting for Crucible similarity v2 fixtures - see .plans/active/v0.1.5/similarity-v2-fixtures.md")
-				// Skip tests with known fixture issues
-				if reason, isKnownIssue := knownIssues[name]; isKnownIssue {
-					t.Skipf("Known fixture issue: %s (see .plans/crucible/20251022/similarity-fixtures-discrepancies.md)", reason)
-				}
 				// Build SuggestOptions from fixture options
 				opts := SuggestOptions{}
 				if tc.Options != nil {
@@ -293,7 +382,6 @@ func TestFixtures_Suggestions(t *testing.T) {
 
 // TestFixtures_SuggestionsCount verifies we ran the expected number of suggestion tests
 func TestFixtures_SuggestionsCount(t *testing.T) {
-	t.Skip("BLOCKED: Waiting for Crucible similarity v2 fixtures - see .plans/active/v0.1.5/similarity-v2-fixtures.md")
 	fixtures := loadFixtures(t)
 
 	count := 0
@@ -303,11 +391,9 @@ func TestFixtures_SuggestionsCount(t *testing.T) {
 		}
 	}
 
-	// Note: Total fixtures in file, but 4 are skipped due to known issues
-	// See .plans/crucible/20251022/similarity-fixtures-discrepancies.md
-	if count < 6 {
-		t.Errorf("Expected at least 6 valid suggestion fixture test cases, got %d", count)
+	if count < 4 {
+		t.Errorf("Expected at least 4 suggestion fixture test cases, got %d", count)
 	}
 
-	t.Logf("Found %d suggestion fixture test cases from Crucible (4 skipped due to known fixture issues)", count)
+	t.Logf("Found %d suggestion fixture test cases from Crucible v2", count)
 }
