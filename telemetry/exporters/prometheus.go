@@ -108,8 +108,9 @@ func (e *PrometheusExporter) Start() error {
 	})
 
 	e.server = &http.Server{
-		Addr:    e.endpoint,
-		Handler: mux,
+		Addr:              e.endpoint,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second, // Prevent Slowloris attacks
 	}
 
 	go func() {
