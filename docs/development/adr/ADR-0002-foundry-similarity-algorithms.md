@@ -49,25 +49,27 @@ Similarity operations are hot-loop sensitive (ADR-0008):
 
 **Hybrid implementation strategy for v0.1.5**:
 
-1. **Levenshtein**: Keep existing gofulmen implementation
+1. **Levenshtein**: Native gofulmen implementation (existing)
    - Benchmarked 1.24-1.76x faster than matchr
    - Uses 3-326x less memory (critical for long strings)
    - Already validated against Crucible fixtures
 
-2. **Damerau OSA**: Use matchr library wrapper
+2. **Damerau OSA**: Native gofulmen implementation (see ADR-0003)
+   - Three-row DP algorithm based on rapidfuzz-cpp OSA.hpp
+   - Replaces matchr.OSA() which had start-of-string transposition bugs
+   - Expected to match or exceed Levenshtein performance pattern
+   - Properly attributed to rapidfuzz-cpp in code and ADR-0003
+
+3. **Damerau Unrestricted**: Use matchr.DamerauLevenshtein()
    - Well-tested external implementation
-   - Lower maintenance burden than custom port
+   - matchr provides unrestricted variant (not OSA)
    - Performance acceptable for non-hot-loop usage
+   - Note: Zhao algorithm port preserved in code for reference if matchr becomes unmaintained
 
-3. **Damerau Unrestricted**: Port Zhao algorithm from rapidfuzz-cpp
-   - matchr does not provide unrestricted variant
-   - Reference implementation: [rapidfuzz-cpp DamerauLevenshtein_impl.hpp](https://github.com/rapidfuzz/rapidfuzz-cpp/blob/main/rapidfuzz/distance/DamerauLevenshtein_impl.hpp)
-   - Based on "Linear space string correction algorithm using the Damerau-Levenshtein distance" by Chunchun Zhao and Sartaj Sahni
-   - Properly attributed in code comments and this ADR
-
-4. **Jaro-Winkler**: Use matchr library wrapper
-   - Proven implementation with configurable prefix scale
+4. **Jaro-Winkler**: Use matchr.JaroWinkler()
+   - Proven implementation with configurable tolerance
    - Matches Crucible fixture expectations
+   - Performance acceptable for name matching use cases
 
 5. **Substring**: Custom implementation
    - Longest common substring via dynamic programming
@@ -108,18 +110,26 @@ Compared existing gofulmen Levenshtein implementation against matchr library usi
 
 ### Decision Rationale
 
-Keep existing Levenshtein implementation because:
+**Keep existing Levenshtein implementation** because:
 
-- Performance advantage significant and consistent
-- Memory characteristics ideal for hot-loop usage (ADR-0008)
+- Performance advantage significant and consistent (1.24-1.76x faster)
+- Memory characteristics ideal for hot-loop usage (3-326x less memory, ADR-0008)
 - Already validated against Crucible fixtures
 - Pure Go, no external dependencies for most common operation
 
-Use matchr for missing algorithms (OSA, Jaro-Winkler) because:
+**Implement native OSA** (see ADR-0003) because:
+
+- matchr.OSA() has bugs with start-of-string transpositions
+- Simple modification of proven Levenshtein (add transposition check)
+- Expected to match Levenshtein performance advantages
+- Eliminates external bug dependency, provides cross-language consistency
+
+**Use matchr for remaining algorithms** (unrestricted Damerau, Jaro-Winkler) because:
 
 - Proven implementations, lower maintenance burden
 - Performance acceptable for less frequent operations
-- Avoids reinventing well-tested algorithms
+- matchr.DamerauLevenshtein() (unrestricted) works correctly
+- Avoids reinventing well-tested algorithms unnecessarily
 
 ## Implementation Details
 
@@ -248,20 +258,55 @@ If string-metrics-go succeeds, this ADR will be revised to document:
 
 **Note**: v0.1.5 proceeds with hybrid approach documented above. Research project is contingent on string-metrics-wasm validation.
 
+## Implementation Evolution
+
+### OSA Implementation Change (Post-Initial Decision)
+
+**Original Decision** (Phase 1b start): Use matchr.OSA()
+
+**Revised Decision** (Phase 1b completion): Native OSA implementation
+
+**Trigger**: Discovery of matchr.OSA() bugs during fixture validation
+
+- `"hello"/"ehllo"`: matchr returned distance=2, fixture expected 1
+- `"algorithm"/"lagorithm"`: matchr returned distance=2, fixture expected 1
+- PyFulmen validation confirmed fixtures correct, matchr buggy
+
+**Resolution**: Implemented native OSA based on rapidfuzz-cpp OSA.hpp (see ADR-0003)
+
+**Impact**:
+
+- ✅ 100% fixture pass rate achieved (30/30, was 28/30)
+- ✅ Cross-language consistency restored (PyFulmen/TSFulmen alignment)
+- ✅ Eliminates external bug dependency
+- ✅ Expected performance on par with Levenshtein pattern
+
+**Updated Dependency Matrix**:
+| Algorithm | Implementation | Source |
+|-----------|---------------|--------|
+| Levenshtein | Native | gofulmen (existing) |
+| Damerau OSA | Native | rapidfuzz-cpp OSA.hpp (ADR-0003) |
+| Damerau Unrestricted | External | matchr.DamerauLevenshtein() |
+| Jaro-Winkler | External | matchr.JaroWinkler() |
+| Substring | Native | gofulmen custom |
+
+This change strengthens the hybrid approach: native implementations for performance-critical and bug-sensitive algorithms, external for proven stable algorithms.
+
 ## Consequences
 
 ### Positive
 
 - ✅ Optimal Levenshtein performance for hot-loop operations (1.24-1.76x faster, 3-326x less memory)
-- ✅ Proven external implementations for complex algorithms (matchr, rapidfuzz-cpp reference)
-- ✅ Cross-language parity via Crucible v2 fixtures (100% test coverage)
-- ✅ Clear attribution for ported algorithms (Zhao algorithm, rapidfuzz-cpp)
+- ✅ Native OSA eliminates external bug dependency (100% fixture compliance)
+- ✅ Cross-language parity via Crucible v2 fixtures (30/30 tests passing)
+- ✅ Clear attribution for reference implementations (rapidfuzz-cpp OSA, Zhao algorithm)
 - ✅ Future-proof: Research path to unified string-metrics-go library
+- ✅ Reduced matchr dependency surface (only unrestricted Damerau + Jaro-Winkler)
 
 ### Negative
 
-- ⚠️ Hybrid approach increases dependency surface (matchr + custom ports)
-- ⚠️ Maintenance burden for ported algorithms (unrestricted Damerau)
+- ⚠️ Increased native implementation maintenance (Levenshtein + OSA)
+- ⚠️ Still hybrid approach with matchr dependency for remaining algorithms
 - ⚠️ Potential future migration if string-metrics-go research succeeds
 
 ### Neutral
@@ -272,14 +317,17 @@ If string-metrics-go succeeds, this ADR will be revised to document:
 
 ## References
 
+- [ADR-0003: Native OSA Implementation](./ADR-0003-native-osa-implementation.md) - OSA-specific decision and rationale
 - [Crucible Similarity Schema v2.0.0](../../../schemas/crucible-go/library/foundry/v2.0.0/similarity.schema.json)
 - [Crucible Similarity Fixtures](../../../config/crucible-go/library/foundry/similarity-fixtures.yaml)
 - [ADR-0008: Helper Library Instrumentation Patterns](../../crucible-go/architecture/decisions/ADR-0008-helper-library-instrumentation-patterns.md)
+- [rapidfuzz-cpp OSA Implementation](https://github.com/rapidfuzz/rapidfuzz-cpp/blob/main/rapidfuzz/distance/OSA.hpp)
 - [rapidfuzz-cpp DamerauLevenshtein Implementation](https://github.com/rapidfuzz/rapidfuzz-cpp/blob/main/rapidfuzz/distance/DamerauLevenshtein_impl.hpp)
 - [strsim-rs (Rust String Similarity)](https://github.com/rapidfuzz/strsim-rs)
 - [matchr Library](https://github.com/antzucaro/matchr)
 - [Implementation Plan](.plans/active/v0.1.5/similarity-v2-fixtures.md)
+- [Discrepancy Memo (RESOLVED)](.plans/memos/libraries/20251027-similarity-discrepancies.md)
 
 ---
 
-**Decision Outcome**: Hybrid implementation strategy balances performance (keep optimized Levenshtein), reliability (use proven libraries for missing algorithms), and future flexibility (research path to unified string-metrics-go). Performance benchmarks document 1.24-1.76x speed advantage and 3-326x memory advantage for native Go Levenshtein, justifying retention while using external libraries for algorithms where performance trade-off is acceptable.
+**Decision Outcome**: Hybrid implementation strategy balances performance (native Levenshtein + OSA), reliability (matchr for stable algorithms), and future flexibility (research path to unified string-metrics-go). Performance benchmarks document 1.24-1.76x speed advantage and 3-326x memory advantage for native implementations. OSA implementation evolved from matchr wrapper to native after bug discovery (see ADR-0003), achieving 100% fixture compliance.
