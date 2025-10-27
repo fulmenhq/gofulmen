@@ -83,6 +83,12 @@ const (
 //
 // Conformance: Implements Crucible Foundry Similarity Standard v2.0.0 (2025.10.3).
 func DistanceWithAlgorithm(a, b string, algorithm Algorithm) (int, error) {
+	// Emit telemetry: algorithm usage counter (ADR-0008 Pattern 1)
+	emitAlgorithmCounter("distance", algorithm)
+
+	// Emit telemetry: string length distribution
+	emitStringLengthCounter(algorithm, a, b)
+
 	switch algorithm {
 	case AlgorithmLevenshtein:
 		return levenshteinDistance(a, b), nil
@@ -94,12 +100,16 @@ func DistanceWithAlgorithm(a, b string, algorithm Algorithm) (int, error) {
 		return damerauUnrestrictedDistance(a, b), nil
 
 	case AlgorithmJaroWinkler:
+		// Emit telemetry: API misuse error
+		emitErrorCounter("wrong_api", algorithm, "ScoreWithAlgorithm")
 		return 0, errors.New(
 			"jaro_winkler metric produces similarity scores, not distances. " +
 				"Use ScoreWithAlgorithm(a, b, AlgorithmJaroWinkler, nil) instead",
 		)
 
 	case AlgorithmSubstring:
+		// Emit telemetry: API misuse error
+		emitErrorCounter("wrong_api", algorithm, "SubstringMatch")
 		return 0, errors.New(
 			"substring metric does not produce distances. " +
 				"Use SubstringMatch(needle, haystack) instead",
@@ -172,8 +182,16 @@ func DefaultScoreOptions() *ScoreOptions {
 //
 // Conformance: Implements Crucible Foundry Similarity Standard v2.0.0 (2025.10.3).
 func ScoreWithAlgorithm(a, b string, algorithm Algorithm, opts *ScoreOptions) (float64, error) {
+	// Emit telemetry: algorithm usage counter (ADR-0008 Pattern 1)
+	emitAlgorithmCounter("score", algorithm)
+
+	// Emit telemetry: string length distribution
+	emitStringLengthCounter(algorithm, a, b)
+
 	// Fast path: identical strings
 	if a == b {
+		// Emit telemetry: fast path hit
+		emitFastPathCounter("identical")
 		return 1.0, nil
 	}
 
@@ -183,6 +201,8 @@ func ScoreWithAlgorithm(a, b string, algorithm Algorithm, opts *ScoreOptions) (f
 
 	// Empty strings case
 	if lenA == 0 && lenB == 0 {
+		// Emit telemetry: edge case
+		emitEdgeCaseCounter("both_empty")
 		return 1.0, nil
 	}
 

@@ -92,37 +92,100 @@ Shared test fixtures validate cross-language consistency:
 
 Common integration patterns:
 
-	// CLI command suggestions
-	func suggestCommand(input string, validCommands []string) {
-		suggestions := similarity.Suggest(input, validCommands,
-			similarity.DefaultSuggestOptions())
-		if len(suggestions) > 0 {
-			fmt.Printf("Unknown command '%s'. Did you mean:\n", input)
-			for _, s := range suggestions {
-				fmt.Printf("  - %s\n", s.Value)
+		// CLI command suggestions
+		func suggestCommand(input string, validCommands []string) {
+			suggestions := similarity.Suggest(input, validCommands,
+				similarity.DefaultSuggestOptions())
+			if len(suggestions) > 0 {
+				fmt.Printf("Unknown command '%s'. Did you mean:\n", input)
+				for _, s := range suggestions {
+					fmt.Printf("  - %s\n", s.Value)
+				}
 			}
 		}
-	}
 
-	// Crucible asset discovery
-	func findAsset(query string, assets []Asset) *Asset {
-		candidates := make([]string, len(assets))
-		for i, a := range assets {
-			candidates[i] = a.ID
-		}
+		// Crucible asset discovery
+		func findAsset(query string, assets []Asset) *Asset {
+			candidates := make([]string, len(assets))
+			for i, a := range assets {
+				candidates[i] = a.ID
+			}
 
-		suggestions := similarity.Suggest(query, candidates,
-			similarity.SuggestOptions{
-				MinScore:       0.5,
-				MaxSuggestions: 1,
-				Normalize:      true,
-			})
+			suggestions := similarity.Suggest(query, candidates,
+				similarity.SuggestOptions{
+					MinScore:       0.5,
+					MaxSuggestions: 1,
+					Normalize:      true,
+				})
 
 		if len(suggestions) > 0 {
 			return findAssetByID(suggestions[0].Value)
 		}
 		return nil
 	}
+
+# Unified API (v2.0.0+)
+
+The v2 API provides algorithm-specific distance and score calculations
+following the Crucible Foundry Similarity Standard v2.0.0:
+
+	// Distance-based algorithms
+	dist, _ := similarity.DistanceWithAlgorithm("hello", "world",
+		similarity.AlgorithmLevenshtein)
+
+	dist, _ := similarity.DistanceWithAlgorithm("hello", "ehllo",
+		similarity.AlgorithmDamerauOSA) // Optimal String Alignment
+
+	dist, _ := similarity.DistanceWithAlgorithm("CA", "ABC",
+		similarity.AlgorithmDamerauUnrestricted) // True Damerau-Levenshtein
+
+	// Score-based algorithms (similarity from 0.0 to 1.0)
+	score, _ := similarity.ScoreWithAlgorithm("martha", "marhta",
+		similarity.AlgorithmJaroWinkler, nil)
+
+	score, _ := similarity.ScoreWithAlgorithm("hello", "hello world",
+		similarity.AlgorithmSubstring, nil)
+
+Supported algorithms:
+  - AlgorithmLevenshtein: Classic edit distance (insertions, deletions, substitutions)
+  - AlgorithmDamerauOSA: Optimal String Alignment (adds adjacent transpositions)
+  - AlgorithmDamerauUnrestricted: True Damerau-Levenshtein (unrestricted transpositions)
+  - AlgorithmJaroWinkler: Similarity metric optimized for short strings with common prefixes
+  - AlgorithmSubstring: Longest common substring matching
+
+See ADR-0002 and ADR-0003 for algorithm implementation details and performance benchmarks.
+
+# Telemetry (Optional)
+
+The package supports opt-in counter-only telemetry following ADR-0008 Pattern 1
+(performance-sensitive, hot-loop eligible). Telemetry provides production visibility
+into algorithm usage, string length distribution, and API misuse without significant
+performance impact.
+
+Enable telemetry during application initialization:
+
+	sys, _ := telemetry.NewSystem(telemetry.DefaultConfig())
+	similarity.EnableTelemetry(sys)
+
+	// Now all similarity operations emit counters:
+	_, _ = similarity.DistanceWithAlgorithm("hello", "world",
+		similarity.AlgorithmLevenshtein)
+	// Emits: foundry.similarity.distance.calls{algorithm=levenshtein}
+	// Emits: foundry.similarity.string_length{bucket=tiny,algorithm=levenshtein}
+
+Telemetry is disabled by default (zero overhead). When enabled, overhead is ~1μs per
+operation (acceptable for typical use cases like CLI suggestions and spell checking).
+
+Metrics emitted:
+  - foundry.similarity.distance.calls: Counter of DistanceWithAlgorithm calls by algorithm
+  - foundry.similarity.score.calls: Counter of ScoreWithAlgorithm calls by algorithm
+  - foundry.similarity.string_length: Counter of operations by string length bucket
+  - foundry.similarity.fast_path: Counter of fast path hits (identical strings)
+  - foundry.similarity.edge_case: Counter of edge cases (empty strings)
+  - foundry.similarity.error: Counter of API misuse errors
+
+For applications with ultra-low latency requirements, keep telemetry disabled (default).
+See phase3-telemetry-backlog.md for instrumentation details and overhead analysis.
 
 # Algorithm Details
 
@@ -144,9 +207,12 @@ Accent Stripping:
 
 # Conformance
 
-Standard: Crucible Foundry Similarity Standard v1.0.0 (2025.10.2)
+Standard: Crucible Foundry Similarity Standard v2.0.0 (2025.10.3)
+  - v1 API (Distance, Score): Standard v1.0.0 (2025.10.2) - Stable
+  - v2 API (DistanceWithAlgorithm, ScoreWithAlgorithm): Standard v2.0.0 (2025.10.3) - Stable
+
 Module: gofulmen/foundry
-Version: 0.1.3+
+Version: 0.1.5+
 Status: Stable
 
 # References
