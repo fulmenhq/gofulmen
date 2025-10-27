@@ -5,9 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-10-24
+## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.1.5] - 2025-10-27
+
+### Added
+
+- **Similarity v2 API** - Unified algorithm-specific distance and score calculations (Crucible v2.0.0)
+  - **DistanceWithAlgorithm()**: Calculate edit distance with algorithm selection (Levenshtein, Damerau OSA, Damerau Unrestricted)
+  - **ScoreWithAlgorithm()**: Calculate normalized similarity scores with algorithm selection (all algorithms + Jaro-Winkler, Substring)
+  - **5 Algorithm Support**: Levenshtein, Damerau OSA (Optimal String Alignment), Damerau Unrestricted, Jaro-Winkler, Substring matching
+  - **Native OSA Implementation**: Replaced buggy matchr.OSA() with native Go implementation based on rapidfuzz-cpp
+  - **100% Fixture Compliance**: All 30 Crucible v2.0.0 fixtures passing (was 28/30 with matchr bug)
+  - **Cross-Language Consistency**: Validated against PyFulmen (RapidFuzz) and TSFulmen (strsim-wasm)
+  - **Performance Optimized**: Native OSA expected to match Levenshtein pattern (1.24-1.76x faster than external libraries)
+  - **ADR-0002**: Similarity algorithm implementation strategy with benchmark data
+  - **ADR-0003**: Native OSA implementation decision and rationale
+
+- **Similarity Telemetry** - Opt-in counter-only instrumentation (ADR-0008 Pattern 1)
+  - **Counter-Only Metrics**: Algorithm usage, string length distribution, fast paths, edge cases, API misuse tracking
+  - **Zero Overhead by Default**: Telemetry disabled unless explicitly enabled via EnableTelemetry()
+  - **Acceptable Overhead**: ~1μs per operation when enabled (negligible for typical CLI/spell-check use cases)
+  - **6 Metric Types**: distance.calls, score.calls, string_length, fast_path, edge_case, error counters
+  - **Production Visibility**: Understand algorithm usage patterns and performance characteristics in production
+  - **NO Histograms/Tracing**: Follows ADR-0008 Pattern 1 for performance-sensitive hot-loop code
 
 - **Error Handling Module** - Structured error envelopes with validation and strategies
   - **Error Envelope System**: Structured errors with severity levels, correlation IDs, and context support
@@ -32,12 +59,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Similarity Algorithm Strategy**: Updated to use native OSA instead of matchr.OSA() (bug fix)
 - **Telemetry Core**: Enhanced MetricsEvent with Type field for proper metric routing
 - **Prometheus Exporter**: Rewritten to handle all metric types with proper Prometheus conventions
 - **Histogram Implementation**: Added +Inf bucket for complete sample coverage
 
 ### Fixed
 
+- **Similarity OSA Bug**: Native OSA implementation fixes start-of-string transposition bugs in matchr library
+  - `"hello"/"ehllo"`: Now correctly returns distance=1 (was 2 with matchr)
+  - `"algorithm"/"lagorithm"`: Now correctly returns distance=1 (was 2 with matchr)
+  - Validated against PyFulmen using RapidFuzz (canonical Rust strsim-rs implementation)
 - **Metric Type Routing**: Resolved issue where gauges were incorrectly routed to counter methods
 - **Histogram Buckets**: Fixed sample loss for durations exceeding largest ADR-0007 boundary
 - **Prometheus Output**: Correct metric naming conventions (\_total, \_gauge, \_bucket/\_sum/\_count)

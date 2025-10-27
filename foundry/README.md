@@ -89,7 +89,60 @@ traceID := foundry.GetTraceID(ctx)
 
 ### Similarity (Subpackage)
 
-Text similarity and suggestion utilities (see `similarity/` subdirectory).
+Text similarity and suggestion utilities with v1 and v2 APIs (see `similarity/` subdirectory for complete documentation).
+
+**NEW in v0.1.5: v2 API with 5 Algorithms**
+
+```go
+import "github.com/fulmenhq/gofulmen/foundry/similarity"
+
+// v1 API (Levenshtein, still supported)
+distance := similarity.Distance("kitten", "sitting") // 3
+score := similarity.Score("kitten", "sitting")       // 0.5714...
+
+// v2 API with algorithm selection
+distance, _ := similarity.DistanceWithAlgorithm("kitten", "sitting", "osa")
+score, _ := similarity.ScoreWithAlgorithm("kitten", "sitting", "jaro-winkler")
+
+// Supported algorithms:
+// - "levenshtein" - Edit distance (insertion, deletion, substitution)
+// - "osa" - Optimal String Alignment (OSA variant of Damerau-Levenshtein)
+// - "damerau" - Unrestricted Damerau-Levenshtein (allows multiple edits)
+// - "jaro-winkler" - Phonetic similarity (0.0-1.0, higher is more similar)
+// - "substring" - Longest common substring ratio
+
+// Suggestion API with fuzzy matching
+candidates := []string{"config", "configure", "conform"}
+suggestions := similarity.Suggest("confg", candidates, similarity.DefaultSuggestOptions())
+// Returns: [{"config", 0.8333}]
+
+// Unicode normalization
+normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
+    StripAccents: true,
+}) // "cafe"
+```
+
+**Telemetry Support (NEW in v0.1.5)**
+
+Similarity includes opt-in counter-only telemetry per ADR-0008 Pattern 1:
+
+```go
+// Enable telemetry (disabled by default)
+similarity.EnableTelemetry(telemetrySystem)
+
+// Metrics emitted (when enabled):
+// - foundry.similarity.distance.calls{algorithm}
+// - foundry.similarity.score.calls{algorithm}
+// - foundry.similarity.string_length{bucket,algorithm}
+// - foundry.similarity.fast_path{reason}
+// - foundry.similarity.edge_case{case}
+// - foundry.similarity.error{type,algorithm,correct_api}
+
+// Disable telemetry
+similarity.DisableTelemetry()
+```
+
+**Performance**: Native OSA implementation provides 1.24-1.76x performance improvement over external libraries. Telemetry overhead is ~1μs per operation when enabled (negligible for typical use cases).
 
 ## Telemetry & Error Handling
 

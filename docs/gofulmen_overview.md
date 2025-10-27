@@ -3,7 +3,7 @@ title: "Gofulmen Library Overview"
 description: "Comprehensive overview of the Go foundation library for FulmenHQ ecosystem"
 author: "Foundation Forge"
 date: "2025-10-11"
-last_updated: "2025-10-11"
+last_updated: "2025-10-27"
 status: "active"
 tags: ["overview", "library", "go", "foundation"]
 ---
@@ -36,19 +36,19 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 ## Module Catalog
 
-| Module          | Status    | Specification                                                                   | Purpose                                                            |
-| --------------- | --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **config/**     | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading |
-| **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE) |
-| **errors/**     | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support |
-| **telemetry/**  | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters  |
-| **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support        |
-| **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards           |
-| **docscribe/**  | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing    |
-| **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories              |
-| **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection           |
-| **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing         |
-| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes  |
+| Module          | Status    | Specification                                                                   | Purpose                                                                                                  |
+| --------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **config/**     | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                       |
+| **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                       |
+| **errors/**     | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                       |
+| **telemetry/**  | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters                                        |
+| **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support                                              |
+| **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards                                                 |
+| **docscribe/**  | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing                                          |
+| **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                    |
+| **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                 |
+| **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                               |
+| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms) |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 

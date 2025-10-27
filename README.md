@@ -70,7 +70,7 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 - **MIME Type Detection**: Content-based detection and extension lookup
 - **HTTP Status Helpers**: Status code grouping and validation
 - **Country Code Validation**: ISO 3166-1 country codes (Alpha2, Alpha3, Numeric)
-- **Text Similarity** (`foundry/similarity/`): Levenshtein distance, normalized scoring, fuzzy matching suggestions, Unicode-aware normalization
+- **Text Similarity** (`foundry/similarity/`): v1 API (Levenshtein) + v2 API (5 algorithms: Levenshtein, OSA, Damerau, Jaro-Winkler, Substring), normalized scoring, fuzzy matching, Unicode normalization, opt-in telemetry
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
 
@@ -226,8 +226,14 @@ if foundry.ValidateCountryCode("usa") {
 // Text similarity and fuzzy matching
 import "github.com/fulmenhq/gofulmen/foundry/similarity"
 
+// v1 API (Levenshtein, still supported)
 distance := similarity.Distance("kitten", "sitting") // 3
 score := similarity.Score("kitten", "sitting")       // 0.5714...
+
+// v2 API with algorithm selection (NEW in v0.1.5)
+distance, _ := similarity.DistanceWithAlgorithm("kitten", "sitting", "osa")
+score, _ := similarity.ScoreWithAlgorithm("kitten", "sitting", "jaro-winkler")
+// Algorithms: "levenshtein", "osa", "damerau", "jaro-winkler", "substring"
 
 // Suggest corrections for typos
 candidates := []string{"config", "configure", "conform"}
@@ -242,6 +248,9 @@ for _, s := range suggestions {
 normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
     StripAccents: true,
 }) // "cafe"
+
+// Enable opt-in telemetry (NEW in v0.1.5)
+similarity.EnableTelemetry(telemetrySystem)
 ```
 
 ## CLI Tools
