@@ -1,10 +1,15 @@
 // Package main demonstrates Phase 5 advanced telemetry features including gauge metrics and custom exporters
+//
+// SECURITY NOTE: This demo uses math/rand for generating fake metric values (CPU percentages,
+// memory usage, etc.). For production code that requires cryptographically secure randomness,
+// replace "math/rand" with "crypto/rand". The use of math/rand here is intentional and safe
+// for demonstration purposes since we're only generating synthetic monitoring data.
 package main
 
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand" // #nosec G404 - Intentional use for demo data generation, not security-sensitive
 	"strings"
 	"time"
 
@@ -25,7 +30,7 @@ func SystemMonitor() {
 
 	// Simulate monitoring CPU usage every second
 	for i := 0; i < 5; i++ {
-		cpuUsage := 20.0 + rand.Float64()*60.0 // Random CPU between 20-80%
+		cpuUsage := 20.0 + rand.Float64()*60.0 // #nosec G404 - Demo data only, not security-sensitive
 
 		err = sys.Gauge("system_cpu_usage_percent", cpuUsage, map[string]string{
 			"host": "web-server-01",
@@ -36,7 +41,7 @@ func SystemMonitor() {
 		}
 
 		// Memory usage in MB
-		memoryUsage := 2048.0 + rand.Float64()*4096.0 // Random memory 2-6GB
+		memoryUsage := 2048.0 + rand.Float64()*4096.0 // #nosec G404 - Demo data only, not security-sensitive
 		err = sys.Gauge("system_memory_usage_mb", memoryUsage, map[string]string{
 			"host": "web-server-01",
 			"type": "used",
@@ -46,7 +51,7 @@ func SystemMonitor() {
 		}
 
 		// Temperature in Celsius
-		temperature := 20.0 + rand.Float64()*15.0 // Random temp 20-35°C
+		temperature := 20.0 + rand.Float64()*15.0 // #nosec G404 - Demo data only, not security-sensitive
 		err = sys.Gauge("environment_temperature_celsius", temperature, map[string]string{
 			"sensor": "indoor",
 			"room":   "server-room",
@@ -89,7 +94,7 @@ func PrometheusExporterDemo() {
 	startTime := time.Now()
 	for time.Since(startTime) < 10*time.Second {
 		// HTTP requests counter
-		requests := float64(100 + rand.Intn(50))
+		requests := float64(100 + rand.Intn(50)) // #nosec G404 - Demo data only, not security-sensitive
 		if err := exporter.Counter("http_requests_total", requests, map[string]string{
 			"status": "200",
 			"method": "GET",
@@ -98,7 +103,7 @@ func PrometheusExporterDemo() {
 		}
 
 		// Request duration histogram
-		duration := time.Duration(50+rand.Intn(150)) * time.Millisecond
+		duration := time.Duration(50+rand.Intn(150)) * time.Millisecond // #nosec G404 - Demo data only, not security-sensitive
 		if err := exporter.Histogram("http_request_duration_ms", duration, map[string]string{
 			"endpoint": "/api/users",
 		}); err != nil {
@@ -106,20 +111,20 @@ func PrometheusExporterDemo() {
 		}
 
 		// System gauges
-		if err := exporter.Gauge("cpu_usage_percent", 30.0+rand.Float64()*40.0, map[string]string{
+		if err := exporter.Gauge("cpu_usage_percent", 30.0+rand.Float64()*40.0, map[string]string{ // #nosec G404 - Demo data only, not security-sensitive
 			"host": "demo-server",
 		}); err != nil {
 			log.Printf("Error emitting CPU gauge: %v", err)
 		}
 
-		if err := exporter.Gauge("memory_usage_percent", 50.0+rand.Float64()*30.0, map[string]string{
+		if err := exporter.Gauge("memory_usage_percent", 50.0+rand.Float64()*30.0, map[string]string{ // #nosec G404 - Demo data only, not security-sensitive
 			"host": "demo-server",
 		}); err != nil {
 			log.Printf("Error emitting memory gauge: %v", err)
 		}
 
 		// Active connections gauge
-		connections := float64(50 + rand.Intn(100))
+		connections := float64(50 + rand.Intn(100)) // #nosec G404 - Demo data only, not security-sensitive
 		if err := exporter.Gauge("active_connections", connections, map[string]string{
 			"protocol": "http",
 		}); err != nil {
