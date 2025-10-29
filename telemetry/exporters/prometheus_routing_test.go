@@ -89,10 +89,10 @@ func TestPrometheusMetricTypeRouting(t *testing.T) {
 	}
 
 	// Verify counter is formatted correctly (should end with _total)
-	assert.Contains(t, output, "test_requests_total_total{status=\"200\"} 100")
+	assert.Contains(t, output, "test_requests_total{status=\"200\"} 100")
 
-	// Verify gauge is formatted correctly (should end with _gauge)
-	assert.Contains(t, output, "test_cpu_usage_percent_gauge{host=\"server1\"} 75.5")
+	// Verify gauge is formatted correctly
+	assert.Contains(t, output, "test_cpu_usage_percent{host=\"server1\"} 75.5")
 
 	// Verify histogram single value is handled
 	assert.Contains(t, output, "test_request_duration_ms{endpoint=\"/api\"} 50")
@@ -142,10 +142,10 @@ func TestPrometheusMetricTypeRoutingInHandler(t *testing.T) {
 	t.Logf("HTTP handler output:\n%s", output)
 
 	// Verify counter formatting
-	assert.Contains(t, output, "app_http_requests_total_total{method=\"GET\",status=\"200\"} 1000")
+	assert.Contains(t, output, "app_http_requests_total{method=\"GET\",status=\"200\"} 1000")
 
 	// Verify gauge formatting
-	assert.Contains(t, output, "app_memory_usage_bytes_gauge{host=\"app1\"} 1073741824")
+	assert.Contains(t, output, "app_memory_usage_bytes{host=\"app1\"} 1073741824")
 
 	// Verify histogram formatting with proper Prometheus conventions
 	lines := strings.Split(output, "\n")

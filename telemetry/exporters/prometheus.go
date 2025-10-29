@@ -214,7 +214,7 @@ func (e *PrometheusExporter) getMetricType(event telemetry.MetricsEvent) string 
 // writeCounterMetrics writes counter metrics in Prometheus format
 func (e *PrometheusExporter) writeCounterMetrics(w io.Writer, metrics []telemetry.MetricsEvent) {
 	for _, metric := range metrics {
-		name := e.formatPrometheusName(metric.Name + "_total")
+		name := e.formatPrometheusName(metric.Name)
 		labels := e.formatPrometheusLabels(metric.Tags)
 		value := e.extractMetricValue(metric.Value)
 
@@ -235,7 +235,7 @@ func (e *PrometheusExporter) writeCounterMetrics(w io.Writer, metrics []telemetr
 // writeGaugeMetrics writes gauge metrics in Prometheus format
 func (e *PrometheusExporter) writeGaugeMetrics(w io.Writer, metrics []telemetry.MetricsEvent) {
 	for _, metric := range metrics {
-		name := e.formatPrometheusName(metric.Name + "_gauge")
+		name := e.formatPrometheusName(metric.Name)
 		labels := e.formatPrometheusLabels(metric.Tags)
 		value := e.extractMetricValue(metric.Value)
 
