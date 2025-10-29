@@ -221,7 +221,8 @@ func TestGolden_MiddlewareOrdering(t *testing.T) {
 }
 
 func TestGolden_RFC3339NanoTimestampCompatibility(t *testing.T) {
-	now := time.Now()
+	// Test with a timestamp that has non-zero nanoseconds to ensure full precision
+	now := time.Unix(1234567890, 123456789) // Fixed timestamp with nanoseconds
 	formatted := now.Format(time.RFC3339Nano)
 
 	parsed, err := time.Parse(time.RFC3339Nano, formatted)
@@ -233,8 +234,15 @@ func TestGolden_RFC3339NanoTimestampCompatibility(t *testing.T) {
 		t.Error("RFC3339Nano round-trip should preserve timestamp")
 	}
 
-	if len(formatted) < 30 {
-		t.Error("RFC3339Nano timestamp should include nanoseconds")
+	// RFC3339Nano with nanoseconds should include decimal point
+	// Format: 2009-02-13T18:31:30.123456789-05:00 (at least 29 chars with nanos)
+	if len(formatted) < 29 {
+		t.Errorf("RFC3339Nano timestamp with nanoseconds should be at least 29 chars, got %d: %s", len(formatted), formatted)
+	}
+
+	// Verify nanoseconds are preserved in round-trip
+	if parsed.Nanosecond() != 123456789 {
+		t.Errorf("Nanoseconds not preserved: expected 123456789, got %d", parsed.Nanosecond())
 	}
 }
 
