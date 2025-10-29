@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - External install test job (disabled until repo is public)
   - All dependencies are public and accessible
 
+### Fixed
+
+- **Prometheus Metric Naming** - Removed automatic suffix duplication in telemetry/exporters
+  - Fixed `writeCounterMetrics()` and `writeGaugeMetrics()` to not append `_total` and `_gauge` suffixes
+  - Metric names now follow Prometheus conventions (callers provide suffixes)
+  - Fixes CI test failures: `TestPrometheusMetricTypeRouting` and `TestPrometheusMetricTypeRoutingInHandler`
+- **RFC3339Nano Timestamp Test** - Fixed Go 1.21 compatibility in logging/golden_test.go
+  - Use fixed timestamp with non-zero nanoseconds for consistent test behavior
+  - Adjusted minimum length check to account for RFC3339Nano trailing zero omission
+  - Fixes CI test failure: `TestGolden_RFC3339NanoTimestampCompatibility`
+
 ## [0.1.6] - 2025-10-29
 
 ### Added
