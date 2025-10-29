@@ -245,6 +245,63 @@ Track in future reviews:
 
 - None yet - this is the first ADR documenting dependency patterns
 
+## Update: Monorepo Subdirectory Issue (2025-10-28)
+
+**Discovery**: After Crucible was made public (v2025.10.4), we discovered that the Go module is located at `lang/go/` subdirectory in the Crucible monorepo, not at the repository root. This creates a Go modules limitation:
+
+**Problem**: Go modules cannot directly reference subdirectories in a repository. The module path `github.com/fulmenhq/crucible` expects the go.mod to be at the repository root, but Crucible's structure is:
+
+```
+crucible/
+├── lang/
+│   ├── go/           # Go module here (go.mod declares github.com/fulmenhq/crucible)
+│   ├── python/
+│   └── typescript/
+├── schemas/
+├── docs/
+└── ...
+```
+
+**Current Workaround**: Using `replace` directive in go.mod:
+
+```go
+// go.mod
+require github.com/fulmenhq/crucible v0.0.0-00010101000000-000000000000
+
+replace github.com/fulmenhq/crucible => ../crucible/lang/go
+```
+
+**Impact**:
+- ❌ `go get github.com/fulmenhq/gofulmen` fails for external users
+- ✅ Works fine for local development with sibling directories
+- ✅ Works in CI/CD with both repos checked out
+
+**Solutions Being Considered**:
+
+1. **Separate Go Module Repository** (Recommended):
+   - Create `github.com/fulmenhq/crucible-go` repository
+   - Contains only the Go module code
+   - Can be versioned independently
+   - Standard `go get` works immediately
+
+2. **Move Go Module to Root**:
+   - Restructure Crucible to have go.mod at root
+   - Place language-specific code in subdirectories
+   - Breaking change for existing structure
+
+3. **Go Workspace** (Complex):
+   - Use Go 1.18+ workspace feature
+   - Requires external users to set up workspace
+   - Non-standard workflow
+
+**Temporary Status**: forge-workhorse-groningen and other external projects must:
+1. Clone both `crucible` and `gofulmen` repositories as siblings
+2. Use the existing `replace` directive
+3. Wait for Crucible team to implement Solution 1 or 2
+
+**Action Required**: Crucible team to decide on repository restructuring approach.
+
 ## Changelog
 
 - **2025-10-28**: Initial version documenting crucible runtime dependency pattern
+- **2025-10-28**: Updated with monorepo subdirectory issue discovery and workarounds

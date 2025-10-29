@@ -25,5 +25,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 )
 
-// Development only: use local crucible
+// TEMPORARY: Crucible Go module is at lang/go subdirectory in monorepo
+// External users: Clone crucible repo and use local replace, OR
+// wait for crucible to move Go module to root or separate repo
 replace github.com/fulmenhq/crucible => ../crucible/lang/go
