@@ -1,0 +1,78 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22', '1.23']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - name: Verify Go version
+        run: go version
+      - name: Download dependencies
+        run: go mod download
+      - name: Verify dependencies
+        run: go mod verify
+      - name: Bootstrap tools
+        run: make bootstrap
+      - name: Run tests
+        run: make test
+      - name: Run lint
+        run: make lint
+      - name: Build
+        run: go build ./...
+  # Separate job to verify external installation works
+  # NOTE: This test will fail until the repository is made public
+  install-test:
+    name: External Installation Test
+    runs-on: ubuntu-latest
+    # Skip this test for now - will work once repo is public
+    if: false
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Test go get installation
+        run: |
+          # Create a temporary test project
+          mkdir -p /tmp/test-install
+          cd /tmp/test-install
+          go mod init test-install
+
+          # Try to get gofulmen (will use latest commit on main)
+          go get github.com/fulmenhq/gofulmen@main
+
+          # Verify it can be imported
+          cat > main.go << 'GOEOF'
+          package main
+          import (
+              "fmt"
+              "github.com/fulmenhq/gofulmen/foundry"
+          )
+          func main() {
+              catalog := foundry.GetDefaultCatalog()
+              pattern, _ := catalog.GetPattern("ansi-email")
+              fmt.Printf("Loaded pattern: %s\n", pattern.Name)
+          }
+          GOEOF
+
+          # Try to build it
+          go build .
+
+          # Run it
+          ./test-install
+
+          echo "✅ External installation test passed"

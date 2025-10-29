@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.1.7] - 2025-10-29
+
+### Added
+
+- **GitHub Actions CI Workflow** - Automated testing on Go 1.21, 1.22, 1.23
+  - Runs tests, lint, and build on every push/PR
+  - Bootstrap installs goneat v0.3.2 from public GitHub releases
+  - External install test job (disabled until repo is public)
+  - All dependencies are public and accessible
+
 ## [0.1.6] - 2025-10-29
 
 ### Added

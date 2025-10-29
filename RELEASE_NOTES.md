@@ -4,6 +4,34 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.7] - 2025-10-29
+
+### GitHub Actions CI Infrastructure
+
+**Release Type**: CI/CD Infrastructure  
+**Status**: 🚧 Not Yet Released
+
+#### Features
+
+- **Multi-version testing**: Go 1.21, 1.22, 1.23 matrix
+- **Automated quality gates**: Tests, lint, build on every push/PR
+- **Bootstrap integration**: Installs goneat v0.3.2 from GitHub releases
+- **External install test**: Verifies `go get` works (disabled until public)
+- **All dependencies public**: No private repos or secrets required
+
+#### Workflow
+
+`.github/workflows/ci.yml` runs on push to main and all PRs:
+
+1. Download and verify dependencies
+2. Bootstrap goneat from GitHub releases
+3. Run `make test` and `make lint`
+4. Build all packages
+
+#### Post-Public Release
+
+After repo is made public, enable external install test by removing `if: false` from `install-test` job.
+
 ## [0.1.6] - 2025-10-29
 
 ### Crucible v0.2.1 Config Embedding + Clean Architecture
