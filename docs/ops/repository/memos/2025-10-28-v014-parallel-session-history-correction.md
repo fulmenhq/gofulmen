@@ -9,12 +9,14 @@ During v0.1.5 release preparation on October 28, 2025, we discovered that the re
 Two parallel OpenCode sessions worked on v0.1.4 release preparation on October 23, 2025 (16:19:46 -0400), creating divergent commits from the same parent:
 
 **Remote commit (6aabbde)** - "docs: update CHANGELOG, RELEASE_NOTES, and VERSION for v0.1.4 release":
+
 - Modified 6 files
 - Updated CHANGELOG.md, RELEASE_NOTES.md, VERSION (0.1.4)
 - Created docs/releases/v0.1.4.md
 - Updated fulhash test fixtures
 
 **Local commit (b7a832b)** - "fix: align precommit/prepush hooks with goneat assess":
+
 - Modified 8 files (same 6 as above PLUS)
 - **Additional**: Updated Makefile with aligned precommit/prepush targets
 - **Additional**: Fixed bootstrap/extract.go issues
@@ -25,15 +27,18 @@ The remote commit was pushed to GitHub first, but the local commit (b7a832b) wit
 ## Timeline
 
 **October 23, 2025 16:19:46 -0400**:
+
 - Two parallel sessions create divergent v0.1.4 commits
 - Remote session pushes 6aabbde to GitHub
 - Local session continues with b7a832b (with Makefile improvements)
 
 **October 23-27, 2025**:
+
 - All v0.1.5 development (Similarity v2 API, telemetry, security fixes) built on b7a832b base
 - 18 commits created: Native OSA implementation, telemetry integration, documentation updates, security hardening
 
 **October 28, 2025**:
+
 - Attempted to push v0.1.5 work to GitHub
 - Discovered divergence when push rejected (non-fast-forward)
 - Analyzed history and confirmed local branch has more complete v0.1.4 changes
@@ -41,12 +46,14 @@ The remote commit was pushed to GitHub first, but the local commit (b7a832b) wit
 ## Original Commit History
 
 **Remote branch (incomplete v0.1.4)**:
+
 ```
 6aabbde - docs: update CHANGELOG, RELEASE_NOTES, and VERSION for v0.1.4 release
 a9bc789 - polish: complete v0.1.4 quality improvements
 ```
 
 **Local branch (complete v0.1.4 + v0.1.5 work)**:
+
 ```
 3d39822 - docs(security): add security notices and suppressions for demo code randomness
 bce5b00 - fix(security): add ReadHeaderTimeout to Prometheus exporter HTTP server
@@ -65,6 +72,7 @@ a9bc789 - polish: complete v0.1.4 quality improvements
 Since all active development occurred on the local branch with the more complete v0.1.4 commit (b7a832b), and the remote's incomplete commit (6aabbde) was never pulled or built upon locally, we decided to force-push the complete history to replace the remote's divergent commit.
 
 This approach:
+
 - Preserves complete v0.1.4 changes including critical Makefile hook alignment
 - Maintains linear history with all v0.1.5 development work intact
 - Avoids merge conflicts and preserves proper commit attribution

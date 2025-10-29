@@ -225,15 +225,15 @@ This approach maintains foundry's base-layer status while providing full observa
 
 ## Data Sources
 
-All reference data is synced from Crucible SSOT via `make sync`:
+All reference data is accessed from Crucible's embedded config (v0.2.1+):
 
-- **Patterns**: `assets/patterns.yaml` (regex patterns for validation)
-- **MIME Types**: `assets/mime-types.yaml` (content type mappings)
-- **HTTP Statuses**: `assets/http-statuses.yaml` (status codes and groups)
-- **Countries**: `assets/country-codes.yaml` (ISO 3166-1 country codes)
-- **Similarity Fixtures**: `assets/similarity-fixtures.yaml` (test data)
+- **Patterns**: Regex patterns for validation
+- **MIME Types**: Content type mappings
+- **HTTP Statuses**: Status codes and groups
+- **Countries**: ISO 3166-1 country codes
+- **Similarity Fixtures**: Test data
 
-Data is embedded at compile time using Go's `embed` directive, ensuring offline operation and zero runtime I/O.
+Crucible embeds these config files at compile time, ensuring offline operation and zero runtime I/O. The foundry package accesses them via `crucible.ConfigRegistry.Library().Foundry().*()` methods.
 
 ## Testing
 

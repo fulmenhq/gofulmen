@@ -47,14 +47,7 @@ sync: ## Sync assets from Crucible SSOT
 	fi
 	@echo "Syncing assets from Crucible..."
 	@$(GONEAT) ssot sync
-	@$(MAKE) sync-foundry-assets
 	@echo "✅ Sync completed"
-
-sync-foundry-assets: ## Copy foundry YAML assets to embedded location (post-sync hook)
-	@echo "Copying foundry assets for embed..."
-	@mkdir -p foundry/assets
-	@cp config/crucible-go/library/foundry/*.yaml foundry/assets/
-	@echo "✅ Foundry assets synchronized"
 
 version-bump: ## Bump version (usage: make version-bump TYPE=patch|minor|major|calver)
 	@if [ ! -f $(GONEAT) ]; then \
@@ -261,7 +254,7 @@ update-licenses: license-inventory license-save ## Update license inventory and 
 # Clean targets
 clean: ## Clean build artifacts and reports
 	@echo "Cleaning artifacts..."
-	rm -rf dist coverage.out coverage.html
+	rm -rf bin dist coverage.out coverage.html
 	@echo "✅ Clean completed"
 
 # Development setup

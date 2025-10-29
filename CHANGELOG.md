@@ -13,6 +13,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.1.6] - 2025-10-29
+
+### Added
+
+- **Crucible v0.2.1 Config Embedding** - Clean architecture eliminating config duplication
+  - **Direct Config Access**: Foundry now accesses config via `crucible.ConfigRegistry.Library().Foundry().*()` methods
+  - **No More Sync Needed**: Config version automatically aligned with Crucible module version
+  - **Single Source of Truth**: Removed local embedding of foundry assets, now uses Crucible's embedded config
+  - **Comprehensive Tests**: Added `crucible/config_test.go` with tests that will fail if config embedding breaks
+  - **Config API Re-exports**: Added `ConfigRegistry`, `GetConfig()`, and `ListConfigs()` to crucible package
+  - **Architecture Cleanup**: Removed `//go:embed assets/*.yaml` from foundry, removed duplicated config files
+
+### Changed
+
+- **Crucible Dependency**: Updated from v0.2.0 to v0.2.1 (adds config embedding support)
+- **Foundry Package**: Refactored `catalog.go` to use Crucible's embedded config instead of local assets
+  - Removed `configFiles embed.FS` variable
+  - Updated `loadYAML()` to call Crucible config API
+  - Updated documentation to reflect new architecture
+- **Build Process**: No longer requires `make sync` for foundry config (still useful for docs reference)
+
+### Fixed
+
+- **External Installation**: Now works correctly for forge-workhorse-groningen and other external consumers
+  - Standard `go get github.com/fulmenhq/gofulmen` installation works
+  - All foundry config accessible out of the box
+  - No special configuration or sync required
+
 ## [0.1.5] - 2025-10-27
 
 ### Added

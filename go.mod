@@ -3,8 +3,9 @@ module github.com/fulmenhq/gofulmen
 go 1.25.1
 
 require (
+	github.com/antzucaro/matchr v0.0.0-20221106193745-7bed6ef61ef9
 	github.com/bmatcuk/doublestar/v4 v4.9.1
-	github.com/fulmenhq/crucible v0.0.0-00010101000000-000000000000
+	github.com/fulmenhq/crucible v0.2.1
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -17,15 +18,9 @@ require (
 )
 
 require (
-	github.com/antzucaro/matchr v0.0.0-20221106193745-7bed6ef61ef9 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )
-
-// TEMPORARY: Crucible Go module is at lang/go subdirectory in monorepo
-// External users: Clone crucible repo and use local replace, OR
-// wait for crucible to move Go module to root or separate repo
-replace github.com/fulmenhq/crucible => ../crucible/lang/go

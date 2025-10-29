@@ -24,6 +24,7 @@ During initial integration of gofulmen into forge-workhorse-groningen, we discov
 Gofulmen includes a `crucible/` package that acts as a facade/shim, re-exporting the entire Crucible Go module.
 
 **Pros**:
+
 - Clean single-import API for applications (`import "github.com/fulmenhq/gofulmen/logging"`)
 - Runtime schema access for validation and introspection
 - Version diagnostics expose both gofulmen and crucible versions
@@ -31,6 +32,7 @@ Gofulmen includes a `crucible/` package that acts as a facade/shim, re-exporting
 - Enables dynamic features (schema inspection, version negotiation)
 
 **Cons**:
+
 - Crucible must be publicly accessible for external users
 - Dependency coupling between gofulmen and crucible versions
 - Cannot use gofulmen if crucible is unavailable
@@ -40,12 +42,14 @@ Gofulmen includes a `crucible/` package that acts as a facade/shim, re-exporting
 Embed Crucible schemas directly in gofulmen via `go:embed` and goneat sync, making crucible an optional dependency.
 
 **Pros**:
+
 - No runtime dependency on crucible repository
 - Works in air-gapped environments
 - Faster startup (no external schema loading)
 - Simpler dependency graph
 
 **Cons**:
+
 - Schema duplication between crucible and gofulmen
 - No dynamic schema inspection capabilities
 - Version drift risk if sync not run regularly
@@ -57,11 +61,13 @@ Embed Crucible schemas directly in gofulmen via `go:embed` and goneat sync, maki
 Support both patterns via build tags: `-tags embedded` for embedded mode, default uses runtime dependency.
 
 **Pros**:
+
 - Flexibility for different deployment scenarios
 - Air-gap support when needed
 - Runtime features available when desired
 
 **Cons**:
+
 - Increased maintenance burden (two code paths)
 - Testing complexity (must test both modes)
 - Documentation complexity
@@ -166,12 +172,14 @@ func main() {
 
 ## Comparison with PyFulmen and TSFulmen
 
-**PyFulmen**: 
+**PyFulmen**:
+
 - Likely uses `package_data` or `importlib.resources` to bundle schemas
 - Python's dynamic nature makes runtime schema access easier without hard dependencies
 - May use optional dependency pattern: `pip install pyfulmen[schemas]`
 
 **TSFulmen**:
+
 - TypeScript bundles schemas at build time via webpack/rollup
 - Type definitions can be generated from schemas
 - No runtime dependency needed since schemas are static assets
@@ -193,7 +201,7 @@ go get github.com/fulmenhq/gofulmen@latest
 # 1. Clone crucible repository
 git clone git@github.com:fulmenhq/crucible.git
 
-# 2. Clone gofulmen repository 
+# 2. Clone gofulmen repository
 git clone git@github.com:fulmenhq/gofulmen.git
 
 # 3. Use local replace in go.mod (already configured)
@@ -210,7 +218,7 @@ git clone git@github.com:fulmenhq/gofulmen.git
     repository: fulmenhq/crucible
     path: crucible
 
-- name: Checkout gofulmen  
+- name: Checkout gofulmen
   uses: actions/checkout@v4
   with:
     repository: fulmenhq/gofulmen
@@ -229,8 +237,9 @@ git clone git@github.com:fulmenhq/gofulmen.git
 ### Monitoring
 
 Track in future reviews:
+
 - Installation friction reports from external users
-- Network access issues in restricted environments  
+- Network access issues in restricted environments
 - Version compatibility problems between gofulmen and crucible
 - Feature requests for embedded mode
 
@@ -272,6 +281,7 @@ replace github.com/fulmenhq/crucible => ../crucible/lang/go
 ```
 
 **Impact**:
+
 - ❌ `go get github.com/fulmenhq/gofulmen` fails for external users
 - ✅ Works fine for local development with sibling directories
 - ✅ Works in CI/CD with both repos checked out
@@ -295,6 +305,7 @@ replace github.com/fulmenhq/crucible => ../crucible/lang/go
    - Non-standard workflow
 
 **Temporary Status**: forge-workhorse-groningen and other external projects must:
+
 1. Clone both `crucible` and `gofulmen` repositories as siblings
 2. Use the existing `replace` directive
 3. Wait for Crucible team to implement Solution 1 or 2

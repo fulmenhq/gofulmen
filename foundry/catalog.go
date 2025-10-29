@@ -1,24 +1,20 @@
 package foundry
 
 import (
-	"embed"
 	"fmt"
 	"strings"
 	"sync"
 
+	"github.com/fulmenhq/gofulmen/crucible"
 	"gopkg.in/yaml.v3"
 )
-
-// Embed YAML catalogs from assets/ (synced from Crucible SSOT via make sync)
-//
-//go:embed assets/*.yaml
-var configFiles embed.FS
 
 // Catalog provides immutable access to Foundry pattern datasets.
 //
 // The catalog loads patterns, MIME types, and HTTP status groups from
-// embedded Crucible configuration using lazy loading for performance.
+// Crucible's embedded configuration using lazy loading for performance.
 // All data is cached after first access and works offline in compiled binaries.
+// Config files are accessed directly from the Crucible Go module (v0.2.1+).
 //
 // Example:
 //
@@ -53,7 +49,7 @@ type Catalog struct {
 // NewCatalog creates a new Catalog instance.
 //
 // The catalog uses lazy loading - data is only loaded when first accessed.
-// All configuration files are embedded at compile time for offline operation.
+// All configuration files are accessed from Crucible's embedded config.
 //
 // Example:
 //
@@ -83,19 +79,34 @@ var (
 	defaultCatalogOnce sync.Once
 )
 
-// loadYAML loads a YAML file from embedded files and returns the parsed data.
+// loadYAML loads a YAML file from Crucible's embedded config and returns the parsed data.
 func (c *Catalog) loadYAML(filename string) (map[string]interface{}, error) {
-	// Use forward slash for embed.FS paths (Windows-safe)
-	// Assets are synced from Crucible SSOT via make sync
-	fullPath := "assets/" + filename
-	data, err := configFiles.ReadFile(fullPath)
+	// Load from Crucible's embedded config
+	var data []byte
+	var err error
+
+	switch filename {
+	case "patterns.yaml":
+		data, err = crucible.ConfigRegistry.Library().Foundry().Patterns()
+	case "country-codes.yaml":
+		data, err = crucible.ConfigRegistry.Library().Foundry().CountryCodes()
+	case "http-statuses.yaml":
+		data, err = crucible.ConfigRegistry.Library().Foundry().HTTPStatuses()
+	case "mime-types.yaml":
+		data, err = crucible.ConfigRegistry.Library().Foundry().MIMETypes()
+	case "similarity-fixtures.yaml":
+		data, err = crucible.ConfigRegistry.Library().Foundry().SimilarityFixtures()
+	default:
+		return nil, fmt.Errorf("unknown config file: %s", filename)
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to read embedded file %s: %w", fullPath, err)
+		return nil, fmt.Errorf("failed to read Crucible config %s: %w", filename, err)
 	}
 
 	var result map[string]interface{}
 	if err := yaml.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML from %s: %w", fullPath, err)
+		return nil, fmt.Errorf("failed to parse YAML from %s: %w", filename, err)
 	}
 
 	return result, nil

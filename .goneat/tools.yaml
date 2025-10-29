@@ -1,14 +1,16 @@
-scopes:
-  bootstrap:
-    description: "Essential bootstrap and tooling dependencies"
-    tools:
-      - goneat
+version: v1.0.0
+binDir: ./bin
 tools:
-  goneat:
-    name: goneat
-    description: "Fulmen schema validation and automation CLI"
-    kind: go
-    detect_command: goneat --version
-    install_package: github.com/fulmenhq/goneat@latest
-    version_scheme: semver
-    minimum_version: "0.3.0"
+  - id: goneat
+    description: Fulmen DX CLI for formatting, linting, SSOT sync
+    required: true
+    install:
+      type: download
+      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.2/goneat_v0.3.2_{{os}}_{{arch}}.tar.gz
+      binName: goneat
+      destination: ./bin
+      checksum:
+        darwin-arm64: c8e7851e656fc3ac42acfb9721fab4d0a007186be6d82ddf4a6dafbe9b51e9e7
+        darwin-amd64: b126d242ce4ad935a67f9d557407b88b12f59d6e272bd97e2db5d6b3fe7d0c7a
+        linux-arm64: 33d0cd6479f3f65d00b387d17133706a312c69dbce2eb714b7b549dbcc24135a
+        linux-amd64: 1ae047a64be3097a48eced22cf9ae4d14f8fd489250c9546ed8ad42f52aa6721

@@ -14,10 +14,12 @@ const (
 var (
 	SchemaRegistry    = crucible.SchemaRegistry
 	StandardsRegistry = crucible.StandardsRegistry
+	ConfigRegistry    = crucible.ConfigRegistry
 )
 
 type Schemas = crucible.Schemas
 type Standards = crucible.Standards
+type Config = crucible.Config
 
 type TerminalSchemas = crucible.TerminalSchemas
 type PathfinderSchemas = crucible.PathfinderSchemas
@@ -45,6 +47,14 @@ func ListSchemas(basePath string) ([]string, error) {
 
 func ParseJSONSchema(data []byte) (map[string]any, error) {
 	return crucible.ParseJSONSchema(data)
+}
+
+func GetConfig(configPath string) ([]byte, error) {
+	return crucible.GetConfig(configPath)
+}
+
+func ListConfigs(basePath string) ([]string, error) {
+	return crucible.ListConfigs(basePath)
 }
 
 type Version struct {
