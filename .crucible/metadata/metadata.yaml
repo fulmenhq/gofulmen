@@ -1,21 +1,21 @@
 schema:
-  name: goneat.ssot.source-metadata
-  version: v1
-  url: https://github.com/fulmenhq/goneat/schemas/ssot/source-metadata.v1.json
-generated_at: 2025-10-29T17:52:49.159782Z
+    name: goneat.ssot.source-metadata
+    version: v1
+    url: https://github.com/fulmenhq/goneat/schemas/ssot/source-metadata.v1.json
+generated_at: 2025-10-29T18:46:23.193469Z
 sources:
-  - name: crucible
-    slug: crucible
-    method: local_path
-    repo_url: https://github.com/fulmenhq/crucible
-    local_path: ../crucible
-    ref: main
-    commit: 320097e1f6125bc648931b14ac117aa8affeb677
-    version_file: VERSION
-    version: 0.2.1
-    version_source: VERSION
-    outputs:
-      config: config/crucible-go
-      doc: docs/crucible-go
-      metadata: .crucible/metadata
-      schema: schemas/crucible-go
+    - name: crucible
+      slug: crucible
+      method: local_path
+      repo_url: https://github.com/fulmenhq/crucible
+      local_path: ../crucible
+      ref: main
+      commit: 320097e1f6125bc648931b14ac117aa8affeb677
+      version_file: VERSION
+      version: 0.2.1
+      version_source: VERSION
+      outputs:
+        config: config/crucible-go
+        doc: docs/crucible-go
+        metadata: .crucible/metadata
+        schema: schemas/crucible-go

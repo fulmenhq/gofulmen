@@ -1,0 +1,87 @@
+# Git attributes for gofulmen repository
+# Ensures consistent file handling across platforms
+
+# ==============================================================================
+# Line Ending Normalization
+# ==============================================================================
+# Enforce LF line endings for all text files to prevent Windows CRLF issues
+# This is critical for:
+# - Cross-platform development (macOS, Linux, Windows)
+# - CI/CD consistency
+# - Checksum integrity in tests
+* text=auto eol=lf
+
+# ==============================================================================
+# Go Source Files
+# ==============================================================================
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.s text eol=lf
+
+# ==============================================================================
+# Configuration Files
+# ==============================================================================
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.goneatignore text eol=lf
+
+# ==============================================================================
+# Documentation
+# ==============================================================================
+*.md text eol=lf
+*.rst text eol=lf
+*.txt text eol=lf
+LICENSE text eol=lf
+README* text eol=lf
+CHANGELOG* text eol=lf
+CONTRIBUTING* text eol=lf
+MAINTAINERS* text eol=lf
+VERSION text eol=lf
+
+# ==============================================================================
+# Scripts
+# ==============================================================================
+*.sh text eol=lf
+*.bash text eol=lf
+Makefile text eol=lf
+makefile text eol=lf
+
+# ==============================================================================
+# CI/CD
+# ==============================================================================
+.github/**/* text eol=lf
+.goneat/**/* text eol=lf
+.crucible/**/* text eol=lf
+
+# ==============================================================================
+# Binary Files
+# ==============================================================================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.so binary
+*.dylib binary
+*.dll binary
+*.a binary
+*.exe binary
+
+# ==============================================================================
+# Special Cases - Binary Content Preservation
+# ==============================================================================
+# Pathfinder test fixtures - preserve exact binary content
+# These files have known checksums that must not change due to line-ending conversion
+pathfinder/testdata/**/* -text
+
+# Test fixtures that may have intentional line endings or binary content
+test/fixtures/**/* -text
