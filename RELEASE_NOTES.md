@@ -4,6 +4,132 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.8] - 2025-11-03
+
+### Foundry Exit Codes Integration from Crucible v0.2.3
+
+**Release Type**: Major Feature Addition  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+Complete implementation of standardized exit codes for the Fulmen ecosystem. Consumes Crucible v0.2.3's exit codes catalog, providing type-safe constants, comprehensive metadata, platform detection, simplified mode mapping, BSD compatibility, and automatic drift detection.
+
+#### Features
+
+**Core Exit Codes API**:
+
+- **54 Exit Code Constants**: Re-exported from `github.com/fulmenhq/crucible/foundry`
+  - Standard codes: `ExitSuccess`, `ExitFailure`
+  - Networking: `ExitPortInUse`, `ExitConnectionTimeout`, etc.
+  - Configuration: `ExitConfigInvalid`, `ExitSsotVersionMismatch`, etc.
+  - Runtime: `ExitHealthCheckFailed`, `ExitDatabaseUnavailable`, etc.
+  - Signals: `ExitSignalTerm`, `ExitSignalInt`, etc. (POSIX only)
+- **Metadata Access**: `GetExitCodeInfo()`, `LookupExitCode()`, `ListExitCodes()`
+- **Catalog Parsing**: Correct YAML parsing with `maps_from` field, efficient `sort.Ints()` sorting
+
+**Platform Compatibility**:
+
+- **Platform Detection**: `SupportsSignalExitCodes()` returns false on Windows (except WSL)
+- **WSL Detection**: Checks `WSL_DISTRO_NAME` and `WSL_INTEROP` environment variables
+- **PlatformInfo**: Comprehensive metadata (GOOS, GOARCH, WSL status, signal support)
+
+**Provenance Reporting**:
+
+- **Version Functions**: `GofulmenVersion()`, `CrucibleVersion()`, `ExitCodesVersion()`
+- **No Hardcoded Values**: All versions sourced from `crucible.Version` and `cruciblefoundry.ExitCodesVersion`
+- **GetProvenanceInfo()**: Returns structured provenance for logging/telemetry
+
+**Simplified Mode Mapping**:
+
+- **MapToSimplified()**: Maps Fulmen codes to simplified modes
+- **Basic Mode**: 3 codes (0=success, 1=error, 2=usage_error)
+- **Severity Mode**: 8 codes (0=success, 1=user_error, 2=config_error, 3=runtime_error, 4=system_error, 5=security_error, 6=test_failure, 7=observability_error)
+- **Catalog-Derived**: Reads from `catalog.SimplifiedModes` (no hardcoded mappings)
+
+**BSD Compatibility**:
+
+- **MapToBSD()**: Maps Fulmen codes to BSD sysexits.h codes
+- **MapFromBSD()**: Reverse mapping from BSD to Fulmen codes
+- **GetBSDCodeInfo()**: Metadata for BSD exit codes (EX_OK, EX_USAGE, EX_CONFIG, etc.)
+- **Full sysexits.h Coverage**: All 16 standard BSD codes mapped
+
+**Quality Assurance**:
+
+- **Snapshot Parity Test**: Compares against `exit-codes.snapshot.json` from Crucible
+- **100% Verification**: All 54 codes verified (names, categories, descriptions)
+- **Automatic Drift Detection**: Test fails if catalog diverges from snapshot
+
+#### Files Added
+
+```
+foundry/
+├── exit_codes.go                    # Re-exported constants
+├── exit_codes_metadata.go           # Metadata access layer
+├── exit_codes_test.go               # Core API tests
+├── exit_codes_snapshot_test.go      # Parity verification
+├── platform.go                      # Platform detection
+├── platform_test.go                 # Platform tests
+├── version.go                       # Provenance reporting
+├── simplified_modes.go              # Simplified mapping
+├── simplified_modes_test.go         # Simplified tests
+├── bsd.go                           # BSD compatibility
+└── bsd_test.go                      # BSD tests
+```
+
+**Total**: 11 files, 1,726 lines added
+
+#### Usage Examples
+
+```go
+import "github.com/fulmenhq/gofulmen/foundry"
+
+// Use exit codes
+if err != nil {
+    os.Exit(foundry.ExitConfigInvalid)
+}
+
+// Check platform support
+if !foundry.SupportsSignalExitCodes() {
+    log.Warn("Signal codes not supported on this platform")
+}
+
+// Get metadata
+info, ok := foundry.GetExitCodeInfo(foundry.ExitPortInUse)
+if ok {
+    log.Info("Exit code", "name", info.Name, "category", info.Category)
+}
+
+// Map to simplified mode
+if code, ok := foundry.MapToSimplified(exitCode, foundry.SimplifiedModeBasic); ok {
+    os.Exit(code)
+}
+
+// BSD compatibility
+if bsdCode, ok := foundry.MapToBSD(foundry.ExitConfigInvalid); ok {
+    os.Exit(bsdCode) // Uses EX_CONFIG (78)
+}
+
+// Provenance reporting
+prov := foundry.GetProvenanceInfo()
+log.Info("versions",
+    "gofulmen", prov.GofulmenVersion,
+    "crucible", prov.CrucibleVersion,
+    "catalog", prov.ExitCodesVersion)
+```
+
+#### Quality Metrics
+
+- ✅ All tests pass (`make test`)
+- ✅ Lint health: 100% (Excellent)
+- ✅ Code formatted (`make fmt`)
+- ✅ Snapshot parity: 54/54 codes verified
+- ✅ Platform detection: Windows, macOS, Linux tested
+
+#### Dependencies
+
+- Crucible updated from v0.2.1 to v0.2.3
+
 ## [0.1.7] - 2025-10-29
 
 ### GitHub Actions CI Infrastructure + Test Fixes

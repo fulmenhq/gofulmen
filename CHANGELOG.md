@@ -13,6 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.1.8] - 2025-11-03
+
+### Added
+
+- **Foundry Exit Codes Integration** - Complete exit codes integration from Crucible v0.2.3
+  - **54 Exit Code Constants**: Re-exported from `github.com/fulmenhq/crucible/foundry` (ExitSuccess, ExitFailure, ExitConfigInvalid, etc.)
+  - **Metadata Access Layer**: `GetExitCodeInfo()`, `LookupExitCode()`, `ListExitCodes()` with parsed catalog data
+  - **Platform Detection**: `SupportsSignalExitCodes()` with WSL detection for Windows compatibility
+  - **Provenance Reporting**: `GofulmenVersion()`, `CrucibleVersion()`, `ExitCodesVersion()` using Crucible constants (no hardcoded values)
+  - **Simplified Mode Mapping**: `MapToSimplified()` supporting 3-code basic mode and 8-code severity mode (catalog-derived)
+  - **BSD Compatibility**: `MapToBSD()`, `MapFromBSD()`, `GetBSDCodeInfo()` for sysexits.h compatibility
+  - **Snapshot Parity Test**: Automatic drift detection via `exit-codes.snapshot.json` comparison (54/54 codes verified)
+  - **Efficient Implementation**: Uses `sort.Ints()` for sorting, correct YAML parsing with `maps_from` field
+  - **100% Test Coverage**: Comprehensive tests for all APIs including platform detection and BSD mapping
+  - **Files Added**: 11 new files (exit_codes.go, exit_codes_metadata.go, exit_codes_test.go, platform.go, platform_test.go, version.go, bsd.go, bsd_test.go, simplified_modes.go, simplified_modes_test.go, exit_codes_snapshot_test.go)
+
+### Changed
+
+- **Crucible Dependency**: Updated from v0.2.1 to v0.2.3 (adds exit codes catalog and snapshot)
+
 ## [0.1.7] - 2025-10-29
 
 ### Added
