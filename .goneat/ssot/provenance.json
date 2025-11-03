@@ -4,7 +4,7 @@
     "version": "v1",
     "url": "https://github.com/fulmenhq/crucible/schemas/content/ssot-provenance/v1.0.0/ssot-provenance.schema.json"
   },
-  "generated_at": "2025-11-03T18:55:18.322964Z",
+  "generated_at": "2025-11-03T19:39:44.366046Z",
   "sources": [
     {
       "name": "crucible",
@@ -13,9 +13,11 @@
       "repo_url": "https://github.com/fulmenhq/crucible",
       "local_path": "../crucible",
       "ref": "main",
-      "commit": "3059c40407706a13b5f345ce8d8e59af520b76a3",
+      "commit": "b0f40abaecea0b6caf70c916676fc883975c6079",
+      "dirty": true,
+      "dirty_reason": "worktree-dirty",
       "version_file": "VERSION",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "version_source": "VERSION",
       "outputs": {
         "config": "config/crucible-go",

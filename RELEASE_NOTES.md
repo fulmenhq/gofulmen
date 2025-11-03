@@ -31,12 +31,14 @@ This document tracks release notes and checklists for gofulmen releases.
 #### Bug Fixes
 
 **Prometheus Metric Naming (telemetry/exporters)** - Fixed double suffix issue:
+
 - **Problem**: Exporter was appending `_total` and `_gauge` to names that already had suffixes
 - **Result**: Metrics like `http_requests_total_total` and `memory_bytes_gauge_gauge`
 - **Fix**: Removed automatic suffix addition, callers now provide proper Prometheus names
 - **Impact**: Tests now pass on all Go versions
 
 **RFC3339Nano Timestamp Test (logging)** - Fixed Go 1.21 compatibility:
+
 - **Problem**: Test expected 30+ char timestamps, but RFC3339Nano omits trailing zeros
 - **Result**: Timestamps with few nanoseconds (25 chars) failed minimum length check
 - **Fix**: Use fixed timestamp with nanoseconds, adjusted minimum to 29 chars
