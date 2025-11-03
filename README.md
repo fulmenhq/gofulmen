@@ -122,7 +122,35 @@ if len(diagnostics) > 0 {
         fmt.Printf("%s: %s\n", d.Pointer, d.Message)
     }
 }
+
+// Export schemas with provenance metadata
+import "github.com/fulmenhq/gofulmen/schema/export"
+
+opts := export.NewExportOptions(
+    "observability/logging/v1.0.0/log-event.schema.json",
+    "vendor/crucible/schemas/logging-event.schema.json",
+)
+if err := export.Export(context.Background(), opts); err != nil {
+    log.Fatal(err)
+}
 ```
+
+**CLI Export:**
+
+```bash
+# Export schema with provenance
+gofulmen-export-schema \
+    --schema-id=observability/logging/v1.0.0/log-event.schema.json \
+    --out=vendor/crucible/schemas/logging-event.schema.json
+
+# Export as YAML
+gofulmen-export-schema \
+    --schema-id=terminal/v1.0.0/schema.json \
+    --out=schema.yaml \
+    --format=yaml
+```
+
+See [docs/schema/export.md](docs/schema/export.md) for detailed export documentation.
 
 ### Config Package
 

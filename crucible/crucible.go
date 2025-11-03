@@ -6,8 +6,11 @@ import (
 	"github.com/fulmenhq/crucible"
 )
 
+// GofulmenVersion is deprecated. Use foundry.GofulmenVersion() instead.
+// This constant is kept for backward compatibility but will be removed in v0.2.0.
+const GofulmenVersion = "0.1.8"
+
 const (
-	GofulmenVersion = "0.1.0"
 	CrucibleVersion = crucible.Version
 )
 

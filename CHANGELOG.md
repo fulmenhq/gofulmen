@@ -17,6 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Schema Export Utilities** - Export Crucible schemas with provenance metadata
+  - **API Package**: `schema/export` with `Export()`, `ValidateExportedSchema()` functions
+  - **CLI Tool**: `cmd/gofulmen-export-schema` with full flag support (--schema-id, --out, --format, --provenance-style, --force)
+  - **Provenance Metadata**: Automatic tracking of schema_id, crucible_version, gofulmen_version, git_revision, exported_at
+  - **Multiple Formats**: JSON and YAML output with auto-detection from file extension
+  - **Provenance Styles**: Object (default), comment, or none - flexible embedding options
+  - **Safety Features**: Overwrite protection, path validation, parent directory creation
+  - **Exit Codes**: Proper foundry exit codes for CLI (ExitInvalidArgument, ExitFileWriteError, ExitDataInvalid)
+  - **Comprehensive Tests**: Unit tests (14 test cases) + CLI integration tests (6 test cases)
+  - **Documentation**: Full API and CLI documentation in `docs/schema/export.md`
+  - **Makefile Targets**: `make export-schema` and `make export-schema-example` for convenience
+  - **Files Added**: 7 new files (schema/export/\*.go, cmd/gofulmen-export-schema/main.go, tests, docs)
+  - **100% Lint Health**: All code passes golangci-lint with zero issues
+
 - **Foundry Exit Codes Integration** - Complete exit codes integration from Crucible v0.2.3
   - **54 Exit Code Constants**: Re-exported from `github.com/fulmenhq/crucible/foundry` (ExitSuccess, ExitFailure, ExitConfigInvalid, etc.)
   - **Metadata Access Layer**: `GetExitCodeInfo()`, `LookupExitCode()`, `ListExitCodes()` with parsed catalog data

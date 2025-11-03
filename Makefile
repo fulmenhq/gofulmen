@@ -19,7 +19,7 @@ GOMOD := $(GOCMD) mod
 
 .PHONY: help bootstrap bootstrap-force tools sync version-bump lint test build build-all clean fmt version check-all precommit prepush
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
-.PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev
+.PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example
 
 # Default target
 all: fmt test
@@ -263,3 +263,26 @@ dev: ## Set up development environment
 	$(MAKE) fmt
 	$(MAKE) test
 	@echo "✅ Development environment ready"
+
+# Schema export targets
+export-schema: ## Export a schema (usage: make export-schema SCHEMA_ID=... OUT=...)
+	@if [ -z "$(SCHEMA_ID)" ]; then \
+		echo "❌ SCHEMA_ID not specified. Usage: make export-schema SCHEMA_ID=observability/logging/v1.0.0/log-event.schema.json OUT=output.json"; \
+		exit 1; \
+	fi
+	@if [ -z "$(OUT)" ]; then \
+		echo "❌ OUT not specified. Usage: make export-schema SCHEMA_ID=... OUT=output.json"; \
+		exit 1; \
+	fi
+	@echo "Exporting schema $(SCHEMA_ID) to $(OUT)..."
+	@go run ./cmd/gofulmen-export-schema --schema-id="$(SCHEMA_ID)" --out="$(OUT)" --no-validate
+	@echo "✅ Schema exported successfully"
+
+export-schema-example: ## Export example logging schema
+	@echo "Exporting example logging schema..."
+	@mkdir -p vendor/crucible/schemas
+	@go run ./cmd/gofulmen-export-schema \
+		--schema-id=observability/logging/v1.0.0/log-event.schema.json \
+		--out=vendor/crucible/schemas/logging-event.schema.json \
+		--no-validate
+	@echo "✅ Example schema exported to vendor/crucible/schemas/logging-event.schema.json"

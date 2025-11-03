@@ -6,12 +6,111 @@ This document tracks release notes and checklists for gofulmen releases.
 
 ## [0.1.8] - 2025-11-03
 
-### Foundry Exit Codes Integration from Crucible v0.2.3
+### Schema Export Utilities + Foundry Exit Codes Integration
 
 **Release Type**: Major Feature Addition  
 **Status**: ✅ Ready for Release
 
 #### Overview
+
+This release adds two major features: (1) Schema export utilities for vendoring Crucible schemas with provenance metadata, and (2) Complete implementation of standardized exit codes from Crucible v0.2.3.
+
+### Feature 1: Schema Export Utilities
+
+Export Crucible schemas with full provenance tracking for vendoring and distribution.
+
+#### Features
+
+**API Package (`schema/export`)**:
+
+- **Export Function**: `Export(ctx, ExportOptions)` - Main export API with validation, formatting, and safety
+- **Validation Helper**: `ValidateExportedSchema()` - Verify exported schemas match source
+- **Flexible Options**: Format (JSON/YAML), provenance style (object/comment/none), validation toggle, overwrite control
+- **Auto-Detection**: Automatic format detection from file extension (.json, .yaml, .yml)
+- **Safety Features**: Path validation, parent directory creation, overwrite protection with clear error messages
+
+**CLI Tool (`cmd/gofulmen-export-schema`)**:
+
+- **Required Flags**: `--schema-id`, `--out`
+- **Optional Flags**: `--format`, `--provenance-style`, `--no-provenance`, `--no-validate`, `--force`
+- **Exit Codes**: Uses foundry exit codes (40=InvalidArgument, 54=FileWriteError, 60=DataInvalid)
+- **Help Text**: Comprehensive usage documentation with examples
+
+**Provenance Metadata**:
+
+- **Automatic Tracking**: schema_id, crucible_version, gofulmen_version, git_revision, exported_at
+- **Optional Identity**: Support for custom identity providers (vendor, binary)
+- **Multiple Styles**:
+  - **Object** (default): `x-crucible-source` top-level field in JSON
+  - **Comment**: Compact `$comment` field in JSON
+  - **YAML Front-Matter**: Commented provenance before `---` separator
+
+**Quality Assurance**:
+
+- **14 Unit Tests**: Export, format detection, provenance styles, validation, safety
+- **6 CLI Integration Tests**: Success cases, help, missing args, overwrite, formats, styles
+- **100% Lint Health**: Zero linting issues, all code formatted
+- **Documentation**: Complete API and CLI docs in `docs/schema/export.md`
+
+**Makefile Integration**:
+
+- **`make export-schema`**: Export with custom SCHEMA_ID and OUT variables
+- **`make export-schema-example`**: Export example logging schema to vendor/
+
+#### Files Added (Schema Export)
+
+```
+schema/export/
+├── export.go              # Main Export() function
+├── options.go             # ExportOptions + validation
+├── provenance.go          # Provenance metadata builder
+├── format.go              # JSON/YAML formatting
+├── safety.go              # Path validation + overwrite checks
+└── export_test.go         # Comprehensive unit tests
+
+cmd/gofulmen-export-schema/
+├── main.go                # CLI wrapper with flag parsing
+└── main_test.go           # CLI integration tests
+
+docs/schema/
+└── export.md              # Full API and CLI documentation
+```
+
+**Total**: 7 files, ~950 lines added
+
+#### Example Usage
+
+**API:**
+
+```go
+import "github.com/fulmenhq/gofulmen/schema/export"
+
+opts := export.NewExportOptions(
+    "observability/logging/v1.0.0/log-event.schema.json",
+    "vendor/crucible/schemas/logging-event.schema.json",
+)
+if err := export.Export(ctx, opts); err != nil {
+    log.Fatal(err)
+}
+```
+
+**CLI:**
+
+```bash
+# Export with provenance
+gofulmen-export-schema \
+    --schema-id=observability/logging/v1.0.0/log-event.schema.json \
+    --out=vendor/crucible/schemas/logging-event.schema.json
+
+# Export as YAML with comment-style provenance
+gofulmen-export-schema \
+    --schema-id=terminal/v1.0.0/schema.json \
+    --out=schema.yaml \
+    --format=yaml \
+    --provenance-style=comment
+```
+
+### Feature 2: Foundry Exit Codes Integration from Crucible v0.2.3
 
 Complete implementation of standardized exit codes for the Fulmen ecosystem. Consumes Crucible v0.2.3's exit codes catalog, providing type-safe constants, comprehensive metadata, platform detection, simplified mode mapping, BSD compatibility, and automatic drift detection.
 
