@@ -1,0 +1,7 @@
+# Invalid: env_prefix must end with underscore
+app:
+  binary_name: testapp
+  vendor: testvendor
+  env_prefix: TESTAPP
+  config_name: testapp
+  description: Test application with invalid env prefix

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **App Identity Module** - Application identity metadata from `.fulmen/app.yaml`
+  - **Core API**: `Get()`, `Must()`, `GetWithOptions()`, `LoadFrom()` for loading identity with caching
+  - **Discovery**: Automatic `.fulmen/app.yaml` discovery via ancestor search (max 20 levels)
+  - **Precedence**: Context injection → Explicit path → Environment variable (`FULMEN_APP_IDENTITY_PATH`) → Ancestor search
+  - **Validation**: Schema validation against Crucible v1.0.0 app-identity schema with field-level diagnostics
+  - **Caching**: Thread-safe process-level caching with sync.Once (verified with race detector)
+  - **Testing Support**: `WithIdentity()` context injection, `Reset()` cache clearing, `NewFixture()`/`NewCompleteFixture()` test utilities
+  - **Integration Helpers**: `ConfigParams()`, `EnvVar()`, `FlagsPrefix()`, `TelemetryNamespace()`, `ServiceName()`
+  - **Error Types**: `NotFoundError`, `ValidationError`, `MalformedError` with detailed diagnostics
+  - **Zero Dependencies**: Layer 0 module with no Fulmen dependencies (stdlib + gopkg.in/yaml.v3 only)
+  - **Test Coverage**: 88.4% coverage with 68 tests passing (includes subtests and examples)
+  - **Documentation**: Comprehensive godoc with 8 runnable examples, README integration guide
+  - **Files Added**: 12 new files (doc.go, identity.go, loader.go, validation.go, cache.go, override.go, testing.go + 5 test files)
+  - **Test Fixtures**: 6 YAML fixtures covering valid/invalid scenarios
+
 ### Changed
 
 ### Fixed

@@ -23,6 +23,17 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 ## Packages
 
+### App Identity (`appidentity/`)
+
+Application identity metadata from `.fulmen/app.yaml` for consistent configuration, logging, and telemetry.
+
+- Automatic discovery with ancestor search
+- Schema validation with detailed diagnostics
+- Thread-safe caching with sync.Once
+- Context-based testing overrides
+- Config/CLI/telemetry integration helpers
+- Zero Fulmen dependencies (Layer 0)
+
 ### ASCII (`ascii/`)
 
 Terminal and Unicode utilities for Go applications.
@@ -82,6 +93,33 @@ go get github.com/fulmenhq/gofulmen
 ```
 
 ## Usage
+
+### App Identity Package
+
+```go
+import "github.com/fulmenhq/gofulmen/appidentity"
+
+// Load application identity from .fulmen/app.yaml
+identity, err := appidentity.Get(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Use identity for configuration
+vendor, name := identity.ConfigParams()
+configPath := configpaths.GetAppConfigDir(vendor, name)
+
+// Construct environment variables
+logLevelVar := identity.EnvVar("LOG_LEVEL")
+os.Getenv(logLevelVar) // MYAPP_LOG_LEVEL
+
+// Get telemetry namespace
+namespace := identity.TelemetryNamespace()
+
+// For testing, use context override
+testIdentity := appidentity.NewFixture()
+ctx = appidentity.WithIdentity(ctx, testIdentity)
+```
 
 ### ASCII Package
 

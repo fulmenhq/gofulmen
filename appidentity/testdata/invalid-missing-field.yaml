@@ -1,0 +1,7 @@
+# Invalid: missing required field (description)
+app:
+  binary_name: testapp
+  vendor: testvendor
+  env_prefix: TESTAPP_
+  config_name: testapp
+  # description is missing - should fail validation

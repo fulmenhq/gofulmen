@@ -1,0 +1,10 @@
+# Invalid: malformed YAML syntax
+app:
+  binary_name: testapp
+  vendor: testvendor
+  env_prefix: TESTAPP_
+  config_name: testapp
+  description: Test application with syntax error
+  nested_field:
+    - invalid_array_item
+    this_line_breaks_yaml: {unclosed_brace

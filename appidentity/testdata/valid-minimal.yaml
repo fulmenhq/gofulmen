@@ -1,0 +1,8 @@
+# Minimal valid application identity
+# All required fields only
+app:
+  binary_name: testapp
+  vendor: testvendor
+  env_prefix: TESTAPP_
+  config_name: testapp
+  description: Minimal test application for validation

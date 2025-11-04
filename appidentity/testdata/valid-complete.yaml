@@ -1,0 +1,25 @@
+# Complete application identity with all optional fields
+app:
+  binary_name: myapp
+  vendor: myvendor
+  env_prefix: MYAPP_
+  config_name: myapp
+  description: Complete test application with all metadata fields
+metadata:
+  project_url: https://github.com/example/myapp
+  support_email: support@example.com
+  license: MIT
+  repository_category: cli
+  telemetry_namespace: myapp_metrics
+  registry_id: 01234567-89ab-cdef-0123-456789abcdef
+  python:
+    distribution_name: my-app
+    package_name: my_app
+    console_scripts:
+      - name: myapp
+        entry_point: my_app.cli:main
+      - name: myapp-admin
+        entry_point: my_app.admin:main
+  # Custom extensibility fields
+  custom_field: custom_value
+  custom_number: 42

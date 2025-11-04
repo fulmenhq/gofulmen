@@ -1,0 +1,12 @@
+# Gofulmen's own application identity
+app:
+  binary_name: gofulmen
+  vendor: fulmenhq
+  env_prefix: GOFULMEN_
+  config_name: gofulmen
+  description: Go foundation library for FulmenHQ ecosystem
+metadata:
+  project_url: https://github.com/fulmenhq/gofulmen
+  support_email: support@fulmenhq.io
+  license: MIT
+  repository_category: library
