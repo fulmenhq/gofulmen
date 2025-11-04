@@ -4,9 +4,13 @@ This directory contains **local ADRs** specific to gofulmen implementation decis
 
 ## 📋 ADR Index
 
-| ID                                                  | Title                                                                   | Status   | Date       | Tags                                                   |
-| --------------------------------------------------- | ----------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------ |
-| [ADR-0001](./ADR-0001-base-layer-error-wrapping.md) | Base Layer Packages Use Standard Go Errors, Callers Wrap with Envelopes | accepted | 2025-10-24 | error-handling, architecture, import-cycles, telemetry |
+| ID                                                       | Title                                                                   | Status   | Date       | Tags                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------ |
+| [ADR-0001](./ADR-0001-base-layer-error-wrapping.md)      | Base Layer Packages Use Standard Go Errors, Callers Wrap with Envelopes | accepted | 2025-10-24 | error-handling, architecture, import-cycles, telemetry |
+| [ADR-0002](./ADR-0002-foundry-similarity-algorithms.md)  | Foundry Similarity Algorithm Implementation Strategy                    | accepted | 2025-10-26 | similarity, performance, algorithms, foundry           |
+| [ADR-0003](./ADR-0003-native-osa-implementation.md)      | Native OSA Implementation                                               | accepted | 2025-10-26 | similarity, algorithms, performance                    |
+| [ADR-0004](./ADR-0004-crucible-runtime-dependency.md)    | Crucible Runtime Dependency                                             | accepted | 2025-10-28 | architecture, dependencies, configuration              |
+| [ADR-0005](./ADR-0005-deterministic-output-from-maps.md) | Sort Map Keys for Deterministic Output in Tests and External Formats    | accepted | 2025-11-04 | testing, maps, determinism, prometheus, observability  |
 
 ## 🎯 When to Write a Local ADR
 

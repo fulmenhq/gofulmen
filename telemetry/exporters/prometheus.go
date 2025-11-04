@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -180,13 +181,22 @@ func (e *PrometheusExporter) formatPrometheusName(name string) string {
 }
 
 // formatPrometheusLabels converts tags to Prometheus label format
+// Labels are sorted alphabetically by key for deterministic output.
 func (e *PrometheusExporter) formatPrometheusLabels(tags map[string]string) string {
 	if len(tags) == 0 {
 		return ""
 	}
 
+	// Sort keys for deterministic output (Go map iteration order is randomized)
+	keys := make([]string, 0, len(tags))
+	for key := range tags {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	labels := make([]string, 0, len(tags))
-	for key, value := range tags {
+	for _, key := range keys {
+		value := tags[key]
 		// Escape quotes in label values
 		escapedValue := strings.ReplaceAll(value, "\"", "\\\"")
 		labels = append(labels, fmt.Sprintf(`%s="%s"`, key, escapedValue))
@@ -196,9 +206,10 @@ func (e *PrometheusExporter) formatPrometheusLabels(tags map[string]string) stri
 }
 
 // formatPrometheusLabelsWithAdditional converts tags to Prometheus label format with additional label
+// Labels are sorted alphabetically by key for deterministic output.
 func (e *PrometheusExporter) formatPrometheusLabelsWithAdditional(tags map[string]string, additionalKey, additionalValue string) string {
 	// Create a copy of tags and add the additional label
-	allTags := make(map[string]string)
+	allTags := make(map[string]string, len(tags)+1)
 	for k, v := range tags {
 		allTags[k] = v
 	}
