@@ -45,6 +45,7 @@ func validateOutputPath(outPath string, overwrite bool) error {
 
 	// Ensure parent directory exists
 	parentDir := filepath.Dir(absPath)
+	// #nosec G301 -- schema export directories need to be readable by other users
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("%w: failed to create parent directory: %v", ErrPathValidation, err)
 	}

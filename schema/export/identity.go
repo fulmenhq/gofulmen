@@ -22,6 +22,7 @@ func (p *defaultIdentityProvider) GetIdentity(ctx context.Context) (*Identity, e
 	}
 
 	// Read the file
+	// #nosec G304 -- identityFile is controlled by findAppYAML which only searches for .fulmen/app.yaml
 	data, err := os.ReadFile(identityFile)
 	if err != nil {
 		// Can't read file - return nil (graceful fallback)
