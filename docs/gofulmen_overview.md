@@ -3,7 +3,7 @@ title: "Gofulmen Library Overview"
 description: "Comprehensive overview of the Go foundation library for FulmenHQ ecosystem"
 author: "Foundation Forge"
 date: "2025-10-11"
-last_updated: "2025-10-27"
+last_updated: "2025-11-03"
 status: "active"
 tags: ["overview", "library", "go", "foundation"]
 ---
@@ -48,7 +48,7 @@ Rather than copying Crucible assets into every project, helper libraries provide
 | **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                    |
 | **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                 |
 | **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                               |
-| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms) |
+| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
@@ -120,7 +120,7 @@ Policy files are resolved in order:
 
 ## Roadmap & Gaps
 
-### Current Version: 0.1.2
+### Current Version: 0.1.8
 
 **Completed**:
 
@@ -131,11 +131,14 @@ Policy files are resolved in order:
 - ✅ Progressive logging with profiles and middleware pipeline
 - ✅ Policy enforcement framework with YAML governance
 - ✅ Schema validation with catalog and composition helpers
+- ✅ Schema export utilities with provenance tracking
 - ✅ Three-layer configuration loading
 - ✅ Pathfinder security with path traversal protection
 - ✅ Foundry utilities (time, correlation IDs, patterns, MIME, HTTP, country codes)
+- ✅ Foundry exit codes (54 standardized codes with metadata, BSD compatibility)
 - ✅ Error handling with structured envelopes and validation strategies
 - ✅ Telemetry with counters, gauges, histograms, and Prometheus exporter
+- ✅ App Identity framework with .fulmen/app.yaml discovery
 
 **Planned** (v0.1.3+):
 
@@ -152,6 +155,19 @@ Policy files are resolved in order:
 - ✅ Metric type routing ensuring proper backend method calls
 - ✅ +Inf histogram bucket for complete sample coverage
 - ✅ Cross-language implementation patterns for ecosystem consistency
+
+**Completed** (v0.1.8):
+
+- ✅ Foundry exit codes integration (54 codes from Crucible v0.2.3)
+- ✅ Exit code metadata access layer with catalog parsing
+- ✅ Platform detection (Windows, macOS, Linux, WSL)
+- ✅ Simplified mode mapping (3-code basic, 8-code severity)
+- ✅ BSD sysexits.h compatibility layer
+- ✅ Schema export utilities with provenance metadata
+- ✅ CLI tool (gofulmen-export-schema) with full flag support
+- ✅ App Identity provider with .fulmen/app.yaml discovery
+- ✅ Schema payload parity verification against SSOT
+- ✅ Proper foundry exit codes in CLI tools
 
 **Planned** (v0.2.0):
 
@@ -291,8 +307,8 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.5
-- **Crucible Version**: 2025.10.2
+- **Current Version**: 0.1.8
+- **Crucible Version**: 2025.10.5 (v0.2.3)
 - **Go Version**: 1.21+
 - **License**: MIT
 

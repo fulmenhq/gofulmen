@@ -70,6 +70,7 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 - **MIME Type Detection**: Content-based detection and extension lookup
 - **HTTP Status Helpers**: Status code grouping and validation
 - **Country Code Validation**: ISO 3166-1 country codes (Alpha2, Alpha3, Numeric)
+- **Exit Codes**: 54 standardized exit codes with metadata, platform detection, simplified mode mapping, BSD sysexits.h compatibility
 - **Text Similarity** (`foundry/similarity/`): v1 API (Levenshtein) + v2 API (5 algorithms: Levenshtein, OSA, Damerau, Jaro-Winkler, Substring), normalized scoring, fuzzy matching, Unicode normalization, opt-in telemetry
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
