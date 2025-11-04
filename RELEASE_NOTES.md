@@ -4,6 +4,142 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.9] - 2025-11-05 (In Development)
+
+### App Identity Module
+
+**Release Type**: Major Feature Addition  
+**Status**: 🚧 In Development
+
+#### Overview
+
+This release introduces the App Identity module for loading and managing application metadata from `.fulmen/app.yaml` files. This Layer 0 module provides the foundation for consistent configuration paths, environment variables, and telemetry namespaces across Go applications.
+
+#### Features
+
+**Core API (`appidentity/`)**:
+
+- **Identity Loading**: `Get()`, `Must()`, `GetWithOptions()`, `LoadFrom()` with process-level caching
+- **Discovery**: Automatic `.fulmen/app.yaml` discovery via ancestor search (max 20 levels)
+- **Precedence**: Context injection → Explicit path → Environment variable (`FULMEN_APP_IDENTITY_PATH`) → Ancestor search
+- **Validation**: Schema validation against Crucible v1.0.0 app-identity schema with field-level diagnostics
+- **Caching**: Thread-safe process-level caching with sync.Once (verified with race detector)
+- **Testing Support**: `WithIdentity()` context injection, `Reset()` cache clearing, test utilities
+- **Integration Helpers**: `ConfigParams()`, `EnvVar()`, `FlagsPrefix()`, `TelemetryNamespace()`, `ServiceName()`
+
+**Testing Utilities**:
+
+- **NewFixture()**: Create minimal test identity with optional overrides
+- **NewCompleteFixture()**: Create complete test identity with all fields populated
+- **Context Override**: `WithIdentity(ctx, identity)` for test isolation
+- **Cache Reset**: `Reset()` for test cleanup (not concurrent-safe)
+
+**Error Types**:
+
+- **NotFoundError**: Detailed search information with documentation reference
+- **ValidationError**: Field-level diagnostics with JSON Pointer paths
+- **MalformedError**: YAML parsing errors with file context
+
+**Quality Assurance**:
+
+- **87.9% Test Coverage**: 68 tests passing (includes subtests and examples)
+- **Zero Race Conditions**: Verified with `-race` flag
+- **Zero Lint Issues**: All code passes golangci-lint
+- **Zero Import Cycles**: Layer 0 module with no Fulmen dependencies
+- **8 Godoc Examples**: Comprehensive usage examples for all major APIs
+
+#### Files Added
+
+```
+appidentity/
+├── doc.go                         # Package documentation
+├── identity.go                    # Identity structs and getters
+├── errors.go                      # Error types with diagnostics
+├── loader.go                      # File discovery and loading
+├── validation.go                  # Schema validation
+├── cache.go                       # Thread-safe caching
+├── override.go                    # Context-based injection
+├── testing.go                     # Test utilities
+├── identity_test.go               # Core API tests
+├── loader_test.go                 # Discovery tests
+├── validation_test.go             # Validation tests
+├── cache_test.go                  # Concurrency tests
+├── override_test.go               # Override tests
+├── testing_test.go                # Test utility tests
+├── examples_test.go               # Godoc examples
+├── app-identity.schema.json       # Embedded Crucible schema
+└── testdata/
+    ├── valid-minimal.yaml
+    ├── valid-complete.yaml
+    ├── valid-gofulmen.yaml
+    ├── invalid-missing-field.yaml
+    ├── invalid-format.yaml
+    └── invalid-env-prefix.yaml
+```
+
+**Total**: 15 Go files + 6 test fixtures, 2,864 lines
+
+#### Example Usage
+
+**Basic Usage**:
+
+```go
+import "github.com/fulmenhq/gofulmen/appidentity"
+
+// Load identity from .fulmen/app.yaml
+identity, err := appidentity.Get(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Use identity for configuration
+vendor, name := identity.ConfigParams()
+configPath := configpaths.GetAppConfigDir(vendor, name)
+
+// Construct environment variables
+logLevelVar := identity.EnvVar("LOG_LEVEL")
+os.Getenv(logLevelVar) // MYAPP_LOG_LEVEL
+```
+
+**Testing**:
+
+```go
+// Create test fixture
+testIdentity := appidentity.NewFixture(func(id *appidentity.Identity) {
+    id.BinaryName = "testapp"
+    id.EnvPrefix = "TESTAPP_"
+})
+
+// Inject into context for test isolation
+ctx = appidentity.WithIdentity(ctx, testIdentity)
+
+// Test code uses injected identity
+identity, _ := appidentity.Get(ctx)
+// Returns testIdentity instead of loading from disk
+```
+
+#### Integration Points
+
+- **Config Module**: `ConfigParams()` provides vendor/name for XDG path derivation
+- **Logging Module**: `ServiceName()` and `TelemetryNamespace()` for structured logging
+- **CLI Tools**: `FlagsPrefix()` and `Binary()` for flag naming conventions
+- **Environment Variables**: `EnvVar()` for consistent variable naming
+
+#### Migration Notes
+
+This is a new module with no breaking changes. Existing code continues to work unchanged. Applications can adopt app identity incrementally:
+
+1. Create `.fulmen/app.yaml` in project root
+2. Replace hardcoded config paths with `identity.ConfigParams()`
+3. Replace hardcoded env var prefixes with `identity.EnvVar()`
+4. Update tests to use `WithIdentity()` for isolation
+
+#### Known Limitations
+
+- Identity is static per process (no dynamic reloading)
+- No multi-app registry/UUID support (deferred to future release)
+- Reset() not safe during concurrent Get() calls (test-only function)
+
 ## [0.1.8] - 2025-11-03
 
 ### Schema Export Utilities + Foundry Exit Codes Integration

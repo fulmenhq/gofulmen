@@ -50,6 +50,7 @@ func (e *NotFoundError) Error() string {
 	sb.WriteString("\n  1. Create .fulmen/app.yaml in your project root")
 	sb.WriteString("\n  2. Set FULMEN_APP_IDENTITY_PATH environment variable")
 	sb.WriteString("\n  3. Use LoadFrom() with explicit path")
+	sb.WriteString("\n\nSee docs/appidentity/README.md for guidance on generating and managing identity files.")
 
 	return sb.String()
 }

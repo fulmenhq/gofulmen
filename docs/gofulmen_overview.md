@@ -36,19 +36,20 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 ## Module Catalog
 
-| Module          | Status    | Specification                                                                   | Purpose                                                                                                                                      |
-| --------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **config/**     | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                                                           |
-| **logging/**    | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                                                           |
-| **errors/**     | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                                                           |
-| **telemetry/**  | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters                                                                            |
-| **schema/**     | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support                                                                                  |
-| **crucible/**   | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards                                                                                     |
-| **docscribe/**  | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing                                                                              |
-| **bootstrap/**  | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                                                        |
-| **pathfinder/** | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                                                     |
-| **ascii/**      | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                                                                   |
-| **foundry/**    | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
+| Module           | Status    | Specification                                                                   | Purpose                                                                                                                                      |
+| ---------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **appidentity/** | ✅ Stable | [App Identity](crucible-go/standards/library/modules/app-identity.md)           | Application identity metadata from `.fulmen/app.yaml` with discovery and validation                                                          |
+| **config/**      | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                                                           |
+| **logging/**     | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                                                           |
+| **errors/**      | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                                                           |
+| **telemetry/**   | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters                                                                            |
+| **schema/**      | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support                                                                                  |
+| **crucible/**    | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards                                                                                     |
+| **docscribe/**   | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing                                                                              |
+| **bootstrap/**   | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                                                        |
+| **pathfinder/**  | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                                                     |
+| **ascii/**       | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                                                                   |
+| **foundry/**     | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
@@ -107,6 +108,7 @@ Policy files are resolved in order:
 
 | Gofulmen Package | External Dependencies  | Crucible Assets                                                  | Notes                                        |
 | ---------------- | ---------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
+| **appidentity/** | `gopkg.in/yaml.v3`     | `schemas/config/repository/app-identity/v1.0.0/`                 | Layer 0 module, no Fulmen dependencies       |
 | **config/**      | None (stdlib only)     | `schemas/config/fulmen-ecosystem/v1.0.0/`                        | XDG Base Directory compliant                 |
 | **logging/**     | `uber-go/zap`          | `schemas/observability/logging/v1.0.0/`                          | Progressive profiles with policy enforcement |
 | **schema/**      | `xeipuuv/gojsonschema` | `schemas/meta/draft-2020-12/`                                    | JSON Schema draft 2020-12 support            |
@@ -120,7 +122,7 @@ Policy files are resolved in order:
 
 ## Roadmap & Gaps
 
-### Current Version: 0.1.8
+### Current Version: 0.1.9 (in development)
 
 **Completed**:
 
@@ -138,7 +140,7 @@ Policy files are resolved in order:
 - ✅ Foundry exit codes (54 standardized codes with metadata, BSD compatibility)
 - ✅ Error handling with structured envelopes and validation strategies
 - ✅ Telemetry with counters, gauges, histograms, and Prometheus exporter
-- ✅ App Identity framework with .fulmen/app.yaml discovery
+- ✅ App Identity module with .fulmen/app.yaml discovery and validation
 
 **Planned** (v0.1.3+):
 
@@ -165,9 +167,19 @@ Policy files are resolved in order:
 - ✅ BSD sysexits.h compatibility layer
 - ✅ Schema export utilities with provenance metadata
 - ✅ CLI tool (gofulmen-export-schema) with full flag support
-- ✅ App Identity provider with .fulmen/app.yaml discovery
 - ✅ Schema payload parity verification against SSOT
 - ✅ Proper foundry exit codes in CLI tools
+
+**Completed** (v0.1.9):
+
+- ✅ App Identity module with .fulmen/app.yaml discovery
+- ✅ Thread-safe caching with sync.Once (87.9% test coverage)
+- ✅ Schema validation against Crucible v1.0.0 app-identity schema
+- ✅ Context-based testing overrides (WithIdentity, Reset)
+- ✅ Integration helpers for config, CLI, and telemetry subsystems
+- ✅ Zero Fulmen dependencies (Layer 0 module)
+- ✅ Test utilities for external consumers (NewFixture, NewCompleteFixture)
+- ✅ Documentation reference in NotFoundError for user guidance
 
 **Planned** (v0.2.0):
 
@@ -295,6 +307,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ### Package Documentation
 
+- [App Identity](../appidentity/doc.go) - Application identity metadata with .fulmen/app.yaml discovery
 - [Logging](../logging/README.md) - Structured logging with progressive profiles
 - [Errors](../errors/README.md) - Structured error handling with severity levels and validation strategies
 - [Telemetry](../telemetry/README.md) - Metrics emission with counters, gauges, histograms, and custom exporters
@@ -307,8 +320,8 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.8
-- **Crucible Version**: 2025.10.5 (v0.2.3)
+- **Current Version**: 0.1.9 (in development)
+- **Crucible Version**: 2025.11.4 (v0.2.5)
 - **Go Version**: 1.21+
 - **License**: MIT
 
