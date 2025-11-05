@@ -86,6 +86,19 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
 
+### Signals (`pkg/signals/`)
+
+Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback support.
+
+- **Graceful Shutdown**: LIFO cleanup chains with context support
+- **Config Reload**: SIGHUP with validation hooks and restart semantics
+- **Ctrl+C Double-Tap**: 2-second window for force quit (configurable)
+- **Windows Fallback**: HTTP admin endpoint for unsupported signals
+- **Rate Limiting**: Built-in request throttling for HTTP endpoint
+- **Thread-Safe**: Concurrent handler registration and execution
+
+Signal definitions and behaviors come from Crucible catalog (v1.0.0) ensuring cross-language parity.
+
 ## Installation
 
 ```bash
@@ -318,6 +331,59 @@ normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
 
 // Enable opt-in telemetry (NEW in v0.1.5)
 similarity.EnableTelemetry(telemetrySystem)
+```
+
+### Signals Package
+
+```go
+import "github.com/fulmenhq/gofulmen/pkg/signals"
+
+// Register graceful shutdown handlers (execute in LIFO order)
+signals.OnShutdown(func(ctx context.Context) error {
+    log.Println("Closing database...")
+    return db.Close()
+})
+
+signals.OnShutdown(func(ctx context.Context) error {
+    log.Println("Stopping workers...")
+    return workers.Stop(ctx)
+})
+
+// Enable Ctrl+C double-tap (2-second window for force quit)
+signals.EnableDoubleTap(signals.DoubleTapConfig{
+    Window:  2 * time.Second,
+    Message: "Press Ctrl+C again to force quit",
+})
+
+// Register config reload handler (SIGHUP)
+signals.OnReload(func(ctx context.Context) error {
+    // Validate new config
+    if err := config.Validate(); err != nil {
+        return err // Abort reload on validation failure
+    }
+    // Reload and restart
+    return config.ReloadAndRestart(ctx)
+})
+
+// Start listening for signals
+ctx := context.Background()
+if err := signals.Listen(ctx); err != nil {
+    log.Fatal(err)
+}
+
+// HTTP admin endpoint for Windows (SIGHUP fallback)
+config := signals.HTTPConfig{
+    TokenAuth: os.Getenv("SIGNAL_ADMIN_TOKEN"),
+    RateLimit: 6,  // requests per minute
+    RateBurst: 3,
+}
+handler := signals.NewHTTPHandler(config)
+http.Handle("/admin/signal", handler)
+
+// Example: Trigger reload on Windows via HTTP
+// curl -X POST http://localhost:8080/admin/signal \
+//   -H "Authorization: Bearer <token>" \
+//   -d '{"signal": "SIGHUP", "reason": "config reload"}'
 ```
 
 ## CLI Tools

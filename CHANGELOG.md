@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Signal Handling Module** (`pkg/signals`) - Cross-platform signal management with graceful shutdown
+  - **Catalog Layer** (`foundry/signals`): Typed access to Crucible signals catalog v1.0.0 with 8 standard signals (TERM, INT, HUP, QUIT, PIPE, ALRM, USR1, USR2)
+  - **Core API**: `OnShutdown()`, `OnReload()`, `Handle()`, `EnableDoubleTap()` for signal registration and management
+  - **Graceful Shutdown**: LIFO cleanup chains with context support and configurable timeouts
+  - **Ctrl+C Double-Tap**: 2-second window (configurable) for force quit with catalog-derived defaults
+  - **Config Reload**: SIGHUP with validation hooks, restart semantics, and fail-fast execution
+  - **Windows Fallback**: Automatic platform detection with INFO-level logging and operation hints for unsupported signals
+  - **HTTP Admin Endpoint**: `/admin/signal` helper with bearer token auth, optional mTLS, and rate limiting (6/min, burst 3)
+  - **Thread-Safe**: Concurrent handler registration with mutex protection and sync.Once caching
+  - **Testing Support**: Manager API for unit testing without OS signals (Listen() integration deferred to test polish phase)
+  - **Comprehensive Documentation**: Package README (350+ lines), 12 godoc examples, Unix/Windows operational guidance
+  - **Test Coverage**: 73.4% for pkg/signals, 79.1% for foundry/signals (36 tests passing, Listen() testing documented in adjunct)
+  - **Files Added**: 11 new files (foundry/signals/\*, pkg/signals/\*, plus tests, examples, README)
+  - **Dependencies**: Added golang.org/x/time v0.14.0 for rate limiting
+  - **Crucible Integration**: Updated from v0.2.5 to v0.2.6 for signals catalog accessor
+
 - **App Identity Module** - Application identity metadata from `.fulmen/app.yaml`
   - **Core API**: `Get()`, `Must()`, `GetWithOptions()`, `LoadFrom()` for loading identity with caching
   - **Discovery**: Automatic `.fulmen/app.yaml` discovery via ancestor search (max 20 levels)

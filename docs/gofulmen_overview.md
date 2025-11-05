@@ -3,7 +3,7 @@ title: "Gofulmen Library Overview"
 description: "Comprehensive overview of the Go foundation library for FulmenHQ ecosystem"
 author: "Foundation Forge"
 date: "2025-10-11"
-last_updated: "2025-11-03"
+last_updated: "2025-11-05"
 status: "active"
 tags: ["overview", "library", "go", "foundation"]
 ---
@@ -36,20 +36,22 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 ## Module Catalog
 
-| Module           | Status    | Specification                                                                   | Purpose                                                                                                                                      |
-| ---------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **appidentity/** | ✅ Stable | [App Identity](crucible-go/standards/library/modules/app-identity.md)           | Application identity metadata from `.fulmen/app.yaml` with discovery and validation                                                          |
-| **config/**      | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                                                           |
-| **logging/**     | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                                                           |
-| **errors/**      | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                                                           |
-| **telemetry/**   | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters                                                                            |
-| **schema/**      | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support                                                                                  |
-| **crucible/**    | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards                                                                                     |
-| **docscribe/**   | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing                                                                              |
-| **bootstrap/**   | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                                                        |
-| **pathfinder/**  | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                                                     |
-| **ascii/**       | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                                                                   |
-| **foundry/**     | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
+| Module               | Status    | Specification                                                                   | Purpose                                                                                                                                      |
+| -------------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **appidentity/**     | ✅ Stable | [App Identity](crucible-go/standards/library/modules/app-identity.md)           | Application identity metadata from `.fulmen/app.yaml` with discovery and validation                                                          |
+| **pkg/signals/**     | ✅ Stable | [Signals Catalog](crucible-go/standards/library/foundry/signals.md)             | Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback                                                   |
+| **config/**          | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                                                           |
+| **logging/**         | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                                                           |
+| **errors/**          | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                                                           |
+| **telemetry/**       | ✅ Stable | [Telemetry Standard](crucible-go/standards/observability/telemetry.md)          | Metrics emission with counters, gauges, histograms, and exporters                                                                            |
+| **schema/**          | ✅ Stable | [Schema Validation](crucible-go/standards/library/modules/schema-validation.md) | JSON Schema validation with catalog and composition support                                                                                  |
+| **crucible/**        | ✅ Stable | [Crucible Shim](crucible-go/standards/library/modules/crucible-shim.md)         | Access to embedded Crucible schemas, docs, and standards                                                                                     |
+| **docscribe/**       | ✅ Stable | [Docscribe Module](crucible-go/standards/library/modules/docscribe.md)          | Frontmatter parsing, header extraction, and document processing                                                                              |
+| **bootstrap/**       | ✅ Stable | [Bootstrap Pattern](crucible-go/standards/library/modules/fuldx-bootstrap.md)   | Dependency-free tool installation for Go repositories                                                                                        |
+| **pathfinder/**      | ✅ Stable | [Pathfinder Extension](crucible-go/standards/library/extensions/pathfinder.md)  | Safe filesystem discovery with path traversal protection                                                                                     |
+| **ascii/**           | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                                                                   |
+| **foundry/**         | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
+| **foundry/signals/** | ✅ Stable | [Signals Catalog](crucible-go/standards/library/foundry/signals.md)             | Typed access to Crucible signals catalog v1.0.0 with 8 standard POSIX signals                                                                |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
@@ -117,6 +119,7 @@ Policy files are resolved in order:
 | **pathfinder/**  | None (stdlib only)     | `schemas/pathfinder/v1.0.0/`                                     | Safe filesystem discovery                    |
 | **ascii/**       | None (stdlib only)     | `schemas/ascii/v1.0.0/`, `config/terminal/v1.0.0/`               | Terminal utilities and Unicode handling      |
 | **foundry/**     | Cloud SDKs (optional)  | `schemas/library/foundry/v1.0.0/`, `config/library/foundry/`     | Enterprise data utilities (planned)          |
+| **pkg/signals/** | `golang.org/x/time`    | `config/library/foundry/signals/v1.0.0/`                         | Cross-platform signal handling               |
 
 **Dependency Philosophy**: Minimize external dependencies; prefer standard library when possible. Cloud provider SDKs are optional and loaded only when needed.
 
@@ -141,6 +144,7 @@ Policy files are resolved in order:
 - ✅ Error handling with structured envelopes and validation strategies
 - ✅ Telemetry with counters, gauges, histograms, and Prometheus exporter
 - ✅ App Identity module with .fulmen/app.yaml discovery and validation
+- ✅ Signal handling module with graceful shutdown, reload, and Windows fallback
 
 **Planned** (v0.1.3+):
 
@@ -180,6 +184,14 @@ Policy files are resolved in order:
 - ✅ Zero Fulmen dependencies (Layer 0 module)
 - ✅ Test utilities for external consumers (NewFixture, NewCompleteFixture)
 - ✅ Documentation reference in NotFoundError for user guidance
+- ✅ Signal handling module (pkg/signals + foundry/signals)
+- ✅ Graceful shutdown with LIFO cleanup chains
+- ✅ Config reload (SIGHUP) with validation hooks
+- ✅ Ctrl+C double-tap with configurable window (2s default)
+- ✅ Windows fallback with INFO logging and operation hints
+- ✅ HTTP admin endpoint with auth and rate limiting
+- ✅ Catalog integration from Crucible v0.2.6 (8 standard signals)
+- ✅ 73.4% coverage (Listen() testing deferred to test polish phase)
 
 **Planned** (v0.2.0):
 
@@ -255,6 +267,53 @@ func main() {
 }
 ```
 
+### Graceful Shutdown with Signals
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/fulmenhq/gofulmen/pkg/signals"
+    "github.com/fulmenhq/gofulmen/logging"
+)
+
+func main() {
+    logger := logging.New("myapp", logging.WithProfile(logging.ProfileSimple))
+    ctx := context.Background()
+
+    // Register cleanup handlers (execute in LIFO order)
+    signals.OnShutdown(func(ctx context.Context) error {
+        logger.Info("Flushing buffers...")
+        return logger.Flush()
+    })
+
+    signals.OnShutdown(func(ctx context.Context) error {
+        logger.Info("Closing database...")
+        return db.Close()
+    })
+
+    // Register config reload handler
+    signals.OnReload(func(ctx context.Context) error {
+        logger.Info("Reloading configuration...")
+        return config.Reload()
+    })
+
+    // Enable double-tap for force quit
+    signals.EnableDoubleTap(signals.DoubleTapConfig{
+        Window:  2 * time.Second,
+        Message: "Press Ctrl+C again to force quit",
+    })
+
+    logger.Info("Service started. Press Ctrl+C to shutdown gracefully.")
+
+    // Start listening for signals (blocks until signal received)
+    if err := signals.Listen(ctx); err != nil {
+        logger.Error("Signal handling failed", logging.WithError(err))
+    }
+}
+```
+
 ## Testing & Quality
 
 ### Test Coverage
@@ -317,11 +376,12 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 - [Bootstrap](../bootstrap/README.md) - Tool installation and management
 - [Pathfinder](../pathfinder/README.md) - Safe filesystem discovery
 - [ASCII](../ascii/README.md) - Terminal utilities and Unicode handling
+- [Signals](../pkg/signals/README.md) - Cross-platform signal handling with graceful shutdown and config reload
 
 ## Version Information
 
 - **Current Version**: 0.1.9 (in development)
-- **Crucible Version**: 2025.11.4 (v0.2.5)
+- **Crucible Version**: 2025.11.4 (v0.2.6)
 - **Go Version**: 1.21+
 - **License**: MIT
 

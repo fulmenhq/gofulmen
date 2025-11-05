@@ -15,3 +15,7 @@ bin/
 
 # Test fixtures (keep our own fixtures, but exclude crucible synced ones)
 test/fixtures/crucible/
+
+# Invalid test fixtures - intentionally malformed for testing
+**/testdata/*invalid*.yaml
+**/testdata/*invalid*.yml
