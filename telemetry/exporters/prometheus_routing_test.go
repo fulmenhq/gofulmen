@@ -94,17 +94,18 @@ func TestPrometheusMetricTypeRouting(t *testing.T) {
 	// Verify gauge is formatted correctly
 	assert.Contains(t, output, "test_cpu_usage_percent{host=\"server1\"} 75.5")
 
-	// Verify histogram single value is handled
-	assert.Contains(t, output, "test_request_duration_ms{endpoint=\"/api\"} 50")
+	// Verify histogram single value is handled (converted to seconds per Prometheus convention)
+	assert.Contains(t, output, "test_request_duration_ms{endpoint=\"/api\"} 0.05")
 
 	// Verify histogram summary is formatted correctly with buckets, sum, and count
+	// Note: Buckets are converted from milliseconds to seconds per Prometheus convention
 	assert.Contains(t, output, "test_api_response_time_ms_bucket")
-	assert.Contains(t, output, "le=\"1\"")
-	assert.Contains(t, output, "le=\"5\"")
-	assert.Contains(t, output, "le=\"10\"")
-	assert.Contains(t, output, "le=\"50\"")
+	assert.Contains(t, output, "le=\"0.001\"") // 1ms -> 0.001s
+	assert.Contains(t, output, "le=\"0.005\"") // 5ms -> 0.005s
+	assert.Contains(t, output, "le=\"0.01\"")  // 10ms -> 0.01s
+	assert.Contains(t, output, "le=\"0.05\"")  // 50ms -> 0.05s
 	assert.Contains(t, output, "le=\"+Inf\"")
-	assert.Contains(t, output, "test_api_response_time_ms_sum{service=\"api\"} 5000")
+	assert.Contains(t, output, "test_api_response_time_ms_sum{service=\"api\"} 5") // 5000ms -> 5s
 	assert.Contains(t, output, "test_api_response_time_ms_count{service=\"api\"} 100")
 }
 

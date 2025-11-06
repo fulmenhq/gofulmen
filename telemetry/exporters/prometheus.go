@@ -5,30 +5,54 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 )
 
-// PrometheusExporter implements a basic Prometheus metrics exporter
+// PrometheusExporter implements a Prometheus metrics exporter with health instrumentation
 type PrometheusExporter struct {
-	mu       sync.RWMutex
-	metrics  []telemetry.MetricsEvent
-	prefix   string
-	endpoint string
-	server   *http.Server
+	mu      sync.RWMutex
+	metrics []telemetry.MetricsEvent
+	config  *PrometheusConfig
+	server  *http.Server
+
+	// HTTP handler with middleware
+	httpHandler *httpHandler
+
+	// Refresh tracking
+	refreshInflight atomic.Int64
+	restartCount    atomic.Int64
 }
 
-// NewPrometheusExporter creates a new Prometheus exporter
+// NewPrometheusExporter creates a new Prometheus exporter (legacy constructor for backward compatibility)
 func NewPrometheusExporter(prefix, endpoint string) *PrometheusExporter {
+	config := DefaultPrometheusConfig()
+	config.Prefix = prefix
+	config.Endpoint = endpoint
+	return NewPrometheusExporterWithConfig(config)
+}
+
+// NewPrometheusExporterWithConfig creates a new Prometheus exporter with the given configuration
+func NewPrometheusExporterWithConfig(config *PrometheusConfig) *PrometheusExporter {
+	if config == nil {
+		config = DefaultPrometheusConfig()
+	}
+	if err := config.Validate(); err != nil {
+		// Fall back to defaults if validation fails
+		config = DefaultPrometheusConfig()
+	}
+
 	return &PrometheusExporter{
-		metrics:  make([]telemetry.MetricsEvent, 0),
-		prefix:   prefix,
-		endpoint: endpoint,
+		metrics: make([]telemetry.MetricsEvent, 0),
+		config:  config,
 	}
 }
 
@@ -98,31 +122,60 @@ func (e *PrometheusExporter) Gauge(name string, value float64, tags map[string]s
 	return nil
 }
 
-// Start starts the HTTP server for Prometheus metrics endpoint
+// Start starts the HTTP server for Prometheus metrics endpoint with instrumentation
 func (e *PrometheusExporter) Start() error {
+	// Emit restart metric
+	tags := map[string]string{metrics.TagReason: metrics.RestartReasonManual}
+	telemetry.EmitCounter(metrics.PrometheusExporterRestartsTotal, 1, tags)
+	e.restartCount.Add(1)
+
+	// Create HTTP handler with middleware
+	e.httpHandler = newHTTPHandler(e, e.config)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/metrics", e.metricsHandler)
+	mux.Handle("/metrics", e.httpHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("<h1>Prometheus Metrics Exporter</h1><p><a href='/metrics'>Metrics</a></p>")); err != nil {
 			fmt.Printf("Error writing response: %v\n", err)
 		}
 	})
 
+	// Use a listener to get the actual address when using port :0
+	listener, err := net.Listen("tcp", e.config.Endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to start Prometheus exporter: %w", err)
+	}
+
+	// Store the actual address (important for :0 random port assignment)
+	actualAddr := listener.Addr().String()
+
 	e.server = &http.Server{
-		Addr:              e.endpoint,
+		Addr:              actualAddr,
 		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second, // Prevent Slowloris attacks
+		ReadHeaderTimeout: e.config.ReadHeaderTimeout,
 	}
 
 	go func() {
-		if err := e.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := e.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Prometheus exporter server error: %v\n", err)
+			// Emit restart on crash
+			crashTags := map[string]string{metrics.TagReason: metrics.RestartReasonPanicRecover}
+			telemetry.EmitCounter(metrics.PrometheusExporterRestartsTotal, 1, crashTags)
 		}
 	}()
 
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 	return nil
+}
+
+// GetAddr returns the actual address the server is listening on
+// This is useful when the endpoint is configured as ":0" (random port)
+func (e *PrometheusExporter) GetAddr() string {
+	if e.server != nil {
+		return e.server.Addr
+	}
+	return e.config.Endpoint
 }
 
 // Stop stops the HTTP server
@@ -133,45 +186,71 @@ func (e *PrometheusExporter) Stop() error {
 	return nil
 }
 
-// metricsHandler handles Prometheus metrics requests
+// metricsHandler handles Prometheus metrics requests with refresh instrumentation
 func (e *PrometheusExporter) metricsHandler(w http.ResponseWriter, r *http.Request) {
+	// Instrument refresh pipeline
+	overallStart := time.Now()
+	e.refreshInflight.Add(1)
+	defer e.refreshInflight.Add(-1)
+
+	// Emit inflight gauge
+	telemetry.EmitGauge(metrics.PrometheusExporterRefreshInflight, float64(e.refreshInflight.Load()), nil)
+
+	// Phase 1: Collect - snapshot metrics
+	collectStart := time.Now()
 	e.mu.RLock()
-	defer e.mu.RUnlock()
+	snapshot := make([]telemetry.MetricsEvent, len(e.metrics))
+	copy(snapshot, e.metrics)
+	e.mu.RUnlock()
+	collectDuration := time.Since(collectStart)
+	telemetry.EmitHistogram(metrics.PrometheusExporterRefreshDurationSeconds, collectDuration, map[string]string{metrics.TagPhase: metrics.PhaseCollect})
 
-	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-
-	// Group metrics by name and type for Prometheus format
+	// Phase 2: Convert - group and prepare Prometheus format
+	convertStart := time.Now()
 	metricGroups := make(map[string][]telemetry.MetricsEvent)
-	for _, metric := range e.metrics {
+	for _, metric := range snapshot {
 		key := fmt.Sprintf("%s_%s", metric.Name, e.getMetricType(metric))
 		metricGroups[key] = append(metricGroups[key], metric)
 	}
+	convertDuration := time.Since(convertStart)
+	telemetry.EmitHistogram(metrics.PrometheusExporterRefreshDurationSeconds, convertDuration, map[string]string{metrics.TagPhase: metrics.PhaseConvert})
+
+	// Phase 3: Export - write to HTTP response
+	exportStart := time.Now()
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 
 	// Write metrics in Prometheus format
-	for _, metrics := range metricGroups {
-		if len(metrics) == 0 {
+	for _, metricsGroup := range metricGroups {
+		if len(metricsGroup) == 0 {
 			continue
 		}
 
 		// Get the first metric to determine type
-		firstMetric := metrics[0]
+		firstMetric := metricsGroup[0]
 
 		switch firstMetric.Type {
 		case telemetry.TypeCounter:
-			e.writeCounterMetrics(w, metrics)
+			e.writeCounterMetrics(w, metricsGroup)
 		case telemetry.TypeGauge:
-			e.writeGaugeMetrics(w, metrics)
+			e.writeGaugeMetrics(w, metricsGroup)
 		case telemetry.TypeHistogram:
-			e.writeHistogramMetrics(w, metrics)
+			e.writeHistogramMetrics(w, metricsGroup)
 		}
 	}
+	exportDuration := time.Since(exportStart)
+	telemetry.EmitHistogram(metrics.PrometheusExporterRefreshDurationSeconds, exportDuration, map[string]string{metrics.TagPhase: metrics.PhaseExport})
+
+	// Emit overall refresh metrics
+	overallDuration := time.Since(overallStart)
+	telemetry.EmitHistogram(metrics.PrometheusExporterRefreshDurationSeconds, overallDuration, map[string]string{metrics.TagPhase: "overall"})
+	telemetry.EmitCounter(metrics.PrometheusExporterRefreshTotal, 1, map[string]string{metrics.TagResult: metrics.ResultSuccess})
 }
 
 // formatPrometheusName converts metric name to Prometheus format
 func (e *PrometheusExporter) formatPrometheusName(name string) string {
 	// Add prefix if specified
-	if e.prefix != "" {
-		name = e.prefix + "_" + name
+	if e.config.Prefix != "" {
+		name = e.config.Prefix + "_" + name
 	}
 
 	// Convert to Prometheus naming convention (snake_case)
@@ -264,14 +343,23 @@ func (e *PrometheusExporter) writeGaugeMetrics(w io.Writer, metrics []telemetry.
 	}
 }
 
-// writeHistogramMetrics writes histogram metrics in Prometheus format
+// writeHistogramMetrics writes histogram metrics in Prometheus format with bucket conversion
 func (e *PrometheusExporter) writeHistogramMetrics(w io.Writer, metrics []telemetry.MetricsEvent) {
 	for _, metric := range metrics {
 		switch v := metric.Value.(type) {
 		case telemetry.HistogramSummary:
+			// Prometheus expects seconds for duration metrics, but ADR-0007 uses milliseconds
+			// Convert if metric ends with _ms or _seconds
+			convertToSeconds := strings.HasSuffix(metric.Name, "_ms") || strings.HasSuffix(metric.Name, "_seconds")
+
 			// Write bucket series
 			for _, bucket := range v.Buckets {
-				bucketLabels := e.formatPrometheusLabelsWithAdditional(metric.Tags, "le", fmt.Sprintf("%g", bucket.LE))
+				bucketLE := bucket.LE
+				if convertToSeconds {
+					// Convert milliseconds to seconds
+					bucketLE = bucketLE / 1000.0
+				}
+				bucketLabels := e.formatPrometheusLabelsWithAdditional(metric.Tags, "le", fmt.Sprintf("%g", bucketLE))
 				name := e.formatPrometheusName(metric.Name + "_bucket")
 				if bucketLabels != "" {
 					if _, err := fmt.Fprintf(w, "%s{%s} %d\n", name, bucketLabels, bucket.Count); err != nil {
@@ -286,13 +374,18 @@ func (e *PrometheusExporter) writeHistogramMetrics(w io.Writer, metrics []teleme
 				}
 			}
 
-			// Write sum and count
+			// Write sum and count (also convert sum if needed)
+			sum := v.Sum
+			if convertToSeconds {
+				sum = sum / 1000.0
+			}
+
 			sumName := e.formatPrometheusName(metric.Name + "_sum")
 			countName := e.formatPrometheusName(metric.Name + "_count")
 			labels := e.formatPrometheusLabels(metric.Tags)
 
 			if labels != "" {
-				if _, err := fmt.Fprintf(w, "%s{%s} %f\n", sumName, labels, v.Sum); err != nil {
+				if _, err := fmt.Fprintf(w, "%s{%s} %f\n", sumName, labels, sum); err != nil {
 					fmt.Printf("Error writing histogram sum: %v\n", err)
 					return
 				}
@@ -301,7 +394,7 @@ func (e *PrometheusExporter) writeHistogramMetrics(w io.Writer, metrics []teleme
 					return
 				}
 			} else {
-				if _, err := fmt.Fprintf(w, "%s %f\n", sumName, v.Sum); err != nil {
+				if _, err := fmt.Fprintf(w, "%s %f\n", sumName, sum); err != nil {
 					fmt.Printf("Error writing histogram sum: %v\n", err)
 					return
 				}
@@ -311,16 +404,21 @@ func (e *PrometheusExporter) writeHistogramMetrics(w io.Writer, metrics []teleme
 				}
 			}
 		case float64:
-			// Single histogram value - treat as a simple metric for now
+			// Single histogram value - convert if needed
+			value := v
+			if strings.HasSuffix(metric.Name, "_ms") || strings.HasSuffix(metric.Name, "_seconds") {
+				value = value / 1000.0
+			}
+
 			name := e.formatPrometheusName(metric.Name)
 			labels := e.formatPrometheusLabels(metric.Tags)
 			if labels != "" {
-				if _, err := fmt.Fprintf(w, "%s{%s} %f\n", name, labels, v); err != nil {
+				if _, err := fmt.Fprintf(w, "%s{%s} %f\n", name, labels, value); err != nil {
 					fmt.Printf("Error writing histogram value: %v\n", err)
 					return
 				}
 			} else {
-				if _, err := fmt.Fprintf(w, "%s %f\n", name, v); err != nil {
+				if _, err := fmt.Fprintf(w, "%s %f\n", name, value); err != nil {
 					fmt.Printf("Error writing histogram value: %v\n", err)
 					return
 				}

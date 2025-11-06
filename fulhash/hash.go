@@ -19,20 +19,23 @@ var (
 	ErrInvalidDigestFormat  = errors.New("invalid digest format")
 )
 
+//nolint:unused // Deprecated - kept for backward compatibility, will be removed in Phase 5
 var (
 	globalTelemetrySystem *telemetry.System
 	telemetryMu           sync.RWMutex
 )
 
 // SetTelemetrySystem configures the global telemetry system for FulHash operations.
-// Call with a configured *telemetry.System to enable metrics emission.
-// Call with nil to disable telemetry (default behavior).
+// Deprecated: Use telemetry.SetGlobalSystem() instead. Will be removed in Phase 5.
+//
+//nolint:unused // Kept for backward compatibility during transition
 func SetTelemetrySystem(sys *telemetry.System) {
 	telemetryMu.Lock()
 	defer telemetryMu.Unlock()
 	globalTelemetrySystem = sys
 }
 
+//nolint:unused // Kept for backward compatibility during transition
 func getTelemetrySystem() *telemetry.System {
 	telemetryMu.RLock()
 	defer telemetryMu.RUnlock()

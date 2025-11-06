@@ -2,6 +2,7 @@ package exporters
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -92,14 +93,20 @@ func TestPrometheusExporterHTTP(t *testing.T) {
 	// Give server time to start
 	time.Sleep(200 * time.Millisecond)
 
+	// Get the actual address the server is listening on (important for :0 random port)
+	addr := exporter.GetAddr()
+	metricsURL := fmt.Sprintf("http://%s/metrics", addr)
+	t.Logf("Connecting to Prometheus exporter at %s", metricsURL)
+
 	// Make HTTP request to metrics endpoint
-	resp, err := http.Get("http://localhost:8080/metrics")
+	resp, err := http.Get(metricsURL)
 	if err != nil {
 		// Server might not be ready, try a few times
 		time.Sleep(500 * time.Millisecond)
-		resp, err = http.Get("http://localhost:8080/metrics")
+		resp, err = http.Get(metricsURL)
 	}
 
+	assert.NoError(t, err, "Should be able to connect to metrics endpoint")
 	if err == nil {
 		defer func() {
 			if closeErr := resp.Body.Close(); closeErr != nil {
