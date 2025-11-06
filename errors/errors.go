@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 )
 
 // Severity represents error severity levels aligned with assessment schema
@@ -50,6 +53,12 @@ type ErrorEnvelope struct {
 
 // NewErrorEnvelope creates a new error envelope with required fields
 func NewErrorEnvelope(code, message string) *ErrorEnvelope {
+	start := time.Now()
+	defer func() {
+		telemetry.EmitCounter(metrics.ErrorHandlingWrapsTotal, 1, map[string]string{metrics.TagOperation: "new_envelope"})
+		telemetry.EmitHistogram(metrics.ErrorHandlingWrapMs, time.Since(start), map[string]string{metrics.TagOperation: "new_envelope"})
+	}()
+
 	return &ErrorEnvelope{
 		Code:      code,
 		Message:   message,

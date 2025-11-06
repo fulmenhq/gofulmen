@@ -7,6 +7,7 @@ import (
 	"hash"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/fulmenhq/gofulmen/telemetry"
 	"github.com/fulmenhq/gofulmen/telemetry/metrics"
@@ -40,18 +41,16 @@ func getTelemetrySystem() *telemetry.System {
 
 // Hash computes the hash of the given data.
 //
-// Telemetry: Emits fulhash_hash_count counter on success.
-// Emits fulhash_errors_count counter on algorithm errors.
+// Telemetry: Emits algorithm-specific operation counters, bytes_hashed_total, and operation latency.
 func Hash(data []byte, opts ...Option) (Digest, error) {
+	start := time.Now()
 	o := defaultOptions()
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	telSys := getTelemetrySystem()
 	tags := map[string]string{
 		metrics.TagAlgorithm: string(o.algorithm),
-		metrics.TagStatus:    metrics.StatusSuccess,
 	}
 
 	var bytes []byte
@@ -60,74 +59,74 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 		sum := xxh3.Hash128(data)
 		b := sum.Bytes()
 		bytes = b[:]
+		// Emit XXH3-128 specific counter
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalXXH3128, 1, tags)
 	case SHA256:
 		h := sha256.New()
 		h.Write(data)
 		bytes = h.Sum(nil)
+		// Emit SHA256 specific counter
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
 	default:
-		tags[metrics.TagStatus] = metrics.StatusError
-		tags[metrics.TagErrorType] = "unsupported_algorithm"
-		if telSys != nil {
-			_ = telSys.Counter(metrics.FulHashErrorsCount, 1, tags)
-		}
 		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, o.algorithm, XXH3_128, SHA256)
 	}
 
-	if telSys != nil {
-		_ = telSys.Counter(metrics.FulHashHashCount, 1, tags)
-	}
+	// Emit bytes hashed counter
+	telemetry.EmitCounter(metrics.FulHashBytesHashedTotal, float64(len(data)), tags)
+
+	// Emit operation latency
+	telemetry.EmitHistogram(metrics.FulHashOperationMs, time.Since(start), tags)
 
 	return Digest{algorithm: o.algorithm, bytes: bytes}, nil
 }
 
 // HashString computes the hash of the given string.
 //
-// Telemetry: Emits fulhash_hash_count counter on success.
-// Emits fulhash_errors_count counter on algorithm errors.
+// Telemetry: Emits hash_string_total counter plus algorithm-specific counters.
 func HashString(s string, opts ...Option) (Digest, error) {
+	// Emit string-specific counter
+	telemetry.EmitCounter(metrics.FulHashHashStringTotal, 1, nil)
 	return Hash([]byte(s), opts...)
 }
 
 // HashReader computes the hash of data from an io.Reader.
 //
-// Telemetry: Emits fulhash_hash_count counter on success.
-// Emits fulhash_errors_count counter on I/O or algorithm errors.
+// Telemetry: Emits algorithm-specific counters and operation latency.
 func HashReader(r io.Reader, opts ...Option) (Digest, error) {
+	start := time.Now()
 	o := defaultOptions()
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	telSys := getTelemetrySystem()
 	tags := map[string]string{
 		metrics.TagAlgorithm: string(o.algorithm),
-		metrics.TagStatus:    metrics.StatusSuccess,
 	}
 
 	hasher, err := newHasher(o.algorithm)
 	if err != nil {
-		tags[metrics.TagStatus] = metrics.StatusError
-		tags[metrics.TagErrorType] = "unsupported_algorithm"
-		if telSys != nil {
-			_ = telSys.Counter(metrics.FulHashErrorsCount, 1, tags)
-		}
 		return Digest{}, err
 	}
 
 	buf := make([]byte, o.bufferSize)
-	_, err = io.CopyBuffer(hasher, r, buf)
+	bytesRead, err := io.CopyBuffer(hasher, r, buf)
 	if err != nil {
-		tags[metrics.TagStatus] = metrics.StatusError
-		tags[metrics.TagErrorType] = "io_error"
-		if telSys != nil {
-			_ = telSys.Counter(metrics.FulHashErrorsCount, 1, tags)
-		}
 		return Digest{}, err
 	}
 
-	if telSys != nil {
-		_ = telSys.Counter(metrics.FulHashHashCount, 1, tags)
+	// Emit algorithm-specific counter
+	switch o.algorithm {
+	case XXH3_128:
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalXXH3128, 1, tags)
+	case SHA256:
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
 	}
+
+	// Emit bytes hashed counter
+	telemetry.EmitCounter(metrics.FulHashBytesHashedTotal, float64(bytesRead), tags)
+
+	// Emit operation latency
+	telemetry.EmitHistogram(metrics.FulHashOperationMs, time.Since(start), tags)
 
 	return hasher.Sum(), nil
 }

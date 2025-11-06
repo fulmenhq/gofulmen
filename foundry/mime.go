@@ -3,6 +3,10 @@ package foundry
 import (
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/fulmenhq/gofulmen/telemetry"
+	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 )
 
 // MimeType represents an immutable MIME type definition from Foundry catalog.
@@ -98,6 +102,15 @@ func (m *MimeType) GetPrimaryExtension() string {
 //	    fmt.Println(mimeType.Mime) // "application/json"
 //	}
 func DetectMimeType(input []byte) (*MimeType, error) {
+	start := time.Now()
+	defer func() {
+		// Emit telemetry at function exit
+		duration := time.Since(start)
+		if duration > 0 {
+			telemetry.EmitHistogram(metrics.FoundryMimeDetectionMs, duration, nil)
+		}
+	}()
+
 	catalog := GetDefaultCatalog()
 	if err := catalog.loadMimeTypes(); err != nil {
 		return nil, err
@@ -120,7 +133,9 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 		// Validate it's actually JSON-like
 		for _, b := range trimmed[:min(len(trimmed), 50)] {
 			if b == '{' || b == '[' || b == '"' || b == ':' {
-				return catalog.mimeTypes["json"], nil
+				detected := catalog.mimeTypes["json"]
+				telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalJSON, 1, map[string]string{metrics.TagMimeType: "json"})
+				return detected, nil
 			}
 		}
 	}
@@ -128,7 +143,9 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 	// XML: starts with <
 	if len(trimmed) > 0 && trimmed[0] == '<' {
 		if len(trimmed) > 5 && string(trimmed[:5]) == "<?xml" {
-			return catalog.mimeTypes["xml"], nil
+			detected := catalog.mimeTypes["xml"]
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalXML, 1, map[string]string{metrics.TagMimeType: "xml"})
+			return detected, nil
 		}
 	}
 
@@ -144,7 +161,9 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 			}
 		}
 		if hasColon && trimmed[0] != '{' && trimmed[0] != '[' && trimmed[0] != '<' {
-			return catalog.mimeTypes["yaml"], nil
+			detected := catalog.mimeTypes["yaml"]
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalYAML, 1, map[string]string{metrics.TagMimeType: "yaml"})
+			return detected, nil
 		}
 	}
 
@@ -157,7 +176,9 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 		}
 	}
 	if len(firstLine) > 0 && countCommas(firstLine) >= 2 {
-		return catalog.mimeTypes["csv"], nil
+		detected := catalog.mimeTypes["csv"]
+		telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalCSV, 1, map[string]string{metrics.TagMimeType: "csv"})
+		return detected, nil
 	}
 
 	// Protocol Buffers: binary format (hard to detect reliably)
@@ -165,9 +186,13 @@ func DetectMimeType(input []byte) (*MimeType, error) {
 
 	// Plain text: fallback for text-like content
 	if isTextContent(input[:min(len(input), 512)]) {
-		return catalog.mimeTypes["plain-text"], nil
+		detected := catalog.mimeTypes["plain-text"]
+		telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalPlainText, 1, map[string]string{metrics.TagMimeType: "plain_text"})
+		return detected, nil
 	}
 
+	// Unknown MIME type
+	telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalUnknown, 1, map[string]string{metrics.TagMimeType: "unknown"})
 	return nil, nil
 }
 
@@ -208,8 +233,42 @@ func IsSupportedMimeType(mime string) bool {
 //	    fmt.Println(mimeType.Mime) // "application/json"
 //	}
 func GetMimeTypeByExtension(extension string) (*MimeType, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.EmitHistogram(metrics.FoundryMimeDetectionMs, time.Since(start), map[string]string{metrics.TagOperation: "by_extension"})
+	}()
+
 	catalog := GetDefaultCatalog()
-	return catalog.GetMimeTypeByExtension(extension)
+	result, err := catalog.GetMimeTypeByExtension(extension)
+
+	// Emit counter based on result
+	if result != nil {
+		tags := map[string]string{
+			metrics.TagMimeType:  result.ID,
+			metrics.TagOperation: "by_extension",
+		}
+		switch result.ID {
+		case "json":
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalJSON, 1, tags)
+		case "xml":
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalXML, 1, tags)
+		case "yaml", "yml":
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalYAML, 1, tags)
+		case "csv":
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalCSV, 1, tags)
+		case "plain-text", "txt":
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalPlainText, 1, tags)
+		default:
+			telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalUnknown, 1, tags)
+		}
+	} else {
+		telemetry.EmitCounter(metrics.FoundryMimeDetectionsTotalUnknown, 1, map[string]string{
+			metrics.TagMimeType:  "unknown",
+			metrics.TagOperation: "by_extension",
+		})
+	}
+
+	return result, err
 }
 
 // ListMimeTypes returns all MIME types from the catalog.

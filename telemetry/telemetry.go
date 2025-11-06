@@ -451,3 +451,69 @@ func (e MetricsEvent) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal((*Alias)(&e))
 }
+
+// Global telemetry system for module instrumentation
+var (
+	globalSystem     *System
+	globalSystemOnce sync.Once
+	globalSystemMu   sync.RWMutex
+)
+
+// SetGlobalSystem sets the global telemetry system for module instrumentation.
+// This should be called once during application initialization.
+// If never called, modules will use a default no-op system.
+func SetGlobalSystem(system *System) {
+	globalSystemMu.Lock()
+	defer globalSystemMu.Unlock()
+	globalSystem = system
+}
+
+// GetGlobalSystem returns the global telemetry system.
+// If no system has been set, it returns a disabled no-op system.
+func GetGlobalSystem() *System {
+	globalSystemOnce.Do(func() {
+		globalSystemMu.RLock()
+		if globalSystem == nil {
+			globalSystemMu.RUnlock()
+			// Create a disabled no-op system
+			config := DefaultConfig()
+			config.Enabled = false
+			sys, _ := NewSystem(config)
+			globalSystemMu.Lock()
+			globalSystem = sys
+			globalSystemMu.Unlock()
+		} else {
+			globalSystemMu.RUnlock()
+		}
+	})
+	globalSystemMu.RLock()
+	defer globalSystemMu.RUnlock()
+	return globalSystem
+}
+
+// EmitCounter is a convenience function for modules to emit counter metrics.
+// It uses the global telemetry system and gracefully handles nil system.
+func EmitCounter(name string, value float64, tags map[string]string) {
+	system := GetGlobalSystem()
+	if system != nil {
+		_ = system.Counter(name, value, tags)
+	}
+}
+
+// EmitHistogram is a convenience function for modules to emit histogram metrics.
+// It uses the global telemetry system and gracefully handles nil system.
+func EmitHistogram(name string, duration time.Duration, tags map[string]string) {
+	system := GetGlobalSystem()
+	if system != nil {
+		_ = system.Histogram(name, duration, tags)
+	}
+}
+
+// EmitGauge is a convenience function for modules to emit gauge metrics.
+// It uses the global telemetry system and gracefully handles nil system.
+func EmitGauge(name string, value float64, tags map[string]string) {
+	system := GetGlobalSystem()
+	if system != nil {
+		_ = system.Gauge(name, value, tags)
+	}
+}
