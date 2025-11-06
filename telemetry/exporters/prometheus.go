@@ -1,4 +1,22 @@
-// Package exporters provides custom metric exporters for various monitoring systems
+// Package exporters provides custom metric exporters for various monitoring systems.
+//
+// The Prometheus exporter implements enterprise-grade HTTP metrics exposition with:
+//   - Bearer token authentication
+//   - Per-IP rate limiting
+//   - Comprehensive health instrumentation (7 built-in metrics)
+//   - Automatic millisecond-to-second conversion for histograms
+//   - Three-phase refresh pipeline (collect, convert, export)
+//
+// Basic usage:
+//
+//	exporter := exporters.NewPrometheusExporter("myapp", ":9090")
+//	if err := exporter.Start(); err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer exporter.Stop()
+//
+// See PrometheusConfig for advanced configuration options including authentication,
+// rate limiting, and refresh intervals.
 package exporters
 
 import (

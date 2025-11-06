@@ -123,6 +123,69 @@ See [`docs/crucible-go/standards/agentic-attribution.md`](docs/crucible-go/stand
 - **Modify VERSION Directly**: Use `make version-bump-{patch|minor|major}` or `make version-set VERSION=x.y.z`.
 - **Skip Bootstrap Verification**: After bootstrap/ changes, always test with `make bootstrap` and `make tools`.
 
+## Pre-Commit Checklist
+
+**CRITICAL**: Follow this checklist before EVERY commit. No exceptions.
+
+1. **Run Pre-commit Checks**
+
+   ```bash
+   make precommit
+   ```
+
+   - If issues found: Fix them, re-run `make precommit`, repeat until clean
+   - Never skip this step
+
+2. **Verify Working Directory State**
+
+   ```bash
+   git status
+   ```
+
+   - Check for unstaged changes
+   - **RULE**: All modified files MUST be staged UNLESS maintainer explicitly approves partial commit
+   - If unstaged files exist without approval: Stage them or get explicit approval
+
+3. **Review Changes**
+
+   ```bash
+   git diff --cached
+   ```
+
+   - Verify staged changes match intent
+   - Check for debug code, TODOs, or unintended modifications
+
+4. **Stage All Related Changes**
+
+   ```bash
+   git add <files>
+   ```
+
+   - Include ALL files modified as part of the logical change
+   - Exception: Only when maintainer explicitly approves partial commits
+
+5. **Verify Tests Pass**
+
+   ```bash
+   make test
+   ```
+
+   - All tests must pass before commit
+   - No exceptions for "minor" changes
+
+6. **Commit with Proper Attribution**
+   - Follow attribution format from `docs/crucible-go/standards/agentic-attribution.md`
+   - Include all required trailers
+   - Use descriptive commit message following conventional commits
+
+**Common Mistakes to Avoid**:
+
+- ❌ Committing without running `make precommit`
+- ❌ Leaving unstaged changes without maintainer approval
+- ❌ Skipping `git status` check before commit
+- ❌ Committing with failing tests
+- ❌ Incomplete attribution trailers
+
 ## Reference Documents
 
 - `MAINTAINERS.md`
