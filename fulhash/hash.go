@@ -71,6 +71,12 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 		// Emit SHA256 specific counter
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
 	default:
+		// Emit error telemetry for unsupported algorithm
+		errorTags := map[string]string{
+			metrics.TagErrorType: "unsupported_algorithm",
+			metrics.TagStatus:    metrics.StatusError,
+		}
+		telemetry.EmitCounter(metrics.FulHashErrorsCount, 1, errorTags)
 		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, o.algorithm, XXH3_128, SHA256)
 	}
 
@@ -114,6 +120,12 @@ func HashReader(r io.Reader, opts ...Option) (Digest, error) {
 	buf := make([]byte, o.bufferSize)
 	bytesRead, err := io.CopyBuffer(hasher, r, buf)
 	if err != nil {
+		// Emit error telemetry for I/O errors
+		errorTags := map[string]string{
+			metrics.TagErrorType: "io_error",
+			metrics.TagStatus:    metrics.StatusError,
+		}
+		telemetry.EmitCounter(metrics.FulHashErrorsCount, 1, errorTags)
 		return Digest{}, err
 	}
 

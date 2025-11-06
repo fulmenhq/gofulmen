@@ -19,29 +19,35 @@ func TestHash_TelemetryEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	SetTelemetrySystem(telSys)
-	defer SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(telSys)
+	defer telemetry.SetGlobalSystem(nil)
 
 	tests := []struct {
-		name      string
-		data      []byte
-		opts      []Option
-		wantAlg   string
-		wantCount int
+		name           string
+		data           []byte
+		opts           []Option
+		wantAlg        string
+		wantAlgMetric  string
+		wantCount      int
+		wantBytesCount int
 	}{
 		{
-			name:      "xxh3-128 success",
-			data:      []byte("test data"),
-			opts:      []Option{WithAlgorithm(XXH3_128)},
-			wantAlg:   "xxh3-128",
-			wantCount: 1,
+			name:           "xxh3-128 success",
+			data:           []byte("test data"),
+			opts:           []Option{WithAlgorithm(XXH3_128)},
+			wantAlg:        "xxh3-128",
+			wantAlgMetric:  "fulhash_operations_total_xxh3_128",
+			wantCount:      1,
+			wantBytesCount: 9, // len("test data")
 		},
 		{
-			name:      "sha256 success",
-			data:      []byte("test data"),
-			opts:      []Option{WithAlgorithm(SHA256)},
-			wantAlg:   "sha256",
-			wantCount: 1,
+			name:           "sha256 success",
+			data:           []byte("test data"),
+			opts:           []Option{WithAlgorithm(SHA256)},
+			wantAlg:        "sha256",
+			wantAlgMetric:  "fulhash_operations_total_sha256",
+			wantCount:      1,
+			wantBytesCount: 9,
 		},
 	}
 
@@ -54,21 +60,32 @@ func TestHash_TelemetryEmission(t *testing.T) {
 				t.Fatalf("Hash() error = %v", err)
 			}
 
-			metrics := collector.GetMetricsByName("fulhash_hash_count")
-			if len(metrics) != tt.wantCount {
-				t.Errorf("expected %d fulhash_hash_count metrics, got %d", tt.wantCount, len(metrics))
+			// Check algorithm-specific operation counter
+			algMetrics := collector.GetMetricsByName(tt.wantAlgMetric)
+			if len(algMetrics) != tt.wantCount {
+				t.Errorf("expected %d %s metrics, got %d", tt.wantCount, tt.wantAlgMetric, len(algMetrics))
 			}
 
-			if len(metrics) > 0 {
-				tags := metrics[0].Tags
+			if len(algMetrics) > 0 {
+				tags := algMetrics[0].Tags
 				if tags["algorithm"] != tt.wantAlg {
 					t.Errorf("expected algorithm=%s, got %s", tt.wantAlg, tags["algorithm"])
 				}
-				if tags["status"] != "success" {
-					t.Errorf("expected status=success, got %s", tags["status"])
-				}
 			}
 
+			// Check bytes hashed counter
+			bytesMetrics := collector.GetMetricsByName("fulhash_bytes_hashed_total")
+			if len(bytesMetrics) != 1 {
+				t.Errorf("expected 1 bytes_hashed_total metric, got %d", len(bytesMetrics))
+			}
+
+			// Check operation latency histogram
+			latencyMetrics := collector.GetMetricsByName("fulhash_operation_ms")
+			if len(latencyMetrics) != 1 {
+				t.Errorf("expected 1 operation_ms metric, got %d", len(latencyMetrics))
+			}
+
+			// Ensure no error metrics
 			errorMetrics := collector.GetMetricsByName("fulhash_errors_count")
 			if len(errorMetrics) != 0 {
 				t.Errorf("expected no error metrics, got %d", len(errorMetrics))
@@ -87,8 +104,8 @@ func TestHash_UnsupportedAlgorithm_TelemetryEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	SetTelemetrySystem(telSys)
-	defer SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(telSys)
+	defer telemetry.SetGlobalSystem(nil)
 
 	_, err = Hash([]byte("data"), WithAlgorithm("invalid"))
 	if err == nil {
@@ -108,9 +125,15 @@ func TestHash_UnsupportedAlgorithm_TelemetryEmission(t *testing.T) {
 		t.Errorf("expected error_type=unsupported_algorithm, got %s", tags["error_type"])
 	}
 
-	successMetrics := collector.GetMetricsByName("fulhash_hash_count")
-	if len(successMetrics) != 0 {
-		t.Errorf("expected no success metrics, got %d", len(successMetrics))
+	// Ensure no success metrics were emitted (check all algorithm-specific counters)
+	xxh3Metrics := collector.GetMetricsByName("fulhash_operations_total_xxh3_128")
+	if len(xxh3Metrics) != 0 {
+		t.Errorf("expected no xxh3_128 operation metrics, got %d", len(xxh3Metrics))
+	}
+
+	sha256Metrics := collector.GetMetricsByName("fulhash_operations_total_sha256")
+	if len(sha256Metrics) != 0 {
+		t.Errorf("expected no sha256 operation metrics, got %d", len(sha256Metrics))
 	}
 }
 
@@ -124,27 +147,43 @@ func TestHashString_TelemetryEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	SetTelemetrySystem(telSys)
-	defer SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(telSys)
+	defer telemetry.SetGlobalSystem(nil)
 
 	_, err = HashString("test string")
 	if err != nil {
 		t.Fatalf("HashString() error = %v", err)
 	}
 
-	metrics := collector.GetMetricsByName("fulhash_hash_count")
-	if len(metrics) != 1 {
-		t.Errorf("expected 1 fulhash_hash_count metric, got %d", len(metrics))
+	// Check hash_string_total counter
+	stringMetrics := collector.GetMetricsByName("fulhash_hash_string_total")
+	if len(stringMetrics) != 1 {
+		t.Errorf("expected 1 hash_string_total metric, got %d", len(stringMetrics))
 	}
 
-	if len(metrics) > 0 {
-		tags := metrics[0].Tags
+	// Check algorithm-specific counter (default is xxh3-128)
+	xxh3Metrics := collector.GetMetricsByName("fulhash_operations_total_xxh3_128")
+	if len(xxh3Metrics) != 1 {
+		t.Errorf("expected 1 xxh3_128 operation metric, got %d", len(xxh3Metrics))
+	}
+
+	if len(xxh3Metrics) > 0 {
+		tags := xxh3Metrics[0].Tags
 		if tags["algorithm"] != "xxh3-128" {
 			t.Errorf("expected algorithm=xxh3-128, got %s", tags["algorithm"])
 		}
-		if tags["status"] != "success" {
-			t.Errorf("expected status=success, got %s", tags["status"])
-		}
+	}
+
+	// Check bytes hashed counter
+	bytesMetrics := collector.GetMetricsByName("fulhash_bytes_hashed_total")
+	if len(bytesMetrics) != 1 {
+		t.Errorf("expected 1 bytes_hashed_total metric, got %d", len(bytesMetrics))
+	}
+
+	// Check operation latency histogram
+	latencyMetrics := collector.GetMetricsByName("fulhash_operation_ms")
+	if len(latencyMetrics) != 1 {
+		t.Errorf("expected 1 operation_ms metric, got %d", len(latencyMetrics))
 	}
 }
 
@@ -158,8 +197,8 @@ func TestHashReader_TelemetryEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	SetTelemetrySystem(telSys)
-	defer SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(telSys)
+	defer telemetry.SetGlobalSystem(nil)
 
 	data := []byte("test data from reader")
 	reader := bytes.NewReader(data)
@@ -169,21 +208,32 @@ func TestHashReader_TelemetryEmission(t *testing.T) {
 		t.Fatalf("HashReader() error = %v", err)
 	}
 
-	metrics := collector.GetMetricsByName("fulhash_hash_count")
-	if len(metrics) != 1 {
-		t.Errorf("expected 1 fulhash_hash_count metric, got %d", len(metrics))
+	// Check algorithm-specific counter (default is xxh3-128)
+	xxh3Metrics := collector.GetMetricsByName("fulhash_operations_total_xxh3_128")
+	if len(xxh3Metrics) != 1 {
+		t.Errorf("expected 1 xxh3_128 operation metric, got %d", len(xxh3Metrics))
 	}
 
-	if len(metrics) > 0 {
-		tags := metrics[0].Tags
+	if len(xxh3Metrics) > 0 {
+		tags := xxh3Metrics[0].Tags
 		if tags["algorithm"] != "xxh3-128" {
 			t.Errorf("expected algorithm=xxh3-128, got %s", tags["algorithm"])
 		}
-		if tags["status"] != "success" {
-			t.Errorf("expected status=success, got %s", tags["status"])
-		}
 	}
 
+	// Check bytes hashed counter
+	bytesMetrics := collector.GetMetricsByName("fulhash_bytes_hashed_total")
+	if len(bytesMetrics) != 1 {
+		t.Errorf("expected 1 bytes_hashed_total metric, got %d", len(bytesMetrics))
+	}
+
+	// Check operation latency histogram
+	latencyMetrics := collector.GetMetricsByName("fulhash_operation_ms")
+	if len(latencyMetrics) != 1 {
+		t.Errorf("expected 1 operation_ms metric, got %d", len(latencyMetrics))
+	}
+
+	// Ensure no error metrics
 	errorMetrics := collector.GetMetricsByName("fulhash_errors_count")
 	if len(errorMetrics) != 0 {
 		t.Errorf("expected no error metrics, got %d", len(errorMetrics))
@@ -200,8 +250,8 @@ func TestHashReader_IOError_TelemetryEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	SetTelemetrySystem(telSys)
-	defer SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(telSys)
+	defer telemetry.SetGlobalSystem(nil)
 
 	reader := &errorReader{}
 
@@ -223,14 +273,20 @@ func TestHashReader_IOError_TelemetryEmission(t *testing.T) {
 		t.Errorf("expected error_type=io_error, got %s", tags["error_type"])
 	}
 
-	successMetrics := collector.GetMetricsByName("fulhash_hash_count")
-	if len(successMetrics) != 0 {
-		t.Errorf("expected no success metrics, got %d", len(successMetrics))
+	// Ensure no success metrics were emitted
+	xxh3Metrics := collector.GetMetricsByName("fulhash_operations_total_xxh3_128")
+	if len(xxh3Metrics) != 0 {
+		t.Errorf("expected no xxh3_128 operation metrics, got %d", len(xxh3Metrics))
+	}
+
+	sha256Metrics := collector.GetMetricsByName("fulhash_operations_total_sha256")
+	if len(sha256Metrics) != 0 {
+		t.Errorf("expected no sha256 operation metrics, got %d", len(sha256Metrics))
 	}
 }
 
 func TestHash_TelemetryDisabled(t *testing.T) {
-	SetTelemetrySystem(nil)
+	telemetry.SetGlobalSystem(nil)
 
 	_, err := Hash([]byte("test"))
 	if err != nil {
