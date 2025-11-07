@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Prometheus Exporter** (`telemetry/exporters`) - Production-grade HTTP metrics exposition with enterprise features
+  - **Core Exporter**: PrometheusExporter implementing telemetry.MetricsEmitter interface
+  - **Three-Phase Refresh Pipeline**: Collect → Convert → Export with health instrumentation at each stage
+  - **Format Conversion**: Automatic conversion to Prometheus text exposition format
+    - Counters: `<prefix>_<name>_total{labels}`
+    - Gauges: `<prefix>_<name>_gauge{labels}`
+    - Histograms: Full bucket series with automatic ms→seconds conversion, `_bucket`, `_sum`, `_count` suffixes
+  - **HTTP Server**: Built-in HTTP server with configurable endpoint (default `:9090`)
+  - **Authentication**: Bearer token authentication with configurable token
+  - **Rate Limiting**: Per-IP rate limiting with configurable requests/minute and burst size
+  - **Health Instrumentation**: 7 built-in metrics tracking exporter health
+    - `prometheus_exporter_refresh_duration_seconds` (histogram)
+    - `prometheus_exporter_refresh_total` (counter by phase/result)
+    - `prometheus_exporter_refresh_errors_total` (counter by phase/reason)
+    - `prometheus_exporter_refresh_inflight` (gauge)
+    - `prometheus_exporter_http_requests_total` (counter by endpoint/status)
+    - `prometheus_exporter_http_errors_total` (counter by endpoint/status)
+    - `prometheus_exporter_restarts_total` (counter by reason)
+  - **HTTP Endpoints**: `/metrics` (Prometheus format), `/` (landing page), `/health` (JSON status)
+  - **Configuration**: PrometheusConfig with defaults and validation
+    - Prefix, endpoint, bearer token, rate limits, refresh interval, quiet mode, read header timeout
+  - **Backward Compatibility**: Legacy `NewPrometheusExporter(prefix, endpoint)` constructor preserved
+  - **Thread-Safe**: Concurrent metric emission with mutex protection
+  - **Test Coverage**: Comprehensive unit tests and integration tests
+  - **Documentation**: Enhanced telemetry/README.md with 137+ lines of Prometheus documentation
+  - **Examples**: Working examples in examples/phase5-telemetry-demo.go
+  - **Module Instrumentation**: 19 module-specific metrics across Foundry, Error Handling, and FulHash
+  - **Files Added**: 3 core files (prometheus.go, config.go, http.go) + tests
+  - **Crucible Integration**: Updated to v0.2.7 for Prometheus metrics taxonomy
+
 - **Signal Handling Module** (`pkg/signals`) - Cross-platform signal management with graceful shutdown
   - **Catalog Layer** (`foundry/signals`): Typed access to Crucible signals catalog v1.0.0 with 8 standard signals (TERM, INT, HUP, QUIT, PIPE, ALRM, USR1, USR2)
   - **Core API**: `OnShutdown()`, `OnReload()`, `Handle()`, `EnableDoubleTap()` for signal registration and management
@@ -41,6 +71,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Test Fixtures**: 6 YAML fixtures covering valid/invalid scenarios
 
 ### Changed
+
+- **FulHash Telemetry**: Migrated from aggregated metrics to granular Prometheus-compatible metrics
+  - Replaced `fulhash_hash_count` with algorithm-specific counters: `fulhash_operations_total_xxh3_128`, `fulhash_operations_total_sha256`
+  - Added `fulhash_hash_string_total` for string hashing operations
+  - Added `fulhash_bytes_hashed_total` for total bytes processed
+  - Added `fulhash_operation_ms` histogram for operation latency
+  - Updated error telemetry to emit `fulhash_errors_count` with error_type tags
+  - Migrated from deprecated `SetTelemetrySystem()` to `telemetry.SetGlobalSystem()`
+  - All 12 FulHash tests passing with new metrics
+- **Crucible Dependency**: Updated from v0.2.6 to v0.2.7 (adds Prometheus metrics taxonomy)
+- **Agent Workflow**: Added Pre-Commit Checklist to AGENTS.md for consistent commit quality
 
 ### Fixed
 

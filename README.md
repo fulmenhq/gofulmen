@@ -86,6 +86,21 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
 
+### Telemetry (`telemetry/`)
+
+Structured metrics emission with support for counters, gauges, and histograms. Includes production-grade Prometheus exporter.
+
+- **Core Metrics**: Counters, gauges, histograms with automatic unit conversion
+- **Custom Exporters**: Pluggable emitter interface
+- **Prometheus Exporter** (`telemetry/exporters/`): HTTP metrics exposition with enterprise features
+  - Bearer token authentication
+  - Per-IP rate limiting (configurable requests/minute and burst)
+  - 7 built-in health metrics tracking exporter performance
+  - Automatic format conversion (ms→seconds for histograms)
+  - Three-phase refresh pipeline (collect, convert, export)
+- **Thread-Safe**: Concurrent metric emission across goroutines
+- **Schema Validation**: Automatic validation against Crucible metrics schema
+
 ### Signals (`pkg/signals/`)
 
 Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback support.

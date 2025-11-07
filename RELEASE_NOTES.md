@@ -4,12 +4,156 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.1.9] - 2025-11-05 (In Development)
+## [0.1.9] - 2025-11-06 (In Development)
+
+### Prometheus Exporter
+
+**Release Type**: Major Feature Addition  
+**Status**: 🚧 In Development
+
+#### Overview
+
+This release introduces a production-grade Prometheus metrics exporter with enterprise features including authentication, rate limiting, and comprehensive health instrumentation. The exporter provides HTTP metrics exposition following Prometheus text format standards with automatic format conversion.
+
+#### Features
+
+**Core Exporter (`telemetry/exporters`)**:
+
+- **PrometheusExporter**: Implements `telemetry.MetricsEmitter` interface for seamless integration
+- **Three-Phase Refresh Pipeline**: Collect → Convert → Export with health instrumentation
+- **Format Conversion**: Automatic conversion to Prometheus text exposition format
+  - Counters: `<prefix>_<name>_total{labels}`
+  - Gauges: `<prefix>_<name>_gauge{labels}`
+  - Histograms: Full bucket series with automatic ms→seconds conversion
+- **HTTP Server**: Built-in server with configurable endpoint (default `:9090`)
+- **Thread-Safe**: Concurrent metric emission with mutex protection
+
+**Enterprise Features**:
+
+- **Authentication**: Bearer token authentication via `BearerToken` config field
+- **Rate Limiting**: Per-IP rate limiting with configurable requests/minute and burst
+- **Health Instrumentation**: 7 built-in metrics tracking exporter health:
+  - `prometheus_exporter_refresh_duration_seconds` (histogram)
+  - `prometheus_exporter_refresh_total` (counter by phase/result)
+  - `prometheus_exporter_refresh_errors_total` (counter by phase/reason)
+  - `prometheus_exporter_refresh_inflight` (gauge)
+  - `prometheus_exporter_http_requests_total` (counter by endpoint/status)
+  - `prometheus_exporter_http_errors_total` (counter by endpoint/status)
+  - `prometheus_exporter_restarts_total` (counter by reason)
+
+**HTTP Endpoints**:
+
+- **GET /metrics**: Prometheus text exposition format
+- **GET /**: HTML landing page with status and links
+- **GET /health**: JSON health status endpoint
+
+**Configuration**:
+
+- **PrometheusConfig**: Comprehensive configuration with validation
+  - Prefix, endpoint, bearer token
+  - Rate limiting (requests/minute, burst size)
+  - Refresh interval, quiet mode, read header timeout
+- **Backward Compatible**: Legacy `NewPrometheusExporter(prefix, endpoint)` preserved
+- **Sensible Defaults**: Default config via `DefaultPrometheusConfig()`
+
+**Module Instrumentation**:
+
+- **19 Module Metrics**: Granular metrics across Foundry, Error Handling, and FulHash
+- **FulHash Migration**: Updated from aggregated to algorithm-specific metrics
+  - `fulhash_operations_total_xxh3_128`, `fulhash_operations_total_sha256`
+  - `fulhash_hash_string_total`, `fulhash_bytes_hashed_total`
+  - `fulhash_operation_ms` histogram
+  - Error telemetry with `fulhash_errors_count`
+
+**Quality Assurance**:
+
+- **Comprehensive Testing**: Unit tests and integration tests for all features
+- **100% Lint Health**: All code passes golangci-lint
+- **Documentation**: 137+ lines added to telemetry/README.md
+- **Examples**: Working demo in `examples/phase5-telemetry-demo.go`
+- **Pre-Commit Checklist**: Added to AGENTS.md for workflow consistency
+
+#### Files Added
+
+```
+telemetry/exporters/
+├── prometheus.go              # Core exporter implementation
+├── config.go                  # Configuration and validation
+├── http.go                    # HTTP server with middleware
+├── prometheus_test.go         # Comprehensive tests
+└── config_test.go             # Config tests
+
+telemetry/metrics/
+└── names.go                   # Extended with Prometheus metrics
+```
+
+**Total**: 3 core files + tests, ~800 lines added
+
+#### Example Usage
+
+**Basic Usage**:
+
+```go
+import "github.com/fulmenhq/gofulmen/telemetry/exporters"
+
+// Create and start exporter
+exporter := exporters.NewPrometheusExporter("myapp", ":9090")
+if err := exporter.Start(); err != nil {
+    log.Fatal(err)
+}
+defer exporter.Stop()
+
+// Configure telemetry system
+config := &telemetry.Config{
+    Enabled: true,
+    Emitter: exporter,
+}
+sys, _ := telemetry.NewSystem(config)
+
+// Metrics available at http://localhost:9090/metrics
+```
+
+**Advanced Configuration**:
+
+```go
+config := &exporters.PrometheusConfig{
+    Prefix:             "myapp",
+    Endpoint:           ":9090",
+    BearerToken:        "secret-token",
+    RateLimitPerMinute: 60,
+    RateLimitBurst:     10,
+    RefreshInterval:    15 * time.Second,
+}
+
+exporter := exporters.NewPrometheusExporterWithConfig(config)
+```
+
+#### Integration Points
+
+- **Crucible Integration**: Updated to v0.2.7 for Prometheus metrics taxonomy
+- **FulHash Module**: Migrated to new telemetry pattern with algorithm-specific metrics
+- **Global Telemetry**: All modules use `telemetry.SetGlobalSystem()` pattern
+
+#### Quality Metrics
+
+- ✅ **All Tests Passing**: FulHash, telemetry, exporters (100+ tests)
+- ✅ **Code Coverage**: Maintained coverage levels across all modules
+- ✅ **Lint Health**: 100% (0 issues)
+- ✅ **Documentation**: Comprehensive README and godoc comments
+- ✅ **Examples**: Working demos with all features demonstrated
+
+#### Known Limitations
+
+- Histogram buckets are fixed (cannot be customized per-metric)
+- Rate limiting is per-IP only (no token-based rate limiting)
+- No dynamic refresh interval configuration (requires restart)
+
+---
 
 ### App Identity Module
 
 **Release Type**: Major Feature Addition  
-**Status**: 🚧 In Development
+**Status**: ✅ Complete
 
 #### Overview
 
