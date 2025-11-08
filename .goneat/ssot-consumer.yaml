@@ -3,6 +3,7 @@ sources:
   - name: crucible
     repo: fulmenhq/crucible
     ref: main
+    force_remote: true
     sync_path_base: lang/go
     assets:
       - type: doc

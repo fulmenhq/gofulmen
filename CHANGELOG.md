@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.9] - 2025-11-08
 
 ### Added
 
@@ -82,6 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 12 FulHash tests passing with new metrics
 - **Crucible Dependency**: Updated from v0.2.6 to v0.2.7 (adds Prometheus metrics taxonomy)
 - **Agent Workflow**: Added Pre-Commit Checklist to AGENTS.md for consistent commit quality
+
+### Fixed
+
+- **Listen Testing Strategy**: Documented approach for signal Listen() integration testing in adjunct brief (deferred implementation to test polish phase)
+
+## [Unreleased]
+
+### Added
+
+### Changed
 
 ### Fixed
 

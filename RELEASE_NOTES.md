@@ -4,12 +4,12 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.1.9] - 2025-11-06 (In Development)
+## [0.1.9] - 2025-11-08
 
 ### Prometheus Exporter
 
 **Release Type**: Major Feature Addition  
-**Status**: 🚧 In Development
+**Status**: ✅ Released
 
 #### Overview
 
@@ -136,11 +136,12 @@ exporter := exporters.NewPrometheusExporterWithConfig(config)
 
 #### Quality Metrics
 
-- ✅ **All Tests Passing**: FulHash, telemetry, exporters (100+ tests)
-- ✅ **Code Coverage**: Maintained coverage levels across all modules
+- ✅ **All Tests Passing**: FulHash, telemetry, exporters, signals, appidentity (200+ tests)
+- ✅ **Code Coverage**: Maintained coverage levels across all modules (70-90% range)
 - ✅ **Lint Health**: 100% (0 issues)
 - ✅ **Documentation**: Comprehensive README and godoc comments
 - ✅ **Examples**: Working demos with all features demonstrated
+- ✅ **Race Safety**: Verified with `-race` flag across all concurrent modules
 
 #### Known Limitations
 
@@ -289,7 +290,7 @@ This is a new module with no breaking changes. Existing code continues to work u
 ### Signal Handling Module
 
 **Release Type**: Major Feature Addition  
-**Status**: 🚧 In Development
+**Status**: ✅ Released
 
 #### Overview
 
@@ -736,159 +737,6 @@ log.Info("versions",
 #### Post-Public Release
 
 After repo is made public, enable external install test by removing `if: false` from `install-test` job.
-
-## [0.1.6] - 2025-10-29
-
-### Crucible v0.2.1 Config Embedding + Clean Architecture
-
-**Release Type**: Infrastructure Improvement + External Installation Fix
-**Release Date**: October 29, 2025
-**Status**: ✅ Ready for Release
-
-#### Features
-
-**Crucible v0.2.1 Integration (Complete)**:
-
-- ✅ **Config Embedding**: Crucible v0.2.1 now embeds `config/` directory alongside `schemas/` and `docs/`
-- ✅ **Direct Config Access**: Foundry accesses config via `crucible.ConfigRegistry.Library().Foundry().*()` type-safe API
-- ✅ **No Duplication**: Removed local `foundry/assets/*.yaml` embedding - config lives in Crucible only
-- ✅ **Single Source of Truth**: Config version automatically matches Crucible module version
-- ✅ **Version Alignment**: Update go.mod to get new config - no sync workflow needed
-- ✅ **External Installation Fixed**: Standard `go get github.com/fulmenhq/gofulmen` now works for all consumers
-
-**Crucible Package Enhancements (Complete)**:
-
-- ✅ **ConfigRegistry Re-export**: Added `crucible.ConfigRegistry` for accessing Crucible's embedded config
-- ✅ **Config Type Alias**: Added `crucible.Config` type for type-safe config access
-- ✅ **GetConfig() Function**: Generic config file accessor for any path
-- ✅ **ListConfigs() Function**: Directory listing for config browsing
-
-**Foundry Package Refactoring (Complete)**:
-
-- ✅ **Removed Local Embedding**: No more `//go:embed assets/*.yaml` directive
-- ✅ **Crucible API Integration**: `loadYAML()` now calls Crucible's config API methods
-- ✅ **Backward Compatible**: All existing Foundry APIs work identically
-- ✅ **Documentation Updated**: Comments reflect new architecture
-
-**Comprehensive Testing (Complete)**:
-
-- ✅ **Config Embedding Tests**: New `crucible/config_test.go` with 3 test functions
-- ✅ **Coverage Verification**: Tests verify all 5 foundry config files accessible (patterns, country-codes, http-statuses, mime-types, similarity-fixtures)
-- ✅ **Size Validation**: Tests ensure config files are non-empty and of expected size
-- ✅ **Fail-Fast Design**: Tests will fail loudly if Crucible stops embedding config
-
-#### Architecture Before vs After
-
-**Before (v0.1.5 - Suboptimal)**:
-
-```
-Crucible Repo
-├── config/library/foundry/*.yaml (NOT embedded)
-│
-↓ make sync (goneat ssot sync)
-│
-gofulmen Repo
-├── config/crucible-go/library/foundry/*.yaml (synced copy)
-│
-↓ make sync-foundry-assets (manual copy)
-│
-├── foundry/assets/*.yaml (duplicated)
-│   └── //go:embed assets/*.yaml (embedded in gofulmen)
-```
-
-**After (v0.1.6 - Clean)**:
-
-```
-Crucible Repo (v0.2.1)
-├── config/library/foundry/*.yaml
-│   └── //go:embed config (embedded in Crucible)
-│
-↓ import "github.com/fulmenhq/crucible"
-│
-gofulmen Repo
-├── foundry/catalog.go
-    └── crucible.ConfigRegistry.Library().Foundry().Patterns()
-```
-
-#### Quality Metrics
-
-- ✅ **All Tests Passing**: 24 test packages pass with new config tests
-- ✅ **Build Success**: `go build ./...` completes without errors
-- ✅ **Config Access Verified**: All 5 foundry config files load successfully
-- ✅ **External Installation Works**: Standard `go get` installation verified
-- ✅ **Backward Compatible**: No breaking changes to public APIs
-
-#### Breaking Changes
-
-- None (fully backward compatible with v0.1.5)
-
-#### Migration Notes
-
-**No migration required** - this is an internal architecture improvement. All existing code continues to work:
-
-```go
-import "github.com/fulmenhq/gofulmen/foundry"
-
-// All existing Foundry APIs work identically
-catalog := foundry.GetDefaultCatalog()
-pattern, _ := catalog.GetPattern("ansi-email")
-country, _ := catalog.GetCountry("US")
-mimeType, _ := catalog.GetMimeType("json")
-```
-
-**New capability** - access Crucible config directly if needed:
-
-```go
-import "github.com/fulmenhq/gofulmen/crucible"
-
-// Access any Crucible config file
-patterns, _ := crucible.ConfigRegistry.Library().Foundry().Patterns()
-countryCodes, _ := crucible.ConfigRegistry.Library().Foundry().CountryCodes()
-
-// Generic config access
-data, _ := crucible.GetConfig("library/foundry/patterns.yaml")
-
-// List config files
-files, _ := crucible.ListConfigs("library/foundry")
-```
-
-#### Impact on Downstream
-
-**forge-workhorse-groningen**:
-
-- ✅ Can now install via standard `go get github.com/fulmenhq/gofulmen@v0.1.6`
-- ✅ All foundry config automatically available
-- ✅ No manual setup or sync required
-
-**External Consumers**:
-
-- ✅ Standard Go module installation works
-- ✅ All config accessible out of the box
-- ✅ No special configuration needed
-
-#### Quality Gates
-
-- [x] Crucible v0.2.1 adopted with config embedding
-- [x] Foundry refactored to use Crucible config API
-- [x] Comprehensive config tests added and passing
-- [x] All 24 test packages pass
-- [x] Build succeeds: `go build ./...`
-- [x] External installation verified
-- [x] No breaking changes to public APIs
-
-#### Release Checklist
-
-- [x] Version number set in VERSION (0.1.6)
-- [x] CHANGELOG.md updated with v0.1.6 release notes
-- [ ] RELEASE_NOTES.md updated (in progress)
-- [ ] README.md reviewed - pending
-- [ ] gofulmen_overview.md reviewed - pending
-- [ ] docs/releases/v0.1.6.md created - pending
-- [ ] All files staged
-- [ ] make prepush executed
-- [ ] Release prep changes committed
-- [ ] Git tag created (v0.1.6) - pending
-- [ ] Tag pushed to GitHub - pending
 
 ## [0.1.5] - 2025-10-27
 

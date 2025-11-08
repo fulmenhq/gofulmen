@@ -2,15 +2,15 @@ version: v1.0.0
 binDir: ./bin
 tools:
   - id: goneat
-    description: Fulmen DX CLI for formatting, linting, SSOT sync
+    description: Fulmen schema validation and automation CLI
     required: true
     install:
       type: download
-      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.2/goneat_v0.3.2_{{os}}_{{arch}}.tar.gz
+      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.4/goneat_v0.3.4_{{os}}_{{arch}}.tar.gz
       binName: goneat
       destination: ./bin
       checksum:
-        darwin-arm64: c8e7851e656fc3ac42acfb9721fab4d0a007186be6d82ddf4a6dafbe9b51e9e7
-        darwin-amd64: b126d242ce4ad935a67f9d557407b88b12f59d6e272bd97e2db5d6b3fe7d0c7a
-        linux-arm64: 33d0cd6479f3f65d00b387d17133706a312c69dbce2eb714b7b549dbcc24135a
-        linux-amd64: 1ae047a64be3097a48eced22cf9ae4d14f8fd489250c9546ed8ad42f52aa6721
+        darwin-arm64: "b87403dca4a94d126702f5380723090b313f8b4b8e3b9373e249e42c151b2c86"
+        darwin-amd64: "0eede3132241da92c3253f3375b8140f1c3f7e05ca3dd0562f9f30de4ddba36b"
+        linux-amd64: "7e888b876b1d4b129c54daeb1e2a6406fb369654084820055a26501043692318"
+        linux-arm64: "383ebd088bb022968cea106e72377508d3a32704a4173becacf9a605bb87e5d0"
