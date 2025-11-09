@@ -101,7 +101,7 @@ Structured metrics emission with support for counters, gauges, and histograms. I
 - **Thread-Safe**: Concurrent metric emission across goroutines
 - **Schema Validation**: Automatic validation against Crucible metrics schema
 
-### Signals (`pkg/signals/`)
+### Signals (`signals/`)
 
 Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback support.
 
@@ -351,7 +351,7 @@ similarity.EnableTelemetry(telemetrySystem)
 ### Signals Package
 
 ```go
-import "github.com/fulmenhq/gofulmen/pkg/signals"
+import "github.com/fulmenhq/gofulmen/signals"
 
 // Register graceful shutdown handlers (execute in LIFO order)
 signals.OnShutdown(func(ctx context.Context) error {
