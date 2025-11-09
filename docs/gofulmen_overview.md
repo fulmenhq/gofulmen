@@ -39,7 +39,7 @@ Rather than copying Crucible assets into every project, helper libraries provide
 | Module               | Status    | Specification                                                                   | Purpose                                                                                                                                      |
 | -------------------- | --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **appidentity/**     | ✅ Stable | [App Identity](crucible-go/standards/library/modules/app-identity.md)           | Application identity metadata from `.fulmen/app.yaml` with discovery and validation                                                          |
-| **pkg/signals/**     | ✅ Stable | [Signals Catalog](crucible-go/standards/library/foundry/signals.md)             | Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback                                                   |
+| **signals/**         | ✅ Stable | [Signals Catalog](crucible-go/standards/library/foundry/signals.md)             | Cross-platform signal handling with graceful shutdown, config reload, and Windows fallback                                                   |
 | **config/**          | ✅ Stable | [Config Path API](crucible-go/standards/library/modules/config-path-api.md)     | XDG-compliant configuration path discovery and three-layer loading                                                                           |
 | **logging/**         | ✅ Stable | [Logging Standard](crucible-go/standards/observability/logging.md)              | Structured logging with progressive profiles (SIMPLE → ENTERPRISE)                                                                           |
 | **errors/**          | ✅ Stable | [Error Envelope](crucible-go/standards/library/modules/error-envelope.md)       | Structured error handling with severity levels and context support                                                                           |
@@ -119,7 +119,7 @@ Policy files are resolved in order:
 | **pathfinder/**  | None (stdlib only)     | `schemas/pathfinder/v1.0.0/`                                     | Safe filesystem discovery                    |
 | **ascii/**       | None (stdlib only)     | `schemas/ascii/v1.0.0/`, `config/terminal/v1.0.0/`               | Terminal utilities and Unicode handling      |
 | **foundry/**     | Cloud SDKs (optional)  | `schemas/library/foundry/v1.0.0/`, `config/library/foundry/`     | Enterprise data utilities (planned)          |
-| **pkg/signals/** | `golang.org/x/time`    | `config/library/foundry/signals/v1.0.0/`                         | Cross-platform signal handling               |
+| **signals/**     | `golang.org/x/time`    | `config/library/foundry/signals/v1.0.0/`                         | Cross-platform signal handling               |
 
 **Dependency Philosophy**: Minimize external dependencies; prefer standard library when possible. Cloud provider SDKs are optional and loaded only when needed.
 
@@ -274,7 +274,7 @@ package main
 
 import (
     "context"
-    "github.com/fulmenhq/gofulmen/pkg/signals"
+    "github.com/fulmenhq/gofulmen/signals"
     "github.com/fulmenhq/gofulmen/logging"
 )
 
@@ -376,11 +376,11 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 - [Bootstrap](../bootstrap/README.md) - Tool installation and management
 - [Pathfinder](../pathfinder/README.md) - Safe filesystem discovery
 - [ASCII](../ascii/README.md) - Terminal utilities and Unicode handling
-- [Signals](../pkg/signals/README.md) - Cross-platform signal handling with graceful shutdown and config reload
+- [Signals](../signals/README.md) - Cross-platform signal handling with graceful shutdown and config reload
 
 ## Version Information
 
-- **Current Version**: 0.1.9 (in development)
+- **Current Version**: 0.1.10 (in development)
 - **Crucible Version**: 2025.11.4 (v0.2.6)
 - **Go Version**: 1.21+
 - **License**: MIT

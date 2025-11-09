@@ -34,7 +34,7 @@ import (
     "context"
     "log"
 
-    "github.com/fulmenhq/gofulmen/pkg/signals"
+    "github.com/fulmenhq/gofulmen/signals"
 )
 
 func main() {

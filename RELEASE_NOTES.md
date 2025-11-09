@@ -2,7 +2,73 @@
 
 This document tracks release notes and checklists for gofulmen releases.
 
-> **Convention**: Keep only the latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
+> **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
+
+## [0.1.10] - 2025-11-09
+
+### Signals Package Migration & Template Support
+
+**Release Type**: Bug Fix & Refactoring  
+**Status**: ✅ Released
+
+#### Overview
+
+This release migrates the signals package from `pkg/signals/` to `signals/` for consistency with the top-level module structure, and fixes documentation issues that were breaking downstream template development. This is a focused release to support microtool template users who were experiencing import path failures.
+
+#### Breaking Changes
+
+**Signals Import Path Migration**:
+
+- **Old**: `github.com/fulmenhq/gofulmen/pkg/signals`
+- **New**: `github.com/fulmenhq/gofulmen/signals`
+
+**Migration Required**:
+
+```bash
+# Update all Go files importing signals
+find . -name "*.go" -exec sed -i 's|github.com/fulmenhq/gofulmen/pkg/signals|github.com/fulmenhq/gofulmen/signals|g' {} \;
+
+# Update documentation
+find . -name "*.md" -exec sed -i 's|github.com/fulmenhq/gofulmen/pkg/signals|github.com/fulmenhq/gofulmen/signals|g' {} \;
+```
+
+#### Changes
+
+**Package Structure**:
+
+- **Moved**: `pkg/signals/` → `signals/`
+- **Removed**: Empty `pkg/` directory
+- **Updated**: All documentation references to use new import path
+- **Consistent**: Now all modules follow top-level structure (no more `pkg/` confusion)
+
+**Template Support Fixes**:
+
+- **Fixed**: Documentation references from non-existent `pkg/` paths to actual module paths
+- **Corrected**: Import path examples in README and documentation
+- **Updated**: Module catalog in `docs/gofulmen_overview.md`
+- **Ensured**: Template examples now compile with current gofulmen structure
+
+#### Impact
+
+**For Library Users**:
+
+- Update import statements for signals package
+- All other modules remain unchanged
+- No API changes - only import path migration
+
+**For Template Developers**:
+
+- Template examples now use correct import paths
+- Documentation matches actual library structure
+- Eliminates confusion about `pkg/` vs top-level modules
+
+#### Verification
+
+- ✅ All tests pass with new structure
+- ✅ All imports resolve correctly
+- ✅ Documentation consistency verified
+- ✅ Template examples compile successfully
+- ✅ Precommit checks pass
 
 ## [0.1.9] - 2025-11-08
 
@@ -367,7 +433,7 @@ pkg/signals/
 **Basic Graceful Shutdown**:
 
 ```go
-import "github.com/fulmenhq/gofulmen/pkg/signals"
+import "github.com/fulmenhq/gofulmen/signals"
 
 // Register cleanup handlers (execute in LIFO order)
 signals.OnShutdown(func(ctx context.Context) error {

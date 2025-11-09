@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2025-11-09
+
+### Changed
+
+- **Signals Package Migration** - Moved `pkg/signals/` to `signals/` for consistency with top-level module structure
+  - Import path changed from `github.com/fulmenhq/gofulmen/pkg/signals` to `github.com/fulmenhq/gofulmen/signals`
+  - All documentation updated to reflect new import path
+  - Eliminates confusion for users expecting consistent top-level module structure
+
+### Fixed
+
+- **Template Support** - Fixed import paths referenced in documentation and templates to support downstream microtool development
+  - Corrected references from non-existent `pkg/` paths to actual top-level module paths
+  - Ensures template examples compile and work correctly with current gofulmen structure
+
 ## [Unreleased]
 
 ### Added

@@ -351,7 +351,7 @@ similarity.EnableTelemetry(telemetrySystem)
 ### Signals Package
 
 ```go
-import "github.com/fulmenhq/gofulmen/pkg/signals"
+import "github.com/fulmenhq/gofulmen/signals"
 
 // Register graceful shutdown handlers (execute in LIFO order)
 signals.OnShutdown(func(ctx context.Context) error {

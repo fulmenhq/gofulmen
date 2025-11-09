@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fulmenhq/gofulmen/pkg/signals"
+	"github.com/fulmenhq/gofulmen/signals"
 )
 
 func ExampleOnShutdown() {
