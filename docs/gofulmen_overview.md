@@ -83,7 +83,7 @@ Downstream users frequently reference [Crucible’s asset guide](../crucible/doc
    ```
 5. **Track versions for support tickets**
    ```go
-   version := crucible.GetVersionString() // "gofulmen/0.1.11 crucible/2025.11.0"
+   version := crucible.GetVersionString() // "gofulmen/v0.1.12 crucible/v0.2.9"
    ```
 
 See `crucible/README.md` (shipped inside gofulmen) for a longer catalog, including helper functions such as `GetPathfinderFindQuerySchema()` and `LoadLoggingSchemas()`. Together, the Crucible guide + this shim let you explore assets even if you never clone the Crucible repo locally.

@@ -4,6 +4,29 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.12] - 2025-11-10
+
+### Critical Dependency Fix
+
+**Release Type**: Bug Fix  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release fixes a critical dependency issue where go.mod was still referencing Crucible v0.2.8 despite documentation claiming v0.2.9 sync. Downstream teams were not receiving the correct Crucible dependency.
+
+#### Changes
+
+**Dependency Fix**:
+
+- Updated go.mod from `github.com/fulmenhq/crucible v0.2.8` to `v0.2.9`
+- Ensured downstream teams receive correct Crucible v0.2.9 dependency
+- Maintained all v0.1.11 functionality with proper dependency resolution
+
+**Impact**: Downstream teams should now receive the correct Crucible v0.2.9 dependency when updating gofulmen.
+
+---
+
 ## [0.1.11] - 2025-11-10
 
 ### Crucible v0.2.9 Sync
