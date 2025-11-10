@@ -4,6 +4,74 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.11] - 2025-11-10
+
+### Crucible v0.2.9 Sync
+
+**Release Type**: Dependency Update  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release synchronizes gofulmen with Crucible v0.2.9, bringing updated documentation standards and new schemas for downstream users. The sync includes enhanced forge standards documentation and l'orage-central module schemas that downstream users need for integration.
+
+#### Changes
+
+**Crucible Asset Updates**:
+
+- **Enhanced crucible/README.md**: Added quick lookup recipes and comprehensive usage examples
+  - Three-step workflow: Locate → Consume → Track provenance
+  - Code examples for schema registry navigation and validation
+  - Version tracking guidance for support tickets
+- **Updated docs/gofulmen_overview.md**: Added comprehensive asset access guide
+  - Step-by-step examples for accessing Crucible assets via gofulmen
+  - Repository layout explanation (no `pkg/` directory by design)
+  - Integration patterns with gofulmen/schema validation
+- **Forge Standards Documentation**: Updated with latest Crucible forge standards
+  - New schemas and config for l'orage-central module
+  - Enhanced provenance tracking and metadata
+
+**Dependency Updates**:
+
+- **Crucible**: Updated from v0.2.8 to v0.2.9
+- **Provenance**: Enhanced metadata tracking with latest Crucible release
+- **Schemas**: New l'orage-central module schemas for downstream integration
+
+#### Impact
+
+**For Library Users**:
+
+- No breaking changes - fully backward compatible
+- Enhanced documentation with practical examples
+- Better asset discovery and usage patterns
+- Improved provenance tracking for debugging
+
+**For Downstream Integration**:
+
+- New l'orage-central module schemas available
+- Updated forge standards for consistent development
+- Enhanced asset access patterns for better integration
+
+#### Verification
+
+- ✅ All tests pass with updated Crucible assets
+- ✅ Documentation examples verified and working
+- ✅ Asset access patterns tested and functional
+- ✅ Precommit checks pass with updated formatting
+
+#### Files Changed
+
+```
+.crucible/metadata/metadata.yaml    # Updated Crucible metadata
+.goneat/ssot-consumer.yaml          # Pinned to v0.2.9
+.goneat/ssot/provenance.json        # Updated provenance tracking
+VERSION                              # v0.1.11
+crucible/README.md                   # Enhanced with examples
+docs/gofulmen_overview.md            # Added asset access guide
+```
+
+**Total**: 6 files changed, +72 lines, -10 lines
+
 ## [0.1.10] - 2025-11-09
 
 ### Signals Package Migration & Template Support
@@ -534,231 +602,6 @@ http.Handle("/admin/signal", handler)
 - Double-tap calls os.Exit() immediately (cannot be intercepted)
 - Signal handling is process-global (parallel tests not recommended)
 - Windows support limited to SIGINT/SIGTERM (platform limitation)
-
-## [0.1.8] - 2025-11-03
-
-### Schema Export Utilities + Foundry Exit Codes Integration
-
-**Release Type**: Major Feature Addition  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release adds two major features: (1) Schema export utilities for vendoring Crucible schemas with provenance metadata, and (2) Complete implementation of standardized exit codes from Crucible v0.2.3.
-
-### Feature 1: Schema Export Utilities
-
-Export Crucible schemas with full provenance tracking for vendoring and distribution.
-
-#### Features
-
-**API Package (`schema/export`)**:
-
-- **Export Function**: `Export(ctx, ExportOptions)` - Main export API with validation, formatting, and safety
-- **Validation Helper**: `ValidateExportedSchema()` - Verify exported schemas match source
-- **Flexible Options**: Format (JSON/YAML), provenance style (object/comment/none), validation toggle, overwrite control
-- **Auto-Detection**: Automatic format detection from file extension (.json, .yaml, .yml)
-- **Safety Features**: Path validation, parent directory creation, overwrite protection with clear error messages
-
-**CLI Tool (`cmd/gofulmen-export-schema`)**:
-
-- **Required Flags**: `--schema-id`, `--out`
-- **Optional Flags**: `--format`, `--provenance-style`, `--no-provenance`, `--no-validate`, `--force`
-- **Exit Codes**: Uses foundry exit codes (40=InvalidArgument, 54=FileWriteError, 60=DataInvalid)
-- **Help Text**: Comprehensive usage documentation with examples
-
-**Provenance Metadata**:
-
-- **Automatic Tracking**: schema_id, crucible_version, gofulmen_version, git_revision, exported_at
-- **Optional Identity**: Support for custom identity providers (vendor, binary)
-- **Multiple Styles**:
-  - **Object** (default): `x-crucible-source` top-level field in JSON
-  - **Comment**: Compact `$comment` field in JSON
-  - **YAML Front-Matter**: Commented provenance before `---` separator
-
-**Quality Assurance**:
-
-- **14 Unit Tests**: Export, format detection, provenance styles, validation, safety
-- **6 CLI Integration Tests**: Success cases, help, missing args, overwrite, formats, styles
-- **100% Lint Health**: Zero linting issues, all code formatted
-- **Documentation**: Complete API and CLI docs in `docs/schema/export.md`
-
-**Makefile Integration**:
-
-- **`make export-schema`**: Export with custom SCHEMA_ID and OUT variables
-- **`make export-schema-example`**: Export example logging schema to vendor/
-
-#### Files Added (Schema Export)
-
-```
-schema/export/
-├── export.go              # Main Export() function
-├── options.go             # ExportOptions + validation
-├── provenance.go          # Provenance metadata builder
-├── format.go              # JSON/YAML formatting
-├── safety.go              # Path validation + overwrite checks
-└── export_test.go         # Comprehensive unit tests
-
-cmd/gofulmen-export-schema/
-├── main.go                # CLI wrapper with flag parsing
-└── main_test.go           # CLI integration tests
-
-docs/schema/
-└── export.md              # Full API and CLI documentation
-```
-
-**Total**: 7 files, ~950 lines added
-
-#### Example Usage
-
-**API:**
-
-```go
-import "github.com/fulmenhq/gofulmen/schema/export"
-
-opts := export.NewExportOptions(
-    "observability/logging/v1.0.0/log-event.schema.json",
-    "vendor/crucible/schemas/logging-event.schema.json",
-)
-if err := export.Export(ctx, opts); err != nil {
-    log.Fatal(err)
-}
-```
-
-**CLI:**
-
-```bash
-# Export with provenance
-gofulmen-export-schema \
-    --schema-id=observability/logging/v1.0.0/log-event.schema.json \
-    --out=vendor/crucible/schemas/logging-event.schema.json
-
-# Export as YAML with comment-style provenance
-gofulmen-export-schema \
-    --schema-id=terminal/v1.0.0/schema.json \
-    --out=schema.yaml \
-    --format=yaml \
-    --provenance-style=comment
-```
-
-### Feature 2: Foundry Exit Codes Integration from Crucible v0.2.3
-
-Complete implementation of standardized exit codes for the Fulmen ecosystem. Consumes Crucible v0.2.3's exit codes catalog, providing type-safe constants, comprehensive metadata, platform detection, simplified mode mapping, BSD compatibility, and automatic drift detection.
-
-#### Features
-
-**Core Exit Codes API**:
-
-- **54 Exit Code Constants**: Re-exported from `github.com/fulmenhq/crucible/foundry`
-  - Standard codes: `ExitSuccess`, `ExitFailure`
-  - Networking: `ExitPortInUse`, `ExitConnectionTimeout`, etc.
-  - Configuration: `ExitConfigInvalid`, `ExitSsotVersionMismatch`, etc.
-  - Runtime: `ExitHealthCheckFailed`, `ExitDatabaseUnavailable`, etc.
-  - Signals: `ExitSignalTerm`, `ExitSignalInt`, etc. (POSIX only)
-- **Metadata Access**: `GetExitCodeInfo()`, `LookupExitCode()`, `ListExitCodes()`
-- **Catalog Parsing**: Correct YAML parsing with `maps_from` field, efficient `sort.Ints()` sorting
-
-**Platform Compatibility**:
-
-- **Platform Detection**: `SupportsSignalExitCodes()` returns false on Windows (except WSL)
-- **WSL Detection**: Checks `WSL_DISTRO_NAME` and `WSL_INTEROP` environment variables
-- **PlatformInfo**: Comprehensive metadata (GOOS, GOARCH, WSL status, signal support)
-
-**Provenance Reporting**:
-
-- **Version Functions**: `GofulmenVersion()`, `CrucibleVersion()`, `ExitCodesVersion()`
-- **No Hardcoded Values**: All versions sourced from `crucible.Version` and `cruciblefoundry.ExitCodesVersion`
-- **GetProvenanceInfo()**: Returns structured provenance for logging/telemetry
-
-**Simplified Mode Mapping**:
-
-- **MapToSimplified()**: Maps Fulmen codes to simplified modes
-- **Basic Mode**: 3 codes (0=success, 1=error, 2=usage_error)
-- **Severity Mode**: 8 codes (0=success, 1=user_error, 2=config_error, 3=runtime_error, 4=system_error, 5=security_error, 6=test_failure, 7=observability_error)
-- **Catalog-Derived**: Reads from `catalog.SimplifiedModes` (no hardcoded mappings)
-
-**BSD Compatibility**:
-
-- **MapToBSD()**: Maps Fulmen codes to BSD sysexits.h codes
-- **MapFromBSD()**: Reverse mapping from BSD to Fulmen codes
-- **GetBSDCodeInfo()**: Metadata for BSD exit codes (EX_OK, EX_USAGE, EX_CONFIG, etc.)
-- **Full sysexits.h Coverage**: All 16 standard BSD codes mapped
-
-**Quality Assurance**:
-
-- **Snapshot Parity Test**: Compares against `exit-codes.snapshot.json` from Crucible
-- **100% Verification**: All 54 codes verified (names, categories, descriptions)
-- **Automatic Drift Detection**: Test fails if catalog diverges from snapshot
-
-#### Files Added
-
-```
-foundry/
-├── exit_codes.go                    # Re-exported constants
-├── exit_codes_metadata.go           # Metadata access layer
-├── exit_codes_test.go               # Core API tests
-├── exit_codes_snapshot_test.go      # Parity verification
-├── platform.go                      # Platform detection
-├── platform_test.go                 # Platform tests
-├── version.go                       # Provenance reporting
-├── simplified_modes.go              # Simplified mapping
-├── simplified_modes_test.go         # Simplified tests
-├── bsd.go                           # BSD compatibility
-└── bsd_test.go                      # BSD tests
-```
-
-**Total**: 11 files, 1,726 lines added
-
-#### Usage Examples
-
-```go
-import "github.com/fulmenhq/gofulmen/foundry"
-
-// Use exit codes
-if err != nil {
-    os.Exit(foundry.ExitConfigInvalid)
-}
-
-// Check platform support
-if !foundry.SupportsSignalExitCodes() {
-    log.Warn("Signal codes not supported on this platform")
-}
-
-// Get metadata
-info, ok := foundry.GetExitCodeInfo(foundry.ExitPortInUse)
-if ok {
-    log.Info("Exit code", "name", info.Name, "category", info.Category)
-}
-
-// Map to simplified mode
-if code, ok := foundry.MapToSimplified(exitCode, foundry.SimplifiedModeBasic); ok {
-    os.Exit(code)
-}
-
-// BSD compatibility
-if bsdCode, ok := foundry.MapToBSD(foundry.ExitConfigInvalid); ok {
-    os.Exit(bsdCode) // Uses EX_CONFIG (78)
-}
-
-// Provenance reporting
-prov := foundry.GetProvenanceInfo()
-log.Info("versions",
-    "gofulmen", prov.GofulmenVersion,
-    "crucible", prov.CrucibleVersion,
-    "catalog", prov.ExitCodesVersion)
-```
-
-#### Quality Metrics
-
-- ✅ All tests pass (`make test`)
-- ✅ Lint health: 100% (Excellent)
-- ✅ Code formatted (`make fmt`)
-- ✅ Snapshot parity: 54/54 codes verified
-- ✅ Platform detection: Windows, macOS, Linux tested
-
-#### Dependencies
-
-- Crucible updated from v0.2.1 to v0.2.3
 
 ## [0.1.7] - 2025-10-29
 

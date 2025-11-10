@@ -55,6 +55,49 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
+## Accessing Crucible Assets via gofulmen
+
+Downstream users frequently reference [Crucible’s asset guide](../crucible/docs/guides/consuming-crucible-assets.md). The `github.com/fulmenhq/gofulmen/crucible` package is how you access those same assets directly from Go without cloning the Crucible repository:
+
+1. **Navigate the registry**
+   ```go
+   loggingSchemas, err := crucible.SchemaRegistry.
+       Observability().
+       Logging().
+       V1_0_0()
+   ```
+2. **Grab a schema or document**
+   ```go
+   logEventSchema, _ := loggingSchemas.LogEvent() // []byte
+   goStandards, _ := crucible.GetGoStandards()    // string
+   ```
+3. **Validate payloads using gofulmen/schema**
+   ```go
+   validator, _ := schema.NewValidator(logEventSchema)
+   diags, err := validator.ValidateBytes(payload)
+   ```
+4. **Discover what’s available**
+   ```go
+   files, _ := crucible.ListSchemas("observability/logging/v1.0.0")
+   raw, _ := crucible.GetSchema("pathfinder/v1.0.0/path-result.schema.json")
+   ```
+5. **Track versions for support tickets**
+   ```go
+   version := crucible.GetVersionString() // "gofulmen/0.1.11 crucible/2025.11.0"
+   ```
+
+See `crucible/README.md` (shipped inside gofulmen) for a longer catalog, including helper functions such as `GetPathfinderFindQuerySchema()` and `LoadLoggingSchemas()`. Together, the Crucible guide + this shim let you explore assets even if you never clone the Crucible repo locally.
+
+## Repository Layout (No `pkg/` Directory)
+
+Gofulmen intentionally exposes its modules at the repository root rather than hiding them under `pkg/`. This mirrors the Go modules philosophy—`import` paths map 1:1 with top-level directories (for example, `github.com/fulmenhq/gofulmen/config`), avoids stuttered paths (`pkg/config/config`), and makes it obvious which packages are public API. Internal-only helpers still live under `internal/`, but everything else at the root is designed for downstream consumption. When building on top of gofulmen:
+
+- Import the root packages directly instead of searching for `pkg/` (e.g., `logging`, `signals`, `pathfinder`, `foundry`).
+- Use `internal/` in your own repositories when you need private helpers; keep your exported code at the top level for clarity.
+- If you see code under `pkg/` inside a Fulmen project, it is either legacy or scheduled for relocation—new work should follow the root-module convention.
+
+This section exists because many new users expect the `cmd/` + `pkg/` split from application repos. Gofulmen is a library-first repo, so the root-level structure is intentional and stable.
+
 ## Observability Highlights
 
 ### Progressive Logging Profiles
@@ -380,7 +423,7 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.10 (in development)
+- **Current Version**: 0.1.11 (released)
 - **Crucible Version**: 2025.11.4 (v0.2.6)
 - **Go Version**: 1.21+
 - **License**: MIT

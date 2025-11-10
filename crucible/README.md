@@ -2,6 +2,8 @@
 
 Gofulmen's `crucible` package provides a unified facade for accessing Crucible schemas, standards, and observability artifacts. This shim allows downstream services to depend on a single Go module instead of importing both gofulmen and crucible separately.
 
+> **Related documentation**: For a high-level explanation of available assets, start with `crucible/docs/guides/consuming-crucible-assets.md` in the Crucible repository, then use the APIs below to fetch the same artifacts directly from Go.
+
 ## Purpose
 
 The crucible shim addresses the multi-import problem for Go applications:
@@ -19,6 +21,23 @@ The crucible shim addresses the multi-import problem for Go applications:
 - **Version Diagnostics**: Expose both gofulmen and crucible versions
 - **Schema Validation**: `ValidateAgainstSchema()` helper using gofulmen validator
 - **Standards Access**: Direct access to Go and TypeScript coding standards
+
+## Quick Lookup Recipes
+
+Most use cases follow three steps:
+
+1. **Locate the asset** – Navigate the registry (`crucible.SchemaRegistry`) or call a helper such as `GetLoggingConfigSchema()`.
+2. **Consume the bytes** – Parse JSON/YAML with the standard library or feed schemas into `github.com/fulmenhq/gofulmen/schema`.
+3. **Track provenance** – Use `crucible.GetVersion()` or `GetVersionString()` when filing tickets to show which Crucible snapshot you embedded.
+
+Example:
+
+```go
+logging, _ := crucible.SchemaRegistry.Observability().Logging().V1_0_0()
+schemaBytes, _ := logging.LogEvent()
+validator, _ := schema.NewValidator(schemaBytes)
+diags, err := validator.ValidateBytes(payload)
+```
 
 ## Basic Usage
 
