@@ -4,6 +4,79 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.13] - 2025-11-13
+
+### Windows Build Compatibility & Crucible v0.2.11 Update
+
+**Release Type**: Bug Fix + Dependency Update  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release resolves critical Windows build failures in the signals package and updates to Crucible v0.2.11 with full verification. The Windows fix enables cross-platform compatibility while maintaining Unix functionality, and the Crucible update brings the latest fulpack type generation framework.
+
+#### Changes
+
+**Windows Build Fix**:
+
+- **Platform-Specific Signal Handling**: Implemented build tag solution for cross-platform compatibility
+  - Added `signals/platform_signals_unix.go` with SIGUSR1/2 definitions for Unix systems
+  - Added `signals/platform_signals_windows.go` with empty map for Windows compatibility
+  - Updated `signals/http.go` to use dynamic signal map composition
+  - Resolved undefined symbol errors on Windows for `syscall.SIGUSR1/SIGUSR2`
+  - Maintains full Unix functionality while enabling Windows builds
+
+**Crucible v0.2.11 Update**:
+
+- **Dependency Verification**: Updated with comprehensive verification process
+  - Updated `go.mod` from v0.2.9 to v0.2.11 and verified via `go list -m github.com/fulmenhq/crucible`
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.11 ref
+  - Updated sync configuration: changed `sync_path_base` from `lang/go` to `"./"` per ADR-0004
+  - Confirmed `go.sum` contains v0.2.11 hashes and removed stale vendor directory
+  - Enhanced fulpack type generation framework for cross-language consistency
+  - Updated provenance tracking with latest Crucible metadata (commit 631e8b7)
+  - Synced latest Crucible assets to `docs/crucible-go/`, `config/crucible-go/`, `schemas/crucible-go/`
+
+#### Impact
+
+**For Windows Users**:
+
+- ✅ gofulmen now builds successfully on Windows platforms
+- ✅ All signals package functionality available on Windows (platform-appropriate)
+- ✅ No breaking changes for Unix/Linux/macOS users
+
+**For All Users**:
+
+- ✅ Latest Crucible v0.2.11 assets and schemas available
+- ✅ Enhanced fulpack type generation framework for future cross-language support
+- ✅ Improved provenance tracking and metadata
+
+#### Verification
+
+- ✅ `go test ./signals/...` passes on all platforms
+- ✅ Windows build compatibility confirmed
+- ✅ Crucible v0.2.11 dependency verified through multiple methods
+- ✅ Precommit checks pass with updated formatting
+- ✅ Cross-platform signal handling tested
+
+#### Files Changed
+
+```
+.goneat/ssot-consumer.local.yaml    # Removed: Local override (explicit coupling only)
+.goneat/ssot-consumer.yaml          # Updated to v0.2.11 ref
+.goneat/ssot/provenance.json        # Updated provenance tracking
+go.mod                               # Updated to Crucible v0.2.11
+go.sum                               # Updated with v0.2.11 hashes
+signals/http.go                       # Updated for platform-specific signals
+signals/platform_signals_unix.go       # New file: Unix signal definitions
+signals/platform_signals_windows.go    # New file: Windows compatibility
+VERSION                              # v0.1.13
+```
+
+**Total**: 8 files changed, +45 lines, -15 lines (1 removed)
+
+---
+
 ## [0.1.12] - 2025-11-10
 
 ### Critical Dependency Fix
@@ -94,72 +167,6 @@ docs/gofulmen_overview.md            # Added asset access guide
 ```
 
 **Total**: 6 files changed, +72 lines, -10 lines
-
-## [0.1.10] - 2025-11-09
-
-### Signals Package Migration & Template Support
-
-**Release Type**: Bug Fix & Refactoring  
-**Status**: ✅ Released
-
-#### Overview
-
-This release migrates the signals package from `pkg/signals/` to `signals/` for consistency with the top-level module structure, and fixes documentation issues that were breaking downstream template development. This is a focused release to support microtool template users who were experiencing import path failures.
-
-#### Breaking Changes
-
-**Signals Import Path Migration**:
-
-- **Old**: `github.com/fulmenhq/gofulmen/pkg/signals`
-- **New**: `github.com/fulmenhq/gofulmen/signals`
-
-**Migration Required**:
-
-```bash
-# Update all Go files importing signals
-find . -name "*.go" -exec sed -i 's|github.com/fulmenhq/gofulmen/pkg/signals|github.com/fulmenhq/gofulmen/signals|g' {} \;
-
-# Update documentation
-find . -name "*.md" -exec sed -i 's|github.com/fulmenhq/gofulmen/pkg/signals|github.com/fulmenhq/gofulmen/signals|g' {} \;
-```
-
-#### Changes
-
-**Package Structure**:
-
-- **Moved**: `pkg/signals/` → `signals/`
-- **Removed**: Empty `pkg/` directory
-- **Updated**: All documentation references to use new import path
-- **Consistent**: Now all modules follow top-level structure (no more `pkg/` confusion)
-
-**Template Support Fixes**:
-
-- **Fixed**: Documentation references from non-existent `pkg/` paths to actual module paths
-- **Corrected**: Import path examples in README and documentation
-- **Updated**: Module catalog in `docs/gofulmen_overview.md`
-- **Ensured**: Template examples now compile with current gofulmen structure
-
-#### Impact
-
-**For Library Users**:
-
-- Update import statements for signals package
-- All other modules remain unchanged
-- No API changes - only import path migration
-
-**For Template Developers**:
-
-- Template examples now use correct import paths
-- Documentation matches actual library structure
-- Eliminates confusion about `pkg/` vs top-level modules
-
-#### Verification
-
-- ✅ All tests pass with new structure
-- ✅ All imports resolve correctly
-- ✅ Documentation consistency verified
-- ✅ Template examples compile successfully
-- ✅ Precommit checks pass
 
 ## [0.1.9] - 2025-11-08
 

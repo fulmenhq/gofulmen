@@ -83,7 +83,7 @@ Downstream users frequently reference [Crucible’s asset guide](../crucible/doc
    ```
 5. **Track versions for support tickets**
    ```go
-   version := crucible.GetVersionString() // "gofulmen/v0.1.12 crucible/v0.2.9"
+    version := crucible.GetVersionString() // "gofulmen/v0.1.13 crucible/v0.2.11"
    ```
 
 See `crucible/README.md` (shipped inside gofulmen) for a longer catalog, including helper functions such as `GetPathfinderFindQuerySchema()` and `LoadLoggingSchemas()`. Together, the Crucible guide + this shim let you explore assets even if you never clone the Crucible repo locally.
@@ -423,8 +423,8 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.11 (released)
-- **Crucible Version**: 2025.11.4 (v0.2.6)
+- **Current Version**: 0.1.13 (released)
+- **Crucible Version**: v0.2.11
 - **Go Version**: 1.21+
 - **License**: MIT
 

@@ -178,6 +178,13 @@ prepush: ## Run pre-push hooks
 		exit 1; \
 	fi
 	@echo "Running pre-push validation..."
+	@if [ -d vendor ]; then \
+		echo "⚠️  Removing stale vendor directory to ensure fresh dependencies..."; \
+		rm -rf vendor; \
+	fi
+	@echo "Verifying go.mod consistency..."
+	@$(GOCMD) mod verify
+	@$(GOCMD) mod tidy
 	@./bin/goneat format
 	@./bin/goneat assess --check --categories format,lint,security,static-analysis --fail-on high
 	@echo "✅ Pre-push checks passed"
@@ -254,7 +261,7 @@ update-licenses: license-inventory license-save ## Update license inventory and 
 # Clean targets
 clean: ## Clean build artifacts and reports
 	@echo "Cleaning artifacts..."
-	rm -rf bin dist coverage.out coverage.html
+	rm -rf bin dist coverage.out coverage.html vendor
 	@echo "✅ Clean completed"
 
 # Development setup

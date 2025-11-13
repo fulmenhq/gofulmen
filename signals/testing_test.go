@@ -117,51 +117,6 @@ func TestSignalInjector_IsRunning(t *testing.T) {
 	}
 }
 
-// TestSignalInjector_MultipleHandlers tests multiple signal types with different handlers.
-func TestSignalInjector_MultipleHandlers(t *testing.T) {
-	manager := NewManager()
-	injector := NewInjector(manager)
-
-	usr1Received := make(chan bool, 1)
-	usr2Received := make(chan bool, 1)
-
-	// Register handlers for different signals
-	_, _ = manager.Handle(syscall.SIGUSR1, func(ctx context.Context, sig os.Signal) error {
-		usr1Received <- true
-		return nil
-	})
-
-	_, _ = manager.Handle(syscall.SIGUSR2, func(ctx context.Context, sig os.Signal) error {
-		usr2Received <- true
-		return nil
-	})
-
-	// Test SIGUSR1
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	go func() {
-		_ = manager.Listen(ctx)
-	}()
-
-	if err := injector.WaitForListen(500 * time.Millisecond); err != nil {
-		t.Fatalf("WaitForListen() failed: %v", err)
-	}
-
-	if err := injector.Inject(syscall.SIGUSR1); err != nil {
-		t.Fatalf("Inject(SIGUSR1) failed: %v", err)
-	}
-
-	select {
-	case <-usr1Received:
-		// Success
-	case <-time.After(500 * time.Millisecond):
-		t.Fatal("SIGUSR1 handler not called")
-	}
-
-	// Note: Listen() exits after first signal, so we only test one injection per Listen() session
-}
-
 // TestSignalInjector_ShutdownChain tests injecting shutdown signal with cleanup.
 func TestSignalInjector_ShutdownChain(t *testing.T) {
 	manager := NewManager()

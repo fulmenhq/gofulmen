@@ -2,9 +2,9 @@ version: v1.1.0
 sources:
   - name: crucible
     repo: fulmenhq/crucible
-    ref: v0.2.9
+    ref: v0.2.11
     force_remote: true
-    sync_path_base: lang/go
+    sync_path_base: "./"
     assets:
       - type: doc
         source_path: docs

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.13] - 2025-11-13
+
+### Fixed
+
+- **Windows Build Compatibility** - Resolved Windows build failures in signals package by implementing platform-specific signal handling
+  - Added `platform_signals_unix.go` with SIGUSR1/2 definitions for Unix systems
+  - Added `platform_signals_windows.go` with empty map for Windows compatibility
+  - Updated `signals/http.go` to use dynamic signal map composition via build tags
+  - Maintains full Unix functionality while enabling Windows builds
+
+### Changed
+
+- **Crucible v0.2.11 Update** - Updated dependency to latest Crucible release with full verification
+  - Updated `go.mod` from v0.2.9 to v0.2.11 and verified via `go list -m github.com/fulmenhq/crucible`
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.11 ref
+  - Updated sync configuration: changed `sync_path_base` from `lang/go` to `"./"` per ADR-0004 (crucible runtime dependency pattern)
+  - Confirmed `go.sum` contains v0.2.11 hashes and removed stale vendor directory
+  - Enhanced fulpack type generation framework for cross-language consistency
+  - Updated provenance tracking with latest Crucible metadata (commit 631e8b7)
+  - Synced `docs/crucible-go/`, `config/crucible-go/`, and `schemas/crucible-go/` content to v0.2.11
+
 ## [0.1.12] - 2025-11-10
 
 ### Fixed
