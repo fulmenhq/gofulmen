@@ -202,22 +202,28 @@ func (h *HTTPHandler) authenticate(r *http.Request) bool {
 
 // parseSignal converts a signal name to os.Signal.
 func (h *HTTPHandler) parseSignal(name string) (os.Signal, error) {
-	signalMap := map[string]os.Signal{
-		"SIGTERM": syscall.SIGTERM,
-		"SIGINT":  syscall.SIGINT,
-		"SIGHUP":  syscall.SIGHUP,
-		"SIGQUIT": syscall.SIGQUIT,
-		"SIGUSR1": syscall.SIGUSR1,
-		"SIGUSR2": syscall.SIGUSR2,
-	}
-
-	sig, ok := signalMap[name]
+	sig, ok := httpSignalMap[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown signal: %s", name)
 	}
 
 	return sig, nil
 }
+
+var httpSignalMap = func() map[string]os.Signal {
+	base := map[string]os.Signal{
+		"SIGTERM": syscall.SIGTERM,
+		"SIGINT":  syscall.SIGINT,
+		"SIGHUP":  syscall.SIGHUP,
+		"SIGQUIT": syscall.SIGQUIT,
+	}
+
+	for name, sig := range platformSpecificSignals {
+		base[name] = sig
+	}
+
+	return base
+}()
 
 // sendError sends an error response.
 func (h *HTTPHandler) sendError(w http.ResponseWriter, status int, message string) {
