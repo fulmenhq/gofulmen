@@ -6,48 +6,58 @@ This document tracks release notes and checklists for gofulmen releases.
 
 ## [0.1.14] - 2025-11-14
 
-### Crucible v0.2.12 Update
+### Crucible v0.2.13 Update
 
 **Release Type**: Dependency Update  
 **Status**: 🚧 In Development
 
 #### Overview
 
-This release updates to Crucible v0.2.12, bringing enhanced fulpack documentation and expanded archive format support.
+This release updates to Crucible v0.2.13, bringing enhanced fulpack documentation, programmatic fixture generation, and the new fulencode module standard.
 
 #### Changes
 
-**Crucible v0.2.12 Update**:
+**Crucible v0.2.13 Update**:
 
 - **Dependency Update**: Updated with comprehensive verification process
-  - Updated `go.mod` from v0.2.11 to v0.2.12 and verified via `go list -m github.com/fulmenhq/crucible`
-  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.12 ref
+  - Updated `go.mod` from v0.2.11 to v0.2.13 and verified via `go list -m github.com/fulmenhq/crucible`
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.13 ref
   - Verified no vendor directory drift (clean dependency management)
   - Enhanced fulpack documentation with uncompressed tar format support
+  - Added programmatic fulpack fixture generation with manifests
+  - Added new fulencode module standard and schemas
   - Updated coding standards for Go, Python, and TypeScript
   - Updated archive format schemas and manifests
-  - Updated provenance tracking with latest Crucible metadata (commit b423a2f)
+  - Updated provenance tracking with latest Crucible metadata (commit 8574932)
 
 #### Files Changed
 
 ```
 .crucible/metadata/metadata.yaml                         # Updated metadata
-.goneat/ssot-consumer.yaml                              # Updated to v0.2.12 ref
+.goneat/ssot-consumer.yaml                              # Updated to v0.2.13 ref
 .goneat/ssot/provenance.json                            # Updated provenance tracking
 VERSION                                                  # v0.1.14
-go.mod                                                   # Updated to Crucible v0.2.12
-go.sum                                                   # Updated with v0.2.12 hashes
+go.mod                                                   # Updated to Crucible v0.2.13
+go.sum                                                   # Updated with v0.2.13 hashes
+config/crucible-go/library/fulpack/fixtures/README.md   # NEW: Fixture generation docs
+config/crucible-go/library/fulpack/fixtures/basic.tar   # NEW: Uncompressed tar fixture
+config/crucible-go/library/fulpack/fixtures/*.tar.gz    # Updated: Programmatic generation
+config/crucible-go/library/fulpack/fixtures/*.txt       # NEW: Fixture manifests
 config/crucible-go/taxonomy/metrics.yaml                # Updated metrics taxonomy
 docs/crucible-go/standards/coding/README.md             # Updated coding standards index
 docs/crucible-go/standards/coding/go.md                 # Updated Go standards
 docs/crucible-go/standards/coding/python.md             # Updated Python standards
 docs/crucible-go/standards/coding/typescript.md         # Updated TypeScript standards
+docs/crucible-go/standards/library/modules/fulencode.md # NEW: Encoding detection module (+4,161 lines)
 docs/crucible-go/standards/library/modules/fulpack.md   # Enhanced with tar format (+449 lines)
+docs/crucible-go/standards/testing/*.md                 # NEW: Testing patterns
+schemas/crucible-go/library/fulencode/v1.0.0/*          # NEW: Fulencode schemas
 schemas/crucible-go/library/fulpack/v1.0.0/*.schema.json # Updated schemas
+schemas/crucible-go/taxonomy/library/fulencode/*        # NEW: Encoding taxonomies
 schemas/crucible-go/taxonomy/library/fulpack/archive-formats/v1.0.0/formats.yaml # Updated formats
 ```
 
-**Total**: 16 files changed, +523 insertions, -52 deletions
+**Total**: 16 files changed, +6,092 insertions, -35 deletions (v0.2.12), +7 new fixture files (v0.2.13)
 
 ---
 
