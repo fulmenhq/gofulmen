@@ -4,6 +4,53 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.14] - 2025-11-14
+
+### Crucible v0.2.12 Update
+
+**Release Type**: Dependency Update  
+**Status**: 🚧 In Development
+
+#### Overview
+
+This release updates to Crucible v0.2.12, bringing enhanced fulpack documentation and expanded archive format support.
+
+#### Changes
+
+**Crucible v0.2.12 Update**:
+
+- **Dependency Update**: Updated with comprehensive verification process
+  - Updated `go.mod` from v0.2.11 to v0.2.12 and verified via `go list -m github.com/fulmenhq/crucible`
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.12 ref
+  - Verified no vendor directory drift (clean dependency management)
+  - Enhanced fulpack documentation with uncompressed tar format support
+  - Updated coding standards for Go, Python, and TypeScript
+  - Updated archive format schemas and manifests
+  - Updated provenance tracking with latest Crucible metadata (commit b423a2f)
+
+#### Files Changed
+
+```
+.crucible/metadata/metadata.yaml                         # Updated metadata
+.goneat/ssot-consumer.yaml                              # Updated to v0.2.12 ref
+.goneat/ssot/provenance.json                            # Updated provenance tracking
+VERSION                                                  # v0.1.14
+go.mod                                                   # Updated to Crucible v0.2.12
+go.sum                                                   # Updated with v0.2.12 hashes
+config/crucible-go/taxonomy/metrics.yaml                # Updated metrics taxonomy
+docs/crucible-go/standards/coding/README.md             # Updated coding standards index
+docs/crucible-go/standards/coding/go.md                 # Updated Go standards
+docs/crucible-go/standards/coding/python.md             # Updated Python standards
+docs/crucible-go/standards/coding/typescript.md         # Updated TypeScript standards
+docs/crucible-go/standards/library/modules/fulpack.md   # Enhanced with tar format (+449 lines)
+schemas/crucible-go/library/fulpack/v1.0.0/*.schema.json # Updated schemas
+schemas/crucible-go/taxonomy/library/fulpack/archive-formats/v1.0.0/formats.yaml # Updated formats
+```
+
+**Total**: 16 files changed, +523 insertions, -52 deletions
+
+---
+
 ## [0.1.13] - 2025-11-13
 
 ### Windows Build Compatibility & Crucible v0.2.11 Update

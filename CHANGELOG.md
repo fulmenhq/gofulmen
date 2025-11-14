@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2025-11-14
+
+### Changed
+
+- **Crucible v0.2.12 Update** - Updated dependency to latest Crucible release
+  - Updated `go.mod` from v0.2.11 to v0.2.12 with full verification
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.12 ref
+  - Enhanced fulpack documentation with uncompressed tar format support (+449 lines)
+  - Updated coding standards for Go, Python, and TypeScript
+  - Updated archive format schemas and manifests
+  - Verified no vendor directory drift (clean dependency management)
+
 ## [0.1.13] - 2025-11-13
 
 ### Fixed

@@ -1112,7 +1112,9 @@ Fulmen Python projects must keep `pytest` suites deterministic across laptops, C
 - Provide shared helpers (e.g., `require_network`, `require_dns`) that call `pytest.skip` with explicit reasons when capabilities are unavailable.
 - Seed randomness via `random.seed(SEED)` or `secrets.randbelow` mocks to keep fixtures reproducible.
 - Prefer in-memory dependencies (SQLite `:memory:`, mocked HTTP servers) for unit tests; guard real integrations with markers (`@pytest.mark.integration`) and capability checks.
-- Use fixtures’ `yield`/`finalizer` patterns to ensure sockets, threads, and background tasks are torn down regardless of test outcome.
+- Use fixtures' `yield`/`finalizer` patterns to ensure sockets, threads, and background tasks are torn down regardless of test outcome.
+
+**CLI Testing**: For Typer/Click-based CLIs (e.g., microtool forges), follow the application factory pattern in [Language-Specific Testing Patterns](../testing/language-testing-patterns.md#python--typerclick-cli-isolation) to isolate context between tests.
 
 ---
 
