@@ -54,6 +54,15 @@ const (
 	FulHashOperationMs            = "fulhash_operation_ms"
 )
 
+// Fulpack Module Metrics
+const (
+	FulpackOperationsTotal     = "fulpack_operations_total"
+	FulpackOperationMs         = "fulpack_operation_ms"
+	FulpackBytesProcessedTotal = "fulpack_bytes_processed_total"
+	FulpackEntriesTotal        = "fulpack_entries_total"
+	FulpackErrorsTotal         = "fulpack_errors_total"
+)
+
 // Metric units
 const (
 	UnitCount   = "count"
