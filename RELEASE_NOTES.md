@@ -4,18 +4,52 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.1.14] - 2025-11-14
+## [0.1.14] - 2025-11-15
 
-### Crucible v0.2.13 Update
+### Fulpack Module Complete + Crucible v0.2.13 Update
 
-**Release Type**: Dependency Update  
-**Status**: 🚧 In Development
+**Release Type**: Major Feature Release + Dependency Update  
+**Status**: ✅ Ready for Release
 
 #### Overview
 
-This release updates to Crucible v0.2.13, bringing enhanced fulpack documentation, programmatic fixture generation, and the new fulencode module standard.
+This release completes the fulpack archive module implementation (all 5 operations now functional) and updates to Crucible v0.2.13. The fulpack module now provides production-ready archive creation, extraction, and verification with mandatory security protections.
 
 #### Changes
+
+**Fulpack Archive Module - Complete Implementation**:
+
+- **Create()**: Archive creation with pathfinder source selection and fulhash checksums
+  - Supports TAR, TAR.GZ, ZIP, GZIP formats
+  - Pathfinder integration for glob-based source filtering (include/exclude patterns)
+  - Fulhash checksum generation (SHA-256 default, XXH3-128 for speed)
+  - Configurable compression levels (1-9, ignored for TAR)
+  - Proper algorithm labeling (unsupported algorithms fallback to SHA-256 with correct label)
+  
+- **Extract()**: Secure extraction with **mandatory** security protections
+  - Path traversal prevention (rejects `../` and absolute paths via `isPathTraversal()`)
+  - Symlink validation (ensures targets stay within destination via `isWithinBounds()`)
+  - **Decompression bomb detection during extraction** (enforces compression ratio, size, and entry limits)
+  - Overwrite policy support (error/skip/overwrite modes)
+  - **Include/exclude pattern filtering** during extraction
+  - MaxSize (1GB default) and MaxEntries (10000 default) enforcement
+  
+- **Verify()**: Integrity and security validation
+  - Archive structure validation (corrupt archive detection)
+  - Path traversal scanning across all entries
+  - Decompression bomb characteristic detection
+  - Symlink safety validation
+  - Checksum presence detection
+  
+- **All 5 Operations Complete**: Info, Scan, Create, Extract, Verify
+- **22 Comprehensive Tests**: Covering all formats, security scenarios, and edge cases
+- **Spec Compliance**: 100% compliant with Fulpack Archive Module Standard v1.0.0
+
+**Security Fixes (Audit Findings)**:
+
+- Fixed exclude patterns now honored during extraction (was being ignored)
+- Added decompression bomb detection to extract operation (was only in verify)
+- Fixed checksum algorithm mislabeling (now correctly reports actual algorithm used)
 
 **Crucible v0.2.13 Update**:
 

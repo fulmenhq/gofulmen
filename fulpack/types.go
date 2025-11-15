@@ -112,6 +112,9 @@ type ExtractOptions struct {
 	// IncludePatterns specifies glob patterns to extract (e.g., ["**/*.csv"]).
 	IncludePatterns []string `json:"include_patterns,omitempty"`
 
+	// ExcludePatterns specifies glob patterns to exclude from extraction (e.g., ["**/__pycache__"]).
+	ExcludePatterns []string `json:"exclude_patterns,omitempty"`
+
 	// MaxSize specifies maximum total uncompressed size in bytes (default: 1GB, bomb protection).
 	MaxSize int64 `json:"max_size,omitempty"`
 

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2025-11-15
+
+### Added
+
+- **Fulpack Archive Module - Complete Implementation**
+  - `Create()`: Archive creation with pathfinder source selection and fulhash checksums
+    - Supports TAR, TAR.GZ, ZIP, GZIP formats
+    - Pathfinder integration for glob-based source filtering
+    - Fulhash checksum generation (SHA-256 default, XXH3-128 supported)
+    - Configurable compression levels (1-9)
+    - Include/exclude pattern support
+  - `Extract()`: Secure extraction with mandatory security protections
+    - Path traversal prevention (rejects `../` and absolute paths)
+    - Symlink validation (ensures targets stay within destination)
+    - Decompression bomb detection (enforces compression ratio, size, and entry limits)
+    - Overwrite policy support (error/skip/overwrite)
+    - Include/exclude pattern filtering during extraction
+  - `Verify()`: Integrity and security validation
+    - Archive structure validation (corrupt archive detection)
+    - Path traversal scanning across all entries
+    - Decompression bomb characteristic detection
+    - Symlink safety validation
+    - Checksum presence detection
+  - All 5 operations now complete: Info, Scan, Create, Extract, Verify
+  - 22 comprehensive tests covering all formats and security scenarios
+
+### Fixed
+
+- **Fulpack Extract**: Exclude patterns now honored during extraction (previously ignored)
+- **Fulpack Extract**: Decompression bomb detection now runs during extraction (not just verify)
+- **Fulpack Create**: Checksum algorithm labels now accurate (unsupported algorithms fallback to SHA-256 with correct label)
+
 ## [0.1.14] - 2025-11-14
 
 ### Changed

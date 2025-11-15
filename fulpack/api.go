@@ -33,8 +33,7 @@ package fulpack
 //	    },
 //	)
 func Create(sources []string, output string, format ArchiveFormat, options *CreateOptions) (*ArchiveInfo, error) {
-	// TODO: Implementation in Phase B
-	return nil, nil
+	return createImpl(sources, output, format, options)
 }
 
 // Extract extracts archive contents to a destination directory.
@@ -69,8 +68,7 @@ func Create(sources []string, output string, format ArchiveFormat, options *Crea
 //	    },
 //	)
 func Extract(archive string, destination string, options *ExtractOptions) (*ExtractResult, error) {
-	// TODO: Implementation in Phase B
-	return nil, nil
+	return extractImpl(archive, destination, options)
 }
 
 // Scan lists archive entries without extraction (for Pathfinder integration).
@@ -140,8 +138,7 @@ func Scan(archive string, options *ScanOptions) ([]ArchiveEntry, error) {
 //	    log.Printf("Archive validation failed: %v", result.Errors)
 //	}
 func Verify(archive string, options *VerifyOptions) (*ValidationResult, error) {
-	// TODO: Implementation in Phase B
-	return nil, nil
+	return verifyImpl(archive, options)
 }
 
 // Info returns archive metadata without extraction.
