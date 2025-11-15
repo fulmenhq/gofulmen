@@ -33,26 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 5 operations now complete: Info, Scan, Create, Extract, Verify
   - 22 comprehensive tests covering all formats and security scenarios
 
+### Changed
+
+- **Crucible v0.2.14 Update** - Updated dependency to latest Crucible release
+  - Updated `go.mod` from v0.2.13 to v0.2.14 with full verification
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.14 ref
+  - Added DevSecOps secrets management standards (docs + schema + defaults)
+  - Updated metrics taxonomy with latest definitions
+  - Updated provenance tracking with Crucible commit 089b4c7
+  - Verified no vendor directory drift (clean dependency management)
+
 ### Fixed
 
 - **Fulpack Extract**: Exclude patterns now honored during extraction (previously ignored)
 - **Fulpack Extract**: Decompression bomb detection now runs during extraction (not just verify)
 - **Fulpack Create**: Checksum algorithm labels now accurate (unsupported algorithms fallback to SHA-256 with correct label)
-
-## [0.1.14] - 2025-11-14
-
-### Changed
-
-- **Crucible v0.2.13 Update** - Updated dependency to latest Crucible release
-  - Updated `go.mod` from v0.2.11 to v0.2.13 with full verification
-  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.13 ref
-  - Enhanced fulpack documentation with uncompressed tar format support (+449 lines)
-  - Added programmatic fulpack fixture generation (basic.tar, \*.txt manifests)
-  - Added fulpack fixtures README with generation documentation
-  - Updated coding standards for Go, Python, and TypeScript
-  - Added new fulencode module standard and schemas (+4,161 lines)
-  - Updated archive format schemas and manifests
-  - Verified no vendor directory drift (clean dependency management)
 
 ## [0.1.13] - 2025-11-13
 
