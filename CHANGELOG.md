@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.16] - 2025-11-17
+
+### Changed
+
+- **Crucible v0.2.17 Support** - Updated DevSecOps secrets schema with structured credential objects
+  - Updated go.mod to Crucible v0.2.17 with full verification
+  - Synced schemas/crucible-go/devsecops/secrets/v1.0.0/ with new credential object structure
+  - Synced config/crucible-go/devsecops/secrets/v1.0.0/ with updated defaults
+  - Schema now supports credential types (api_key, password, token), metadata, rotation policies
+  - Enables fulmen-secrets v0.1.1+ enterprise credential management features
+
 ## [0.1.15] - 2025-11-16
 
 ### Added

@@ -4,6 +4,85 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.16] - 2025-11-17
+
+### Crucible v0.2.17 Support – DevSecOps Secrets Schema Sync
+
+**Release Type**: Dependency Update + Schema Sync  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release updates gofulmen to support Crucible v0.2.17, bringing enhanced DevSecOps secrets schema with structured credential objects, lifecycle metadata, and rotation policies. This enables fulmen-secrets v0.1.1+ enterprise credential management features.
+
+#### Changes
+
+**Crucible v0.2.17 Update**:
+
+- **Dependency Update**: Updated go.mod from v0.2.16 to v0.2.17 with full verification
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.17 ref
+  - Verified no vendor directory drift (clean dependency management)
+  - Updated provenance tracking with latest Crucible metadata (commit from v0.2.17)
+
+**DevSecOps Secrets Schema Enhancement**:
+
+- **Structured Credential Objects**: Transition from flat string secrets to rich credential objects
+  - `type` field: api_key, password, token with smart masking behavior
+  - `value` or `ref` fields: inline values or external references (vault://, aws-secrets://)
+  - `metadata` object: created, expires, purpose, tags, owner for lifecycle tracking
+  - `rotation` object: interval, method for automated credential rotation
+  - `description` field: human-readable purpose documentation
+
+- **Schema Updates**: `schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json`
+  - Added credential object definitions with oneOf validation (value XOR ref)
+  - Added metadata and rotation policy schemas
+  - Relaxed project_slug pattern to allow underscores
+  - Updated domain to schemas.fulmenhq.dev for consistency
+
+- **Config Defaults**: `config/crucible-go/devsecops/secrets/v1.0.0/defaults.yaml`
+  - Updated examples to use new credential object structure
+  - Added comprehensive examples for all credential types
+  - Included metadata and rotation policy samples
+
+#### Impact
+
+**For fulmen-secrets Users**:
+
+- ✅ Rich credential management with lifecycle tracking
+- ✅ Smart masking by credential type (API keys, passwords, tokens)
+- ✅ External secret manager integration (Vault, AWS Secrets Manager)
+- ✅ Rotation policy enforcement and expiry monitoring
+- ✅ Compliance auditing with tags and ownership tracking
+
+**For gofulmen Consumers**:
+
+- ✅ Latest Crucible schemas available via SSOT sync
+- ✅ No breaking changes - schema sync only
+- ✅ Enhanced DevSecOps standards support
+
+#### Files Changed
+
+```
+.goneat/ssot-consumer.yaml          # Updated to v0.2.17 ref
+.goneat/ssot/provenance.json        # Updated provenance tracking
+go.mod                               # Updated to Crucible v0.2.17
+go.sum                               # Updated with v0.2.17 hashes
+schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json  # Enhanced schema
+config/crucible-go/devsecops/secrets/v1.0.0/defaults.yaml        # Updated examples
+VERSION                              # v0.1.16
+```
+
+**Total**: 7 files changed (+ enhanced DevSecOps schema support)
+
+#### Verification
+
+- ✅ All tests passing (existing test suite)
+- ✅ Precommit checks: 0 issues (100% health)
+- ✅ Schema validation passes for updated DevSecOps schemas
+- ✅ Crucible v0.2.17 dependency verified through multiple methods
+
+---
+
 ## [0.1.15] - 2025-11-16
 
 ### Logging Redaction Middleware + Pathfinder Repository Root Discovery
@@ -208,82 +287,13 @@ config/crucible-go/devsecops/secrets-defaults.yaml        # NEW: Secrets default
 
 ---
 
-## [0.1.13] - 2025-11-13
-
-### Windows Build Compatibility & Crucible v0.2.11 Update
-
-**Release Type**: Bug Fix + Dependency Update  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release resolves critical Windows build failures in the signals package and updates to Crucible v0.2.11 with full verification. The Windows fix enables cross-platform compatibility while maintaining Unix functionality, and the Crucible update brings the latest fulpack type generation framework.
-
-#### Changes
-
-**Windows Build Fix**:
-
-- **Platform-Specific Signal Handling**: Implemented build tag solution for cross-platform compatibility
-  - Added `signals/platform_signals_unix.go` with SIGUSR1/2 definitions for Unix systems
-  - Added `signals/platform_signals_windows.go` with empty map for Windows compatibility
-  - Updated `signals/http.go` to use dynamic signal map composition
-  - Resolved undefined symbol errors on Windows for `syscall.SIGUSR1/SIGUSR2`
-  - Maintains full Unix functionality while enabling Windows builds
-
-**Crucible v0.2.11 Update**:
-
-- **Dependency Verification**: Updated with comprehensive verification process
-  - Updated `go.mod` from v0.2.9 to v0.2.11 and verified via `go list -m github.com/fulmenhq/crucible`
-  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.11 ref
-  - Updated sync configuration: changed `sync_path_base` from `lang/go` to `"./"` per ADR-0004
-  - Confirmed `go.sum` contains v0.2.11 hashes and removed stale vendor directory
-  - Enhanced fulpack type generation framework for cross-language consistency
-  - Updated provenance tracking with latest Crucible metadata (commit 631e8b7)
-  - Synced latest Crucible assets to `docs/crucible-go/`, `config/crucible-go/`, `schemas/crucible-go/`
-
-#### Impact
-
-**For Windows Users**:
-
-- ✅ gofulmen now builds successfully on Windows platforms
-- ✅ All signals package functionality available on Windows (platform-appropriate)
-- ✅ No breaking changes for Unix/Linux/macOS users
-
-**For All Users**:
-
-- ✅ Latest Crucible v0.2.11 assets and schemas available
-- ✅ Enhanced fulpack type generation framework for future cross-language support
-- ✅ Improved provenance tracking and metadata
-
-#### Verification
-
-- ✅ `go test ./signals/...` passes on all platforms
-- ✅ Windows build compatibility confirmed
-- ✅ Crucible v0.2.11 dependency verified through multiple methods
-- ✅ Precommit checks pass with updated formatting
-- ✅ Cross-platform signal handling tested
-
-#### Files Changed
-
-```
-.goneat/ssot-consumer.local.yaml    # Removed: Local override (explicit coupling only)
-.goneat/ssot-consumer.yaml          # Updated to v0.2.11 ref
-.goneat/ssot/provenance.json        # Updated provenance tracking
-go.mod                               # Updated to Crucible v0.2.11
-go.sum                               # Updated with v0.2.11 hashes
-signals/http.go                       # Updated for platform-specific signals
-signals/platform_signals_unix.go       # New file: Unix signal definitions
-signals/platform_signals_windows.go    # New file: Windows compatibility
-VERSION                              # v0.1.13
-```
-
-**Total**: 8 files changed, +45 lines, -15 lines (1 removed)
-
----
-
 ## Archived Releases
 
-Older releases (v0.1.12 and earlier) are archived in `docs/releases/`. See those files for complete release documentation.
+Older releases (v0.1.13 and earlier) are archived in `docs/releases/`. See those files for complete release documentation.
+
+## [0.1.13] - 2025-11-13 (Archived)
+
+Windows Build Compatibility & Crucible v0.2.11 Update. See `docs/releases/v0.1.13.md`
 
 ## [0.1.12] - 2025-11-10 (Archived)
 
