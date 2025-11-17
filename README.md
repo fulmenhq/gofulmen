@@ -71,6 +71,32 @@ Simple, dependency-free tool installation for Go repositories using the goneat b
 - Cross-platform (macOS, Linux, Windows)
 - Local development overrides via `.goneat/tools.local.yaml`
 
+### Logging (`logging/`)
+
+Progressive logging system with profiles, middleware pipeline, and policy enforcement.
+
+- **Progressive Profiles**: SIMPLE (minimal), STRUCTURED (JSON + middleware), ENTERPRISE (full observability)
+- **Middleware Pipeline**: Pluggable event processing (correlation, redaction, throttling)
+- **Redaction Middleware**: Pattern and field-based PII/secrets filtering (API keys, passwords, SSNs, credit cards)
+- **Correlation Middleware**: UUIDv7 correlation ID injection for distributed tracing
+- **Throttling Middleware**: Token bucket rate limiting with configurable drop policies
+- **Full Crucible Envelope**: 20+ fields including traceId, spanId, contextId, requestId
+- **Schema Validation**: Automatic validation against Crucible logging schema
+- **Backward Compatible**: 100% compatibility with existing configurations
+
+### Pathfinder (`pathfinder/`)
+
+Safe filesystem discovery with path traversal protection and repository root detection.
+
+- **File Discovery**: Glob-based pattern matching with include/exclude support
+- **Security**: Path traversal prevention, boundary enforcement, hidden file filtering
+- **Repository Root Discovery**: Safe upward traversal with multiple marker sets (Git, Go, Node, Python, Monorepo)
+- **Safety Boundaries**: Home directory ceiling, filesystem root detection, max depth limits
+- **Symlink Protection**: Loop detection, boundary enforcement when following symlinks
+- **Checksum Support**: Optional integrity verification using FulHash (xxh3-128, sha256)
+- **Performance**: <30µs for repository root discovery, <10% overhead for checksums
+- **Cross-Platform**: Works on macOS, Linux, Windows with platform-specific path handling
+
 ### Foundry (`foundry/`)
 
 Enterprise-grade foundation utilities providing consistent cross-language implementations from Crucible catalogs.
@@ -271,6 +297,113 @@ mergedSchema, _ := schema.MergeJSONSchemas(
     []byte(`{"properties":{"name":{"type":"string"}}}`),
 )
 fmt.Printf("Merged schema: %s\n", string(mergedSchema))
+```
+
+### Logging Package
+
+```go
+import "github.com/fulmenhq/gofulmen/logging"
+
+// Create logger with SIMPLE profile (minimal output)
+logger, err := logging.BundleSimple()
+if err != nil {
+    log.Fatal(err)
+}
+
+logger.Info("Application started", map[string]any{
+    "version": "1.0.0",
+    "environment": "production",
+})
+
+// Create logger with STRUCTURED profile + redaction middleware
+logger, err = logging.BundleStructuredWithRedaction()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Automatically redacts sensitive data
+logger.Info("User login", map[string]any{
+    "username": "alice",
+    "password": "secret123",  // Will be redacted as [REDACTED]
+    "apiKey": "sk_live_abc123", // Will be redacted
+})
+
+// Custom redaction configuration
+redactionConfig := logging.RedactionConfig{
+    Patterns: []string{
+        `\b[A-Z0-9]{20,}\b`,  // API tokens
+        `credit_card=\d+`,    // Credit card patterns
+    },
+    Fields: []string{"ssn", "tax_id"},
+    ReplacementMode: "hash",  // Use hash prefix instead of [REDACTED]
+}
+
+logger, err = logging.New(logging.LoggingConfig{
+    Profile: "STRUCTURED",
+    MinSeverity: "INFO",
+    Middleware: []logging.MiddlewareConfig{
+        logging.WithRedaction(redactionConfig),
+    },
+})
+
+// Progressive profiles for different environments
+// SIMPLE: Development (minimal output)
+// STRUCTURED: Staging (JSON with middleware)
+// ENTERPRISE: Production (full observability with correlation, throttling, policies)
+```
+
+### Pathfinder Package
+
+```go
+import "github.com/fulmenhq/gofulmen/pathfinder"
+
+// Find all Go files in a directory
+query := pathfinder.FindQuery{
+    Root: "/path/to/project",
+    Include: []string{"**/*.go"},
+    Exclude: []string{"vendor/**", "**/testdata/**"},
+}
+
+results, err := pathfinder.Find(query)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, result := range results {
+    fmt.Printf("Found: %s (%d bytes)\n", result.Path, result.Size)
+}
+
+// Find repository root (safe upward traversal)
+rootPath, err := pathfinder.FindRepositoryRoot(".")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Repository root: %s\n", rootPath)
+
+// Find repository root with custom markers and boundaries
+opts := []pathfinder.RootOption{
+    pathfinder.WithMarkers([]string{".git", "go.mod", "package.json"}),
+    pathfinder.WithMaxDepth(5),
+    pathfinder.WithBoundary("/home/user/projects"),  // Don't search above this
+}
+
+rootPath, err = pathfinder.FindRepositoryRoot("/home/user/projects/myapp/src", opts...)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Find files with checksums (integrity verification)
+query = pathfinder.FindQuery{
+    Root: "/path/to/files",
+    Include: []string{"**/*.tar.gz"},
+    CalculateChecksums: true,
+    ChecksumAlgorithm: "sha256",
+}
+
+results, err = pathfinder.Find(query)
+for _, result := range results {
+    fmt.Printf("%s: %s\n", result.Path, result.Checksum)
+}
 ```
 
 ### Foundry Package

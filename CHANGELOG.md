@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.15] - 2025-11-16
+
+### Added
+
+- **Logging Redaction Middleware** - Schema-compliant PII and secrets redaction per Crucible v0.2.16
+  - `middleware_redaction_v2.go`: New redaction middleware with pattern and field-based filtering
+  - `RedactionConfig` struct with patterns, fields, replacement options (text/hash)
+  - Updated `MiddlewareConfig` to support `type` and `priority` fields for Crucible compliance
+  - Helper functions: `WithRedaction()`, `WithDefaultRedaction()` for easy configuration
+  - Bundle helpers: `BundleSimpleWithRedaction()`, `BundleStructuredWithRedaction()`
+  - Default patterns: API keys, tokens, passwords, social security numbers, credit cards
+  - Default fields: password, token, secret, apiKey, ssn, creditCard
+  - Opt-in design: No behavioral changes unless explicitly configured
+  - Documentation: 80+ lines added to logging/README.md with before/after examples
+- **Pathfinder Repository Root Discovery** - Safe upward traversal for repository detection
+  - `FindRepositoryRoot()` API per Crucible v0.2.15 specification
+  - Predefined marker sets: `GitMarkers`, `GoModMarkers`, `NodeMarkers`, `PythonMarkers`, `MonorepoMarkers`
+  - Safety boundaries: Home directory ceiling (default), filesystem root detection, max depth (10)
+  - Functional options: `WithMaxDepth`, `WithBoundary`, `WithFollowSymlinks`, `WithMarkers`, `WithStrictBoundary`
+  - Symlink loop detection with `TRAVERSAL_LOOP` error (critical severity)
+  - Structured error codes: `REPOSITORY_NOT_FOUND`, `INVALID_START_PATH`, `TRAVERSAL_LOOP`
+  - Security test suite: 17 tests covering boundary enforcement, multi-tenant isolation, container escape prevention
+  - Performance benchmarks: All operations <30µs (well under Crucible spec targets)
+  - Documentation: 150+ lines in pathfinder/README.md with usage examples and safety guidance
+
+### Changed
+
+- **Logging Pipeline Builder** - Backward compatible updates for Crucible v0.2.16 compliance
+  - Pipeline builder now maps legacy `name` field to `type` field
+  - Maps legacy `order` field to `priority` field
+  - Maintains 100% backward compatibility with existing configurations
+- **Schema Validator** - Fixed path resolution from test subdirectories
+  - Added `findRepoRoot()` helper to resolve schema paths from repository root
+  - Fixed `mapSchemaURLToPath()` to handle relative schema references correctly
+  - Detects version directories to prevent path duplication (e.g., `/v1.0.0/v1.0.0/`)
+  - All schema validation tests now pass from any subdirectory
+- **Crucible v0.2.16 Update** - Latest schemas, standards, and taxonomy
+  - Updated logging schemas with middleware type/priority fields
+  - Added pathfinder repository root discovery specification
+  - New ADR-0012: Schema reference IDs standard
+  - Updated DevSecOps taxonomy with modules schema
+  - Updated metrics taxonomy
+
+### Fixed
+
+- **Schema Validator Path Resolution** - Schema loading now works correctly from test subdirectories
+  - Repository root discovery ensures absolute paths computed correctly
+  - Relative schema references (e.g., `severity-filter.schema.json`) now resolve properly
+  - Version directory detection prevents duplicate path segments
+
 ## [0.1.14] - 2025-11-15
 
 ### Added
