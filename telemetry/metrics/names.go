@@ -63,6 +63,15 @@ const (
 	FulpackErrorsTotal         = "fulpack_errors_total"
 )
 
+// HTTP Server Metrics (Crucible v0.2.18 taxonomy)
+const (
+	HTTPRequestsTotal          = "http_requests_total"
+	HTTPRequestDurationSeconds = "http_request_duration_seconds"
+	HTTPRequestSizeBytes       = "http_request_size_bytes"
+	HTTPResponseSizeBytes      = "http_response_size_bytes"
+	HTTPActiveRequests         = "http_active_requests"
+)
+
 // Metric units
 const (
 	UnitCount   = "count"
@@ -92,6 +101,9 @@ const (
 	TagPath      = "path"
 	TagClient    = "client"
 	TagMimeType  = "mime_type"
+	TagMethod    = "method"
+	TagRoute     = "route"
+	TagService   = "service"
 )
 
 // Standard tag values
