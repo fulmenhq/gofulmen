@@ -328,6 +328,174 @@ type PathResult struct {
 - `checksumAlgorithm`: Checksum algorithm used ("xxh3-128" or "sha256", when CalculateChecksums=true)
 - `checksumError`: Error message if checksum calculation failed (string, optional)
 
+## Repository Root Discovery
+
+**New in v0.1.15** - The pathfinder package provides safe upward filesystem traversal to locate repository markers.
+
+### FindRepositoryRoot
+
+Searches upward from a starting path to find the first directory containing specified marker files or directories (e.g., `.git`, `go.mod`).
+
+#### Basic Usage
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/fulmenhq/gofulmen/pathfinder"
+)
+
+func main() {
+    // Find Git repository root
+    root, err := pathfinder.FindRepositoryRoot(".", pathfinder.GitMarkers)
+    if err != nil {
+        log.Fatalf("Not in a Git repository: %v", err)
+    }
+    fmt.Printf("Repository root: %s\n", root)
+
+    // Find Go module root
+    root, err = pathfinder.FindRepositoryRoot(".", pathfinder.GoModMarkers)
+    if err != nil {
+        log.Fatalf("Not in a Go module: %v", err)
+    }
+    fmt.Printf("Go module root: %s\n", root)
+}
+```
+
+#### Predefined Marker Sets
+
+```go
+pathfinder.GitMarkers      // [".git"]
+pathfinder.GoModMarkers    // ["go.mod"]
+pathfinder.NodeMarkers     // ["package.json"]
+pathfinder.PythonMarkers   // ["pyproject.toml", "setup.py"]
+pathfinder.MonorepoMarkers // [".git", "pnpm-workspace.yaml", "lerna.json"]
+```
+
+#### Advanced Options
+
+```go
+// Custom boundary and max depth
+root, err := pathfinder.FindRepositoryRoot(
+    "internal/config",
+    pathfinder.GoModMarkers,
+    pathfinder.WithMaxDepth(5),
+    pathfinder.WithBoundary("/home/user/projects"),
+)
+
+// Multiple markers (finds first match)
+root, err := pathfinder.FindRepositoryRoot(
+    ".",
+    []string{".git", "go.mod"},
+)
+
+// Custom markers
+root, err := pathfinder.FindRepositoryRoot(
+    ".",
+    []string{".fulmen", "workspace.yaml"},
+    pathfinder.WithMaxDepth(10),
+)
+```
+
+#### Safety Boundaries
+
+FindRepositoryRoot enforces multiple safety boundaries to prevent runaway traversal:
+
+1. **Home Directory Ceiling** (default): Never traverses above `$HOME` (Linux/macOS) or `%USERPROFILE%` (Windows)
+2. **Filesystem Root**: Stops at `/` (Unix), `C:\` (Windows), or UNC share root (`\\server\share\`)
+3. **Max Depth Guard**: Limits upward traversal (default: 10 directories)
+4. **Custom Boundary**: Optional explicit ceiling path via `WithBoundary()`
+
+**Example with boundaries:**
+
+```go
+// Directory structure:
+// /home/user/           <- boundary (home directory)
+//   projects/
+//     myapp/            <- has go.mod
+//       src/
+//         internal/     <- start here
+
+root, err := pathfinder.FindRepositoryRoot(
+    "/home/user/projects/myapp/src/internal",
+    pathfinder.GoModMarkers,
+    // Default boundary is /home/user, so this will find myapp/go.mod
+)
+// Returns: "/home/user/projects/myapp"
+```
+
+#### Error Handling
+
+FindRepositoryRoot returns structured error envelopes with detailed context:
+
+```go
+root, err := pathfinder.FindRepositoryRoot(".", pathfinder.GitMarkers)
+if err != nil {
+    if envelope, ok := err.(*errors.ErrorEnvelope); ok {
+        fmt.Printf("Error Code: %s\n", envelope.Code)
+        // Possible codes:
+        // - REPOSITORY_NOT_FOUND: No marker found within boundaries
+        // - INVALID_START_PATH: Start path doesn't exist or invalid
+        // - INVALID_BOUNDARY: Boundary path doesn't exist or invalid
+        // - INVALID_MARKERS: Empty markers list
+
+        if context, ok := envelope.Context.(map[string]any); ok {
+            fmt.Printf("Searched depth: %v\n", context["searchedDepth"])
+            fmt.Printf("Stopped at: %s\n", context["stoppedAt"])
+            fmt.Printf("Reason: %s\n", context["reason"])
+        }
+    }
+    return err
+}
+```
+
+#### API Reference
+
+**Function Signature:**
+
+```go
+func FindRepositoryRoot(startPath string, markers []string, opts ...FindOption) (string, error)
+```
+
+**Parameters:**
+
+- `startPath`: Starting directory for upward search (relative or absolute)
+- `markers`: Slice of file/directory names to search for (e.g., `[".git", "go.mod"]`)
+- `opts`: Optional configuration (WithMaxDepth, WithBoundary, WithFollowSymlinks, etc.)
+
+**Returns:**
+
+- `string`: Absolute path to the directory containing the first marker found
+- `error`: Structured error envelope if marker not found or validation fails
+
+**Functional Options:**
+
+```go
+pathfinder.WithMaxDepth(depth int)           // Limit upward traversal depth
+pathfinder.WithBoundary(path string)         // Set explicit ceiling path
+pathfinder.WithStopAtFirst(stop bool)        // Stop at first marker (default: true)
+pathfinder.WithFollowSymlinks(follow bool)   // Follow symlinks during traversal (default: false)
+pathfinder.WithRespectConstraints(respect bool) // Honor PathConstraint if configured (default: true)
+```
+
+#### Performance Characteristics
+
+- **Typical case** (3-5 directories up): <5ms
+- **Max depth case** (10 directories): <20ms
+- **I/O pattern**: One stat call per directory level, minimal overhead
+- **No recursion**: Iterative implementation for consistent performance
+
+#### Use Cases
+
+- **Tool Initialization**: Find project root for config loading
+- **Path Resolution**: Convert relative paths to project-relative paths
+- **Workspace Detection**: Locate workspace boundaries for tooling
+- **CI/CD Scripts**: Determine repository structure dynamically
+- **Multi-Project Repos**: Navigate monorepo structures
+
 ## Security Considerations
 
 - **Path Traversal Protection**: All paths are validated to prevent ".." traversal attacks

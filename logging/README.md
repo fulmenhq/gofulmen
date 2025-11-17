@@ -305,6 +305,68 @@ Returns default logger configuration.
 
 - `*LoggerConfig`: Default configuration with JSON console sink
 
+#### logging.BundleSimpleWithRedaction(service string, level Severity) \*LoggerConfig
+
+**New in v0.1.15** - Creates a SIMPLE profile logger with default redaction middleware enabled.
+
+**Parameters:**
+
+- `service`: Service name
+- `level`: Minimum severity level
+
+**Returns:**
+
+- `*LoggerConfig`: SIMPLE profile with redaction middleware using Crucible default patterns
+
+**Example:**
+
+```go
+config := logging.BundleSimpleWithRedaction("my-cli", logging.INFO)
+logger, _ := logging.New(config)
+logger.WithFields(map[string]any{
+    "apiKey": "secret123",  // Will be redacted
+    "user": "alice",        // Not redacted
+}).Info("Processing")
+```
+
+#### logging.BundleStructuredWithRedaction(service string, level Severity, opts ...RedactionOption) \*LoggerConfig
+
+**New in v0.1.15** - Creates a STRUCTURED profile logger with redaction middleware.
+
+**Parameters:**
+
+- `service`: Service name
+- `level`: Minimum severity level
+- `opts`: Optional redaction configuration (WithDefaultRedaction(), WithMinimalRedaction(), WithRedaction(config))
+
+**Returns:**
+
+- `*LoggerConfig`: STRUCTURED profile with JSON sink and redaction middleware
+
+**Example:**
+
+```go
+// With default patterns
+config := logging.BundleStructuredWithRedaction("my-service", logging.INFO)
+
+// Or with minimal redaction (passwords only)
+config := logging.BundleStructuredWithRedaction(
+    "my-service",
+    logging.INFO,
+    logging.WithMinimalRedaction(),
+)
+
+// Or with custom patterns
+config := logging.BundleStructuredWithRedaction(
+    "my-service",
+    logging.INFO,
+    logging.WithRedaction(&logging.RedactionConfig{
+        Patterns: []string{`SECRET_.*`},
+        Fields: []string{"password"},
+    }),
+)
+```
+
 ### Configuration
 
 #### logging.LoadConfig(path string) (\*LoggerConfig, error)
@@ -731,18 +793,90 @@ Injects UUIDv7 correlation IDs into log events for request tracing.
 
 #### Redaction Middleware
 
-Redacts sensitive fields matching configured patterns.
+Redacts sensitive data from log events using pattern matching and field detection. Available for SIMPLE, STRUCTURED, and ENTERPRISE profiles when explicitly configured.
+
+**Schema-Based Configuration (v0.1.15+):**
+
+```yaml
+# YAML config format (recommended)
+middleware:
+  - type: redaction
+    enabled: true
+    priority: 1
+    redaction:
+      patterns:
+        - "SECRET_[A-Z0-9_]+"
+        - "[A-Z0-9_]*TOKEN[A-Z0-9_]*"
+        - "[A-Z0-9_]*KEY[A-Z0-9_]*"
+      fields:
+        - password
+        - apiKey
+        - authorization
+      replacement: "[REDACTED]"
+```
+
+**Programmatic Configuration:**
 
 ```go
-{
-    Name: "redaction",
-    Enabled: true,
-    Order: 200,
-    Config: map[string]any{
-        "patterns": []string{"password", "secret", "api_key", "bearer"},
-    },
+// Using helper functions (easiest)
+config := logging.BundleStructuredWithRedaction(
+    "my-service",
+    logging.INFO,
+    logging.WithDefaultRedaction(), // Uses Crucible default patterns
+)
+
+// Or with custom redaction config
+config := logging.DefaultConfig("my-service")
+config.Middleware = []logging.MiddlewareConfig{
+    logging.WithRedaction(&logging.RedactionConfig{
+        Patterns: []string{
+            `SECRET_[A-Z0-9_]+`,
+            `[A-Z0-9_]*TOKEN[A-Z0-9_]*`,
+        },
+        Fields: []string{"password", "apiKey"},
+        Replacement: "[REDACTED]",
+    }),
 }
 ```
+
+**Default Redaction Patterns:**
+
+When using `WithDefaultRedaction()`, the following patterns are applied per Crucible spec:
+
+- `SECRET_*` environment variables (e.g., `SECRET_KEY`)
+- `*TOKEN*` fields (e.g., `GITHUB_TOKEN`, `bearerToken`)
+- `*KEY*` fields (e.g., `API_KEY`, `apiKey`)
+- Base64 secrets (40+ characters)
+- Email addresses
+- Credit card numbers
+
+**Default Redacted Fields** (case-insensitive):
+
+- `password`, `token`, `apiKey`, `authorization`, `secret`, `cardNumber`, `cvv`, `ssn`
+
+**Example Usage:**
+
+```go
+logger := logging.NewCLI("my-cli", logging.INFO)
+
+// Before redaction:
+logger.WithFields(map[string]any{
+    "apiKey": "sk_live_abc123xyz",
+    "username": "alice",
+}).Info("Processing request")
+// Output: {"apiKey":"sk_live_abc123xyz","username":"alice"}
+
+// With redaction enabled:
+config := logging.BundleSimpleWithRedaction("my-cli", logging.INFO)
+logger, _ := logging.New(config)
+logger.WithFields(map[string]any{
+    "apiKey": "sk_live_abc123xyz",
+    "username": "alice",
+}).Info("Processing request")
+// Output: {"apiKey":"[REDACTED]","username":"alice","redacted":true}
+```
+
+**Note:** Redaction is **opt-in** - no redaction occurs unless explicitly configured. This preserves backward compatibility.
 
 #### Throttling Middleware
 

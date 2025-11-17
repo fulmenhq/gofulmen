@@ -488,9 +488,9 @@ environment: production
 policyFile: %s
 defaultLevel: INFO
 middleware:
-  - name: correlation
+  - type: redaction
     enabled: true
-    order: 1
+    priority: 1
 throttling:
   enabled: true
   maxRate: 1000

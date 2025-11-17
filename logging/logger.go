@@ -456,7 +456,12 @@ func initializeStructuredProfile(config *LoggerConfig) error {
 	// Ensure correlation middleware is present
 	hasCorrelation := false
 	for _, mw := range config.Middleware {
-		if mw.Name == "correlation" {
+		// Check both new Type field and legacy Name field
+		mwType := mw.Type
+		if mwType == "" {
+			mwType = mw.Name
+		}
+		if mwType == "correlation" {
 			hasCorrelation = true
 			break
 		}
@@ -464,9 +469,9 @@ func initializeStructuredProfile(config *LoggerConfig) error {
 
 	if !hasCorrelation {
 		config.Middleware = append(config.Middleware, MiddlewareConfig{
-			Name:    "correlation",
-			Enabled: true,
-			Order:   5,
+			Type:     "correlation",
+			Enabled:  true,
+			Priority: 20, // Crucible recommended (line 351)
 		})
 	}
 
@@ -505,17 +510,48 @@ func buildMiddlewarePipeline(config *LoggerConfig) (*MiddlewarePipeline, error) 
 			continue
 		}
 
-		// Create middleware from registry
-		mw, err := DefaultRegistry().Create(mwConfig.Name, mwConfig.Config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create middleware %s: %w", mwConfig.Name, err)
+		// Determine middleware type (support both old Name field and new Type field)
+		mwType := mwConfig.Type
+		if mwType == "" {
+			mwType = mwConfig.Name // Backward compatibility
 		}
 
-		// Override order if specified in config
-		if mwConfig.Order > 0 {
+		// Get priority (support both old Order and new Priority)
+		priority := mwConfig.Priority
+		if priority == 0 && mwConfig.Order > 0 {
+			priority = mwConfig.Order // Backward compatibility
+		}
+
+		var mw Middleware
+		var err error
+
+		// Handle new schema-based middleware types
+		switch mwType {
+		case "redaction":
+			// Use new schema-based redaction middleware
+			mw, err = NewRedactionMiddleware(mwConfig.Redaction, priority)
+		default:
+			// Fall back to old registry-based system for compatibility
+			cfg := mwConfig.Config
+			if cfg == nil {
+				cfg = make(map[string]any)
+			}
+			// Add priority to config for old middleware
+			if priority > 0 {
+				cfg["priority"] = priority
+			}
+			mw, err = DefaultRegistry().Create(mwType, cfg)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create middleware %s: %w", mwType, err)
+		}
+
+		// Override priority if specified and not already handled
+		if priority > 0 && mw.Order() != priority {
 			mw = &middlewareOrderOverride{
 				Middleware: mw,
-				order:      mwConfig.Order,
+				order:      priority,
 			}
 		}
 

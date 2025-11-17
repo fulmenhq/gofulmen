@@ -29,11 +29,28 @@ type LoggerConfig struct {
 }
 
 // MiddlewareConfig defines middleware pipeline configuration
+// Matches crucible schema: schemas/observability/logging/v1.0.0/middleware-config.schema.json
 type MiddlewareConfig struct {
-	Name    string         `json:"name"`
-	Enabled bool           `json:"enabled"`
-	Order   int            `json:"order"`
-	Config  map[string]any `json:"config,omitempty"`
+	Type         string           `json:"type"`                   // "redaction", "filter", "augmentation", "sampling", "custom"
+	Enabled      bool             `json:"enabled"`                // Default: true
+	Priority     int              `json:"priority,omitempty"`     // Execution priority (lower runs first)
+	Redaction    *RedactionConfig `json:"redaction,omitempty"`    // Redaction-specific config
+	Filter       map[string]any   `json:"filter,omitempty"`       // Filter-specific config
+	Augmentation map[string]any   `json:"augmentation,omitempty"` // Augmentation-specific config
+	Sampling     map[string]any   `json:"sampling,omitempty"`     // Sampling-specific config
+
+	// Legacy fields (deprecated, for backward compatibility)
+	Name   string         `json:"name,omitempty"`   // Deprecated: use Type instead
+	Order  int            `json:"order,omitempty"`  // Deprecated: use Priority instead
+	Config map[string]any `json:"config,omitempty"` // Deprecated: use type-specific fields
+}
+
+// RedactionConfig defines redaction middleware configuration
+// Matches crucible schema: schemas/observability/logging/v1.0.0/middleware-config.schema.json#/$defs/redactionConfig
+type RedactionConfig struct {
+	Patterns    []string `json:"patterns,omitempty"`    // Regex patterns to match and redact
+	Fields      []string `json:"fields,omitempty"`      // Field names to redact completely
+	Replacement string   `json:"replacement,omitempty"` // Replacement text (default: "[REDACTED]")
 }
 
 // ThrottlingConfig controls log output rate

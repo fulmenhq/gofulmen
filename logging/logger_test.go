@@ -298,7 +298,12 @@ func TestNew_ProfileStructured(t *testing.T) {
 
 	hasCorrelation := false
 	for _, mw := range config.Middleware {
-		if mw.Name == "correlation" {
+		// Check both new Type field and legacy Name field
+		mwType := mw.Type
+		if mwType == "" {
+			mwType = mw.Name
+		}
+		if mwType == "correlation" {
 			hasCorrelation = true
 			break
 		}
