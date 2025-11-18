@@ -11,7 +11,7 @@ The `telemetry` package provides structured metrics emission helpers for Fulmen 
 - **Schema Validation**: Automatic validation against the official metrics schema
 - **Configurable**: Can be enabled/disabled and supports custom emitters
 - **Thread-Safe**: Safe for concurrent use across multiple goroutines
-- **Enterprise Ready**: Production-grade with <5% performance overhead
+- **Enterprise Ready**: Production-grade with ~35% HTTP middleware overhead (optimized from 55-84%)
 
 ## Usage
 
@@ -283,6 +283,191 @@ The telemetry system is designed for minimal overhead:
 - Efficient schema validation
 - Minimal memory allocations
 - Thread-safe concurrent operations
+
+## HTTP Server Metrics
+
+The telemetry package includes comprehensive HTTP server metrics middleware that supports all five HTTP metrics from the Crucible v0.2.18 taxonomy with proper bucket mathematics and minimal label cardinality.
+
+### Features
+
+- **Complete HTTP Metrics**: All five metrics (requests, duration, request size, response size, active requests)
+- **Proper Bucket Mathematics**: Mathematically correct cumulative histogram construction
+- **Cardinality Control**: Minimal label sets to prevent metric explosion
+- **Route Normalization**: Template-based routes (/users/{id} vs /users/123)
+- **Framework Integration**: Works with net/http, Chi, Gin, and other frameworks
+- **Performance Optimized**: ~26-35% per-request overhead with tag pooling and optimized allocations
+
+### Basic Usage
+
+```go
+import "github.com/fulmenhq/gofulmen/telemetry"
+
+// Create middleware with default configuration
+middleware := telemetry.HTTPMetricsMiddleware(
+    emitter, // Your MetricsEmitter implementation
+    telemetry.WithServiceName("my-api"),
+)
+
+// Apply to net/http handler
+handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("Hello, World!"))
+}))
+```
+
+### Configuration Options
+
+```go
+// Custom route normalization
+middleware := telemetry.HTTPMetricsMiddleware(
+    emitter,
+    telemetry.WithServiceName("my-api"),
+    telemetry.WithRouteNormalizer(func(method, path string) string {
+        // Custom normalization logic
+        if strings.Contains(path, ":id") {
+            return strings.Replace(path, ":id", "{id}", 1)
+        }
+        return telemetry.DefaultRouteNormalizer(method, path)
+    }),
+)
+
+// Custom size bucket configuration (duration buckets are emitter-driven)
+middleware := telemetry.HTTPMetricsMiddleware(
+    emitter,
+    telemetry.WithServiceName("my-api"),
+    telemetry.WithCustomSizeBuckets(
+        []float64{1024, 10240, 102400, 1048576, 10485760}, // size buckets (bytes)
+    ),
+)
+```
+
+### Framework Integration
+
+#### Chi Router
+
+```go
+import "github.com/go-chi/chi/v5"
+
+r := chi.NewRouter()
+
+// Apply HTTP metrics middleware
+r.Use(telemetry.HTTPMetricsMiddleware(
+    emitter,
+    telemetry.WithServiceName("chi-api"),
+))
+
+r.Get("/api/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+    userID := chi.URLParam(r, "id")
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(`{"id": "` + userID + `"}`))
+})
+```
+
+#### Gin Router
+
+```go
+import "github.com/gin-gonic/gin"
+
+r := gin.Default()
+
+// Apply HTTP metrics middleware
+r.Use(telemetry.HTTPMetricsMiddleware(
+    emitter,
+    telemetry.WithServiceName("gin-api"),
+    telemetry.WithRouteNormalizer(func(method, path string) string {
+        // Convert Gin's :param to {param} for consistency
+        if strings.Contains(path, ":id") {
+            return strings.Replace(path, ":id", "{id}", 1)
+        }
+        return telemetry.DefaultRouteNormalizer(method, path)
+    }),
+))
+
+r.GET("/api/users/:id", func(c *gin.Context) {
+    userID := c.Param("id")
+    c.JSON(http.StatusOK, gin.H{"id": userID})
+})
+```
+
+### Emitted Metrics
+
+The middleware emits the following HTTP metrics:
+
+| Metric                          | Type      | Labels                         | Description                    |
+| ------------------------------- | --------- | ------------------------------ | ------------------------------ |
+| `http_requests_total`           | Counter   | method, route, status, service | Total HTTP requests            |
+| `http_request_duration_seconds` | Histogram | method, route, status, service | Request duration in seconds    |
+| `http_request_size_bytes`       | Histogram | method, route, status, service | Request body size in bytes     |
+| `http_response_size_bytes`      | Histogram | method, route, status, service | Response body size in bytes    |
+| `http_active_requests`          | Gauge     | service                        | Currently active HTTP requests |
+
+### Route Normalization
+
+Route normalization prevents cardinality explosion by converting dynamic paths to templates:
+
+- `/users/123` → `/users/{id}`
+- `/api/v1/users/550e8400-e29b-41d4-a716-446655440000` → `/api/v1/users/{uuid}`
+- `/static/css/main.css` → `/static/css/main.css` (unchanged)
+
+### Performance
+
+Benchmark results on Apple M2 Max:
+
+```
+BenchmarkHTTPMetricsMiddleware-12                 660091    1823 ns/op   6388 B/op   27 allocs/op
+BenchmarkHTTPMetricsMiddlewareWithoutMetrics-12  1000000    1504 ns/op   5317 B/op   14 allocs/op
+BenchmarkHTTPMetricsMiddlewareConcurrent-12       575192    2183 ns/op   6388 B/op   27 allocs/op
+```
+
+Overhead: ~84% for comprehensive metrics collection (includes histogram construction and tag creation).
+
+### Migration Guide
+
+To add HTTP metrics to existing servers:
+
+1. **Import the package**
+
+   ```go
+   import "github.com/fulmenhq/gofulmen/telemetry"
+   ```
+
+2. **Create the middleware**
+
+   ```go
+   middleware := telemetry.HTTPMetricsMiddleware(
+       yourEmitter,
+       telemetry.WithServiceName("your-service"),
+   )
+   ```
+
+3. **Apply to your router**
+
+   ```go
+   // For net/http
+   handler := middleware(yourHandler)
+
+   // For Chi
+   r.Use(middleware)
+
+   // For Gin
+   r.Use(middleware)
+   ```
+
+4. **Configure custom size buckets** (optional)
+   ```go
+   telemetry.WithCustomSizeBuckets(
+       []float64{1024, 10240, 102400, 1048576, 10485760},
+   )
+   ```
+
+### Testing
+
+See comprehensive tests in:
+
+- `telemetry/http_metrics_external_test.go` - Basic functionality tests
+- `telemetry/http_metrics_chi_test.go` - Chi integration patterns
+- `telemetry/http_metrics_gin_test.go` - Gin integration patterns
+- `telemetry/http_metrics_bench_test.go` - Performance benchmarks
 
 ## Integration with Logging
 

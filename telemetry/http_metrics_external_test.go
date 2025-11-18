@@ -22,7 +22,7 @@ func TestHTTPMetricsMiddleware_Metrics(t *testing.T) {
 	// Create a test handler
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!")) // 13 bytes
+		_, _ = w.Write([]byte("Hello, World!")) // 13 bytes
 	}))
 
 	// Make a request with 4 bytes of body
@@ -114,7 +114,7 @@ func TestHTTPMetricsMiddleware_SizeBucketValidation(t *testing.T) {
 	handler := middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		// Write 15KB of data - should land in the 1048576 (1MB) bucket, not 10240 (10KB) bucket
-		w.Write(make([]byte, 15*1024)) // 15KB
+		_, _ = w.Write(make([]byte, 15*1024)) // 15KB
 	}))
 
 	// Make a request
@@ -185,7 +185,11 @@ func (m *mockEmitter) Counter(name string, value float64, tags map[string]string
 	m.calledCounter = true
 	m.counterName = name
 	m.counterValue = value
-	m.counterTags = tags
+	// Make a copy of tags since they may be pooled
+	m.counterTags = make(map[string]string, len(tags))
+	for k, v := range tags {
+		m.counterTags[k] = v
+	}
 	return nil
 }
 
@@ -197,11 +201,12 @@ func (m *mockEmitter) Histogram(name string, duration time.Duration, tags map[st
 }
 
 func (m *mockEmitter) HistogramSummary(name string, summary telemetry.HistogramSummary, tags map[string]string) error {
-	if name == metrics.HTTPRequestSizeBytes {
+	switch name {
+	case metrics.HTTPRequestSizeBytes:
 		m.calledSizeHistogramReq = true
 		m.sizeHistogramNameReq = name
 		m.sizeHistogramSummaryReq = summary
-	} else if name == metrics.HTTPResponseSizeBytes {
+	case metrics.HTTPResponseSizeBytes:
 		m.calledSizeHistogramResp = true
 		m.sizeHistogramNameResp = name
 		m.sizeHistogramSummaryResp = summary
@@ -213,6 +218,10 @@ func (m *mockEmitter) Gauge(name string, value float64, tags map[string]string) 
 	m.calledGauge = true
 	m.gaugeName = name
 	m.gaugeValue = value
-	m.gaugeTags = tags
+	// Make a copy of tags since they may be pooled
+	m.gaugeTags = make(map[string]string, len(tags))
+	for k, v := range tags {
+		m.gaugeTags[k] = v
+	}
 	return nil
 }

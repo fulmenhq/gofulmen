@@ -11,6 +11,7 @@ This directory contains **local ADRs** specific to gofulmen implementation decis
 | [ADR-0003](./ADR-0003-native-osa-implementation.md)      | Native OSA Implementation                                               | accepted | 2025-10-26 | similarity, algorithms, performance                    |
 | [ADR-0004](./ADR-0004-crucible-runtime-dependency.md)    | Crucible Runtime Dependency                                             | accepted | 2025-10-28 | architecture, dependencies, configuration              |
 | [ADR-0005](./ADR-0005-deterministic-output-from-maps.md) | Sort Map Keys for Deterministic Output in Tests and External Formats    | accepted | 2025-11-04 | testing, maps, determinism, prometheus, observability  |
+| [ADR-0006](./ADR-0006-http-metrics-middleware.md)        | HTTP Server Metrics Middleware Implementation                           | accepted | 2025-11-17 | http, metrics, middleware, performance, observability  |
 
 ## 🎯 When to Write a Local ADR
 

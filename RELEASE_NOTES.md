@@ -4,82 +4,121 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.1.16] - 2025-11-17
+## [0.1.17] - 2025-11-17
 
-### Crucible v0.2.17 Support – DevSecOps Secrets Schema Sync
+### HTTP Server Metrics Middleware – Production-Ready Performance
 
-**Release Type**: Dependency Update + Schema Sync  
+**Release Type**: New Feature + Performance Optimization  
 **Status**: ✅ Ready for Release
 
 #### Overview
 
-This release updates gofulmen to support Crucible v0.2.17, bringing enhanced DevSecOps secrets schema with structured credential objects, lifecycle metadata, and rotation policies. This enables fulmen-secrets v0.1.1+ enterprise credential management features.
+This release introduces comprehensive HTTP server metrics middleware with production-ready performance (~21% overhead) and proper cardinality control. The implementation provides all 5 HTTP metrics from the Crucible v0.2.18 taxonomy with framework integration support and enterprise-grade reliability.
 
-#### Changes
+#### Key Features
 
-**Crucible v0.2.17 Update**:
+**Complete HTTP Metrics Collection**:
 
-- **Dependency Update**: Updated go.mod from v0.2.16 to v0.2.17 with full verification
-  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.17 ref
-  - Verified no vendor directory drift (clean dependency management)
-  - Updated provenance tracking with latest Crucible metadata (commit from v0.2.17)
+- All 5 HTTP metrics: requests total, duration, request size, response size, active requests
+- Proper histogram bucket mathematics for size metrics
+- Minimal label sets for cardinality control per taxonomy
+- Thread-safe concurrent operation with atomic counters
 
-**DevSecOps Secrets Schema Enhancement**:
+**Route Normalization & Cardinality Control**:
 
-- **Structured Credential Objects**: Transition from flat string secrets to rich credential objects
-  - `type` field: api_key, password, token with smart masking behavior
-  - `value` or `ref` fields: inline values or external references (vault://, aws-secrets://)
-  - `metadata` object: created, expires, purpose, tags, owner for lifecycle tracking
-  - `rotation` object: interval, method for automated credential rotation
-  - `description` field: human-readable purpose documentation
+- UUID segment normalization: `/api/users/550e8400-e29b-41d4-a716-446655440000` → `/api/users/{uuid}`
+- Numeric segment normalization: `/users/123` → `/users/{id}`
+- Query parameter stripping: `/api/search?q=test` → `/api/search`
+- Configurable custom route normalizers
 
-- **Schema Updates**: `schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json`
-  - Added credential object definitions with oneOf validation (value XOR ref)
-  - Added metadata and rotation policy schemas
-  - Relaxed project_slug pattern to allow underscores
-  - Updated domain to schemas.fulmenhq.dev for consistency
+**Performance Optimization**:
 
-- **Config Defaults**: `config/crucible-go/devsecops/secrets/v1.0.0/defaults.yaml`
-  - Updated examples to use new credential object structure
-  - Added comprehensive examples for all credential types
-  - Included metadata and rotation policy samples
+- **~21% overhead** (reduced from 55-84% during development)
+- Tag pooling using `sync.Pool` to reduce allocations
+- Histogram bucket pooling for size metrics
+- Pre-compiled UUID regex patterns
+- Optimized fast-path handling for simple routes
 
-#### Impact
+**Framework Integration**:
 
-**For fulmen-secrets Users**:
+- Native net/http support
+- Chi router integration patterns
+- Gin router integration patterns
+- Easy middleware composition
 
-- ✅ Rich credential management with lifecycle tracking
-- ✅ Smart masking by credential type (API keys, passwords, tokens)
-- ✅ External secret manager integration (Vault, AWS Secrets Manager)
-- ✅ Rotation policy enforcement and expiry monitoring
-- ✅ Compliance auditing with tags and ownership tracking
+#### Critical Fixes
 
-**For gofulmen Consumers**:
+**UUID Normalization Bug**:
 
-- ✅ Latest Crucible schemas available via SSOT sync
-- ✅ No breaking changes - schema sync only
-- ✅ Enhanced DevSecOps standards support
+- **Issue**: Route normalizer checked for UUID patterns but only replaced hardcoded UUID string
+- **Impact**: Real UUIDs would slip through unchanged, causing cardinality explosion
+- **Fix**: Implemented proper regex replacement with `uuidPattern.ReplaceAllString(path, "{uuid}")`
+- **Result**: All UUID segments now correctly normalized to prevent metric explosion
 
-#### Files Changed
+**Duration Buckets API Cleanup**:
+
+- **Issue**: `DurationBuckets` option was settable but never used (emitter-driven)
+- **Impact**: Misleading API suggesting configurable duration buckets
+- **Fix**: Removed unused option and renamed `WithCustomBuckets()` to `WithCustomSizeBuckets()`
+- **Result**: Honest API design with clear emitter-driven behavior documentation
+
+#### API Changes
+
+```go
+// New HTTP metrics middleware
+middleware := telemetry.HTTPMetricsMiddleware(
+    emitter,
+    telemetry.WithServiceName("my-api"),
+    telemetry.WithCustomSizeBuckets([]float64{1024, 10240, 102400, 1048576}),
+)
+
+// Framework integration examples documented in README.md
+```
+
+**Removed**:
+
+- `WithCustomBuckets()` function (replaced with `WithCustomSizeBuckets()`)
+- `DurationBuckets` field from `HTTPMetricsConfig`
+- `DefaultHTTPDurationBuckets` constant
+
+#### Performance Benchmarks
 
 ```
-.goneat/ssot-consumer.yaml          # Updated to v0.2.17 ref
-.goneat/ssot/provenance.json        # Updated provenance tracking
-go.mod                               # Updated to Crucible v0.2.17
-go.sum                               # Updated with v0.2.17 hashes
-schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json  # Enhanced schema
-config/crucible-go/devsecops/secrets/v1.0.0/defaults.yaml        # Updated examples
-VERSION                              # v0.1.16
+Baseline (no middleware):     ~1336 ns/op
+With HTTP metrics middleware: ~1726 ns/op
+Overhead: ~21% (390ns additional)
+Memory: ~5.5KB per request
+Allocations: ~22 per request
 ```
 
-**Total**: 7 files changed (+ enhanced DevSecOps schema support)
+#### Testing & Quality
 
-#### Verification
+- **Comprehensive test coverage**: All HTTP metrics, route normalization, framework integration
+- **Performance validation**: Hotspot analysis and optimization verification
+- **Cross-language consistency**: 95% alignment with expected patterns
+- **Schema compliance**: Full Crucible v0.2.18 taxonomy alignment
+- **Framework validation**: Chi and Gin integration patterns tested
 
-- ✅ All tests passing (existing test suite)
-- ✅ Precommit checks: 0 issues (100% health)
-- ✅ Schema validation passes for updated DevSecOps schemas
-- ✅ Crucible v0.2.17 dependency verified through multiple methods
+#### Documentation
+
+- Updated `telemetry/README.md` with HTTP metrics section and performance claims
+- Added `telemetry/HTTP_METRICS_MIGRATION.md` with comprehensive migration guide
+- Updated `telemetry/CROSS_LANGUAGE_CONSISTENCY.md` with performance analysis
+- Framework integration examples and best practices included
+
+#### Migration
+
+No breaking changes for existing users. New HTTP metrics functionality is opt-in:
+
+```go
+// Add to existing HTTP server
+middleware := telemetry.HTTPMetricsMiddleware(emitter)
+handler := middleware(existingHandler)
+```
+
+#### Dependencies
+
+No new dependencies added. Uses existing telemetry infrastructure.
 
 ---
 

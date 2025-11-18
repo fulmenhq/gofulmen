@@ -3,8 +3,10 @@ package telemetry
 import (
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,15 +19,13 @@ type RouteNormalizer func(method, path string) string
 // HTTPMetricsConfig configures the HTTP metrics middleware
 type HTTPMetricsConfig struct {
 	RouteNormalizer RouteNormalizer
-	DurationBuckets []float64
 	SizeBuckets     []float64
 	ServiceName     string
 }
 
 // Default HTTP metric buckets from taxonomy
 var (
-	DefaultHTTPDurationBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10} // seconds
-	DefaultHTTPSizeBuckets     = []float64{1024, 10240, 102400, 1048576, 10485760, 104857600}       // bytes
+	DefaultHTTPSizeBuckets = []float64{1024, 10240, 102400, 1048576, 10485760, 104857600} // bytes
 )
 
 // HTTPMetricsOption configures the HTTP metrics middleware
@@ -38,10 +38,9 @@ func WithRouteNormalizer(fn RouteNormalizer) HTTPMetricsOption {
 	}
 }
 
-// WithCustomBuckets sets custom histogram buckets for duration and size metrics
-func WithCustomBuckets(durationBuckets, sizeBuckets []float64) HTTPMetricsOption {
+// WithCustomSizeBuckets sets custom histogram buckets for size metrics
+func WithCustomSizeBuckets(sizeBuckets []float64) HTTPMetricsOption {
 	return func(c *HTTPMetricsConfig) {
-		c.DurationBuckets = durationBuckets
 		c.SizeBuckets = sizeBuckets
 	}
 }
@@ -53,69 +52,69 @@ func WithServiceName(name string) HTTPMetricsOption {
 	}
 }
 
-// DefaultRouteNormalizer provides basic route normalization by stripping numeric segments, UUIDs, and query parameters
+// Pre-compiled UUID pattern for better performance (global to avoid recompilation)
+var uuidPattern = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+
+// DefaultRouteNormalizer provides optimized defaults for route normalization
 func DefaultRouteNormalizer(method, path string) string {
-	// Strip query parameters and fragments to prevent cardinality explosion
-	if idx := strings.IndexAny(path, "?#"); idx >= 0 {
+	// Fast path: if no query or fragment, skip string operations
+	idx := strings.IndexAny(path, "?#")
+	if idx >= 0 {
+		// Strip query parameters and fragments to prevent cardinality explosion
 		path = path[:idx]
 	}
 
-	// Split path into segments
+	// Fast UUID detection using length and pattern matching
+	if len(path) > 30 && strings.Contains(path, "-") {
+		// Replace all UUID segments with {uuid} using regex replacement
+		path = uuidPattern.ReplaceAllString(path, "{uuid}")
+	}
+
+	// Optimized numeric segment detection
 	segments := strings.Split(strings.Trim(path, "/"), "/")
-	normalized := make([]string, 0, len(segments))
-
-	for _, segment := range segments {
-		if segment == "" {
-			continue
-		}
-
-		// Replace numeric segments with {id}
-		if _, err := strconv.Atoi(segment); err == nil {
-			normalized = append(normalized, "{id}")
-			continue
-		}
-
-		// Replace UUID-like segments (8-4-4-4-12 hex chars) with {uuid}
-		if len(segment) == 36 && strings.Count(segment, "-") == 4 {
-			parts := strings.Split(segment, "-")
-			if len(parts) == 5 && len(parts[0]) == 8 && len(parts[1]) == 4 && len(parts[2]) == 4 && len(parts[3]) == 4 && len(parts[4]) == 12 {
-				if isHexString(parts[0]) && isHexString(parts[1]) && isHexString(parts[2]) && isHexString(parts[3]) && isHexString(parts[4]) {
-					normalized = append(normalized, "{uuid}")
-					continue
-				}
+	needsNormalization := false
+	for i, segment := range segments {
+		if len(segment) > 0 && segment[0] >= '0' && segment[0] <= '9' {
+			// Likely numeric, but verify to avoid false positives
+			if _, err := strconv.Atoi(segment); err == nil {
+				segments[i] = "{id}"
+				needsNormalization = true
 			}
 		}
-
-		normalized = append(normalized, segment)
 	}
 
-	result := "/" + strings.Join(normalized, "/")
-	if result == "//" {
-		return "/"
+	if needsNormalization {
+		return "/" + strings.Join(segments, "/")
 	}
-	return result
+
+	return path
 }
 
-// isHexString checks if a string contains only hexadecimal characters
-func isHexString(s string) bool {
-	for _, r := range s {
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
-			return false
-		}
-	}
-	return true
+// Histogram bucket pool to reduce allocations
+var histogramBucketPool = sync.Pool{
+	New: func() interface{} {
+		buckets := make([]HistogramBucket, 0, 7) // DefaultHTTPSizeBuckets + 1
+		return &buckets
+	},
 }
 
-// emitSizeHistogram emits a size-based histogram using HistogramSummary
 // This is a workaround until MetricsEmitter supports SizeHistogram method
 func emitSizeHistogram(emitter MetricsEmitter, name string, size float64, buckets []float64, tags map[string]string) error {
 	if len(buckets) == 0 {
 		buckets = DefaultHTTPSizeBuckets
 	}
 
+	// Get bucket slice from pool to reduce allocations
+	bucketCountsPtr := histogramBucketPool.Get().(*[]HistogramBucket)
+	bucketCounts := *bucketCountsPtr
+	defer func() {
+		// Reset length and return to pool
+		*bucketCountsPtr = bucketCounts[:0]
+		histogramBucketPool.Put(bucketCountsPtr)
+	}()
+
 	// Create histogram buckets for this single observation with proper cumulative counts
 	// For a single observation: 0 for buckets < size, 1 for first bucket ≥ size, 1 for +Inf
-	bucketCounts := make([]HistogramBucket, 0, len(buckets)+1)
 	observationFound := false
 
 	for _, bucket := range buckets {
@@ -165,6 +164,9 @@ type httpMetricsHandler struct {
 	emitter MetricsEmitter
 	config  HTTPMetricsConfig
 	active  int64 // Active request counter - must be updated atomically
+
+	// Pre-allocated tag maps to reduce allocations (sync.Map for concurrent safety)
+	tagPool sync.Pool
 }
 
 // ServeHTTP implements http.Handler
@@ -193,40 +195,43 @@ func (h *httpMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestSize := int64(r.ContentLength) // May be -1 for unknown
 	responseSize := rw.size
 
-	// Emit metrics
-	tags := map[string]string{
-		metrics.TagMethod: r.Method,
-		metrics.TagRoute:  route,
-		metrics.TagStatus: strconv.Itoa(rw.status),
-	}
+	// Get tag map from pool to reduce allocations
+	tags := h.getTagMap()
+	defer h.putTagMap(tags)
 
+	// Fill tags efficiently (pre-allocate status string to avoid allocation)
+	statusStr := strconv.Itoa(rw.status)
+	tags[metrics.TagMethod] = r.Method
+	tags[metrics.TagRoute] = route
+	tags[metrics.TagStatus] = statusStr
 	if h.config.ServiceName != "" {
 		tags[metrics.TagService] = h.config.ServiceName
 	}
 
 	// HTTP requests total (counter)
-	h.emitter.Counter(metrics.HTTPRequestsTotal, 1, tags)
+	_ = h.emitter.Counter(metrics.HTTPRequestsTotal, 1, tags) // Ignore errors to avoid request failure
 
 	// HTTP request duration (histogram) - duration is already in nanoseconds for the interface
-	h.emitter.Histogram(metrics.HTTPRequestDurationSeconds, duration, tags)
+	_ = h.emitter.Histogram(metrics.HTTPRequestDurationSeconds, duration, tags) // Ignore errors to avoid request failure
 
 	// HTTP request size (histogram) - always emit, use 0 if unknown
 	requestSizeValue := float64(requestSize)
 	if requestSize < 0 {
 		requestSizeValue = 0 // Unknown size becomes 0
 	}
-	emitSizeHistogram(h.emitter, metrics.HTTPRequestSizeBytes, requestSizeValue, h.config.SizeBuckets, tags)
+	_ = emitSizeHistogram(h.emitter, metrics.HTTPRequestSizeBytes, requestSizeValue, h.config.SizeBuckets, tags) // Ignore errors to avoid request failure
 
 	// HTTP response size (histogram) - always emit
-	emitSizeHistogram(h.emitter, metrics.HTTPResponseSizeBytes, float64(responseSize), h.config.SizeBuckets, tags)
+	_ = emitSizeHistogram(h.emitter, metrics.HTTPResponseSizeBytes, float64(responseSize), h.config.SizeBuckets, tags) // Ignore errors to avoid request failure
 
 	// HTTP active requests (gauge) - minimal tags per taxonomy (service only)
-	activeTags := make(map[string]string)
 	if h.config.ServiceName != "" {
-		activeTags[metrics.TagService] = h.config.ServiceName
+		// Reuse tags map for gauge with just service tag
+		serviceOnlyTag := h.getTagMap()
+		defer h.putTagMap(serviceOnlyTag)
+		serviceOnlyTag[metrics.TagService] = h.config.ServiceName
+		_ = h.emitter.Gauge(metrics.HTTPActiveRequests, float64(h.active), serviceOnlyTag)
 	}
-
-	h.emitter.Gauge(metrics.HTTPActiveRequests, float64(h.active), activeTags)
 }
 
 // responseWriter wraps http.ResponseWriter to capture status and response size
@@ -250,11 +255,27 @@ func (rw *responseWriter) Write(data []byte) (int, error) {
 	return n, err
 }
 
+// getTagMap retrieves a tag map from the pool or creates a new one
+func (h *httpMetricsHandler) getTagMap() map[string]string {
+	if tags := h.tagPool.Get(); tags != nil {
+		return tags.(map[string]string)
+	}
+	return make(map[string]string, 4) // Pre-allocate for common tags
+}
+
+// putTagMap returns a tag map to the pool after clearing it
+func (h *httpMetricsHandler) putTagMap(tags map[string]string) {
+	// Clear the map to avoid memory leaks
+	for k := range tags {
+		delete(tags, k)
+	}
+	h.tagPool.Put(tags)
+}
+
 // HTTPMetricsMiddleware creates middleware that collects HTTP server metrics
 func HTTPMetricsMiddleware(emitter MetricsEmitter, opts ...HTTPMetricsOption) func(http.Handler) http.Handler {
 	config := HTTPMetricsConfig{
 		RouteNormalizer: DefaultRouteNormalizer,
-		DurationBuckets: DefaultHTTPDurationBuckets,
 		SizeBuckets:     DefaultHTTPSizeBuckets,
 	}
 
@@ -267,6 +288,11 @@ func HTTPMetricsMiddleware(emitter MetricsEmitter, opts ...HTTPMetricsOption) fu
 			handler: next,
 			emitter: emitter,
 			config:  config,
+			tagPool: sync.Pool{
+				New: func() interface{} {
+					return make(map[string]string, 4)
+				},
+			},
 		}
 	}
 }

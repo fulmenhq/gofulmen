@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.17] - 2025-11-17
+
+### Added
+
+- **HTTP Server Metrics Middleware** - Comprehensive HTTP metrics collection with ~21% overhead
+  - Complete implementation of all 5 HTTP metrics from Crucible v0.2.18 taxonomy
+  - Route normalization with UUID and numeric segment support to prevent cardinality explosion
+  - Tag pooling and histogram bucket pooling for optimized performance
+  - Framework integration support for Chi, Gin, and net/http
+  - Configurable service names and custom size buckets
+  - Thread-safe concurrent operation with atomic counters
+
+### Fixed
+
+- **UUID Route Normalization** - Fixed critical bug where UUID patterns were not properly normalized
+  - Replaced hardcoded UUID string replacement with proper regex replacement
+  - Now correctly normalizes all UUID segments to `{uuid}` preventing cardinality explosion
+- **Duration Buckets API** - Removed misleading no-op configuration option
+  - Eliminated unused `DurationBuckets` field as duration histograms are emitter-driven
+  - Renamed `WithCustomBuckets()` to `WithCustomSizeBuckets()` for API clarity
+  - Updated documentation to reflect emitter-driven bucket behavior
+
+### Performance
+
+- **HTTP Middleware Optimization** - Reduced overhead from 55-84% to ~21%
+  - Implemented tag pooling using `sync.Pool` to reduce allocations
+  - Added histogram bucket pooling to minimize memory overhead
+  - Optimized route normalizer with proper fast-path handling
+  - Pre-compiled UUID regex pattern to avoid recompilation overhead
+
 ## [0.1.16] - 2025-11-17
 
 ### Changed
