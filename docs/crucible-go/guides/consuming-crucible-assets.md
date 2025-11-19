@@ -3,8 +3,9 @@ title: "Consuming Crucible Assets"
 description: "Guidance for Fulmen templates and applications on using Crucible schemas, configs, and generated artifacts via helper libraries or dual-hosting workflows"
 author: "Schema Cartographer"
 date: "2025-11-03"
+last_updated: "2025-11-19"
 status: "approved"
-tags: ["guides", "consumers", "schemas", "provenance", "dual-hosting"]
+tags: ["guides", "consumers", "schemas", "provenance", "dual-hosting", "examples"]
 ---
 
 # Consuming Crucible Assets
@@ -16,6 +17,113 @@ Crucible is the SSOT for FulmenHQ schemas, configs, and generated bindings. Help
 3. Recommended checks to detect drift when Crucible versions advance.
 
 > **Audience**: Template repositories (e.g., forge-codex-pulsar) and applications that depend on Fulmen helper libraries.
+
+---
+
+## 0. Practical Examples (Go)
+
+**Problem**: The fulmen-secrets team needs to read `project-secrets.md` from Crucible but doesn't know how.
+
+**Solution**: Use gofulmen's `crucible` package - it provides three generic access functions:
+
+```go
+import "github.com/fulmenhq/gofulmen/crucible"
+
+// 1. Read a SCHEMA from schemas/crucible-go/
+schemaBytes, err := crucible.GetSchema("devsecops/secrets/v1.0.0/secrets.schema.json")
+if err != nil {
+    log.Fatal(err)
+}
+
+// 2. Read a DOC from docs/crucible-go/
+docContent, err := crucible.GetDoc("standards/devsecops/project-secrets.md")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(docContent) // Full markdown content
+
+// 3. Read a CONFIG from config/crucible-go/
+configBytes, err := crucible.GetConfig("devsecops/secrets/v1.0.0/defaults.yaml")
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### Real Example: fulmen-secrets Reading Project Secrets Documentation
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "strings"
+    
+    "github.com/fulmenhq/gofulmen/crucible"
+)
+
+func main() {
+    // Get the project secrets documentation (latest version from gofulmen)
+    secretsDocs, err := crucible.GetDoc("standards/devsecops/project-secrets.md")
+    if err != nil {
+        log.Fatalf("Failed to read project-secrets.md: %v", err)
+    }
+    
+    // Get the secrets schema
+    secretsSchema, err := crucible.GetSchema("devsecops/secrets/v1.0.0/secrets.schema.json")
+    if err != nil {
+        log.Fatalf("Failed to read secrets schema: %v", err)
+    }
+    
+    // Get the default configuration
+    defaultsConfig, err := crucible.GetConfig("devsecops/secrets/v1.0.0/defaults.yaml")
+    if err != nil {
+        log.Fatalf("Failed to read secrets defaults: %v", err)
+    }
+    
+    // Now you have all three assets
+    fmt.Printf("Documentation: %d characters\n", len(secretsDocs))
+    fmt.Printf("Schema: %d bytes\n", len(secretsSchema))
+    fmt.Printf("Defaults config: %d bytes\n", len(defaultsConfig))
+    
+    // Extract the first paragraph from docs
+    lines := strings.Split(secretsDocs, "\n")
+    fmt.Println("\nFirst 5 lines of documentation:")
+    for i := 0; i < 5 && i < len(lines); i++ {
+        fmt.Println(lines[i])
+    }
+}
+```
+
+### Path Rules
+
+All paths are relative to their root directory:
+
+| Function | Root Directory | Example Path |
+|----------|----------------|--------------|
+| `GetSchema()` | `schemas/crucible-go/` | `"devsecops/secrets/v1.0.0/secrets.schema.json"` |
+| `GetDoc()` | `docs/crucible-go/` | `"standards/devsecops/project-secrets.md"` |
+| `GetConfig()` | `config/crucible-go/` | `"devsecops/secrets/v1.0.0/defaults.yaml"` |
+
+**Do NOT** include the root directory in your path - it's added automatically!
+
+```go
+// ✅ CORRECT
+crucible.GetDoc("standards/devsecops/project-secrets.md")
+
+// ❌ WRONG - will fail with "not found"
+crucible.GetDoc("docs/crucible-go/standards/devsecops/project-secrets.md")
+```
+
+### Version Tracking
+
+Always log which Crucible version you're using for support tickets:
+
+```go
+version := crucible.GetVersionString()
+log.Printf("Using %s", version)
+// Output: "gofulmen/v0.1.19 crucible/v0.2.19"
+```
 
 ---
 
@@ -67,7 +175,7 @@ When possible:
 
 ---
 
-## 2. Dual-Hosting Workflow
+## 2. Advanced: Dual-Hosting Workflow
 
 Sometimes you need the schema/config **in your repository** for visibility, auditing, or to run tools that require local files (e.g., static site builders, component demos). Follow this workflow to stay aligned with Crucible:
 
@@ -161,7 +269,7 @@ if not result.is_valid:
 
 ---
 
-## 3. Drift Detection & Updates
+## 3. Advanced: Drift Detection & Updates
 
 When Crucible publishes an update (new version or schema change):
 
@@ -179,7 +287,81 @@ Consider adding a periodic CI job that:
 
 ---
 
-## 4. Frequently Asked Questions
+## 4. Troubleshooting Common Issues
+
+### "File not found" Error
+
+**Problem**: `crucible.GetDoc("docs/crucible-go/standards/devsecops/project-secrets.md")` returns "file not found"
+
+**Solution**: Remove the `docs/crucible-go/` prefix - the function adds it automatically:
+
+```go
+// ❌ WRONG
+crucible.GetDoc("docs/crucible-go/standards/devsecops/project-secrets.md")
+
+// ✅ CORRECT  
+crucible.GetDoc("standards/devsecops/project-secrets.md")
+```
+
+### "Which version of the doc am I getting?"
+
+**Problem**: You updated gofulmen but don't know if you have the latest Crucible docs.
+
+**Solution**: Check the version string and compare to [Crucible releases](https://github.com/fulmenhq/crucible/releases):
+
+```go
+fmt.Println(crucible.GetVersionString())
+// Output: gofulmen/v0.1.19 crucible/v0.2.19
+
+// This means you have Crucible v0.2.19 embedded in gofulmen v0.1.19
+```
+
+### "I need a newer Crucible version"
+
+**Problem**: Crucible v0.2.20 was released but gofulmen is still on v0.2.19.
+
+**Solution**: Wait for gofulmen maintainers to sync, OR temporarily dual-host (see Section 2):
+
+```bash
+# Temporary workaround: fetch directly from GitHub
+curl -sS https://raw.githubusercontent.com/fulmenhq/crucible/v0.2.20/docs/standards/devsecops/project-secrets.md \
+  -o vendor/crucible/docs/project-secrets.md
+```
+
+Then update once gofulmen syncs to v0.2.20.
+
+### "How do I know what paths are available?"
+
+**Problem**: You don't know the exact path to a schema or doc.
+
+**Solution**: Use `ListSchemas()` or browse the [Crucible repository](https://github.com/fulmenhq/crucible):
+
+```go
+// List all schemas in devsecops/secrets/v1.0.0/
+schemas, err := crucible.ListSchemas("devsecops/secrets/v1.0.0")
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, name := range schemas {
+    fmt.Println(name)
+}
+// Output:
+// secrets.schema.json
+// defaults.yaml
+```
+
+Or check gofulmen's embedded files:
+```bash
+# In gofulmen repository
+ls schemas/crucible-go/devsecops/secrets/v1.0.0/
+ls docs/crucible-go/standards/devsecops/
+ls config/crucible-go/devsecops/secrets/v1.0.0/
+```
+
+---
+
+## 5. Frequently Asked Questions
 
 ### Can we bypass helper libraries entirely?
 
@@ -201,7 +383,7 @@ If you alter the schema locally, you must:
 
 ---
 
-## Next Steps
+## 6. Next Steps
 
 - Helper-library owners: audit modules to ensure they expose provenance (version/hash) and export commands.
 - Templates/apps: integrate this guide into your onboarding docs so contributors know how to dual-host responsibly.

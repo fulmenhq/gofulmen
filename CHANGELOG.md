@@ -7,7 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.19] - 2025-11-19
+
+### Fixed
+
+- **Critical: Crucible Version Mismatch** - Fixed v0.1.18 release which shipped with mismatched Crucible versions (go.mod v0.2.18 but embedded assets v0.2.19)
+  - Updated `go.mod` to correctly require `github.com/fulmenhq/crucible v0.2.19`
+  - Updated provenance timestamp via `make sync` to reflect current state
+  - All three synchronization points now aligned: ssot-consumer.yaml, provenance.json, go.mod
+
+### Added
+
+- **Guardrail Test** - `crucible/version_guard_test.go` prevents future Crucible version mismatches
+  - Automatically detects when go.mod and synced metadata versions disagree
+  - Fails CI/builds with clear error message showing exact mismatch and fix
+  - Dogfoods gofulmen libraries: uses `pathfinder.FindRepositoryRoot()` and `ascii.DrawBox()`
+  - Normalizes version comparison to handle format differences ("v0.2.19" vs "0.2.19")
+  - Runs as part of `make check-all` and `go test ./...`
+- **Automated Workflow** - New `make crucible-update VERSION=v0.2.X` target
+  - Atomically updates all three Crucible synchronization points
+  - Self-documenting with progress messages and next steps
+  - Runs verification test automatically after update
+  - Prevents partial updates that cause version mismatches
+
+### Changed
+
+- **Dependency** - Added `golang.org/x/mod v0.30.0` for go.mod parsing in guardrail test
+
+### Documentation
+
+- **ADR-0007** - Crucible Version Synchronization and Verification
+  - Documents the three-way synchronization problem
+  - Explains `make crucible-update` workflow and guardrail test
+  - Provides manual verification guide for code reviewers
+  - Includes lessons learned from repeated failures
+
 ## [0.1.18] - 2025-11-19
+
+### Known Issues
+
+⚠️ **Version mismatch bug**: This release has mismatched Crucible versions (go.mod requires v0.2.18 but embedded docs/schemas are v0.2.19). This primarily affects users of Crucible's DevSecOps secrets schema. Upgrade to v0.1.19 for correct alignment.
 
 ### Changed
 

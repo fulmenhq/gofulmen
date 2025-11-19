@@ -4,7 +4,131 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.19] - 2025-11-19
+
+### Crucible Version Synchronization Fix + Guardrail
+
+**Release Type**: Critical Bug Fix + Process Improvement  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release fixes the v0.1.18 Crucible version mismatch and implements guardrails to prevent future occurrences. The mismatch caused `go.mod` to require v0.2.18 while embedded assets came from v0.2.19, primarily affecting users of Crucible's DevSecOps secrets schema.
+
+#### Critical Fix
+
+**Crucible Version Mismatch (v0.1.18)**:
+
+- **Issue**: go.mod required `github.com/fulmenhq/crucible v0.2.18` but synced assets were from v0.2.19
+- **Impact**: Version reporting incorrect, DevSecOps secrets schema users got v0.2.19 docs but v0.2.18 runtime
+- **Root Cause**: Sync process updated assets but forgot to run `go get github.com/fulmenhq/crucible@v0.2.19`
+- **Fix**: Updated go.mod to v0.2.19, aligned all three synchronization points (ssot-consumer.yaml, provenance.json, go.mod)
+
+#### Guardrails Implemented
+
+**Automated Detection** - `TestCrucibleVersionMatchesMetadata`:
+
+- New test fails CI/builds when go.mod and metadata versions disagree
+- Parses go.mod using `golang.org/x/mod/modfile` (no shell dependencies)
+- Parses metadata.yaml to extract synced Crucible version
+- Normalizes versions to handle format differences ("v0.2.19" vs "0.2.19")
+- Beautiful error message using `ascii.DrawBox()` shows exact mismatch and fix
+- Dogfoods gofulmen: uses `pathfinder.FindRepositoryRoot()` for repo discovery
+- Runs as part of `make check-all`, `make test`, and CI
+
+**Automated Workflow** - `make crucible-update VERSION=v0.2.X`:
+
+- Single command atomically updates all three synchronization points:
+  1. Updates `.goneat/ssot-consumer.yaml` ref via sed
+  2. Runs `make sync` to update provenance timestamp
+  3. Runs `go get github.com/fulmenhq/crucible@<version>` + `go mod tidy`
+  4. Runs verification test to confirm success
+- Self-documenting with progress messages and next steps
+- Prevents partial updates that cause mismatches
+
+**Manual Verification Guide** (ADR-0007):
+
+Quick 3-point check for code reviewers:
+
+```bash
+# 1. Check sync ref
+grep "ref:" .goneat/ssot-consumer.yaml  # Expected: ref: v0.2.19
+
+# 2. Check go.mod
+grep "github.com/fulmenhq/crucible" go.mod  # Expected: v0.2.19
+
+# 3. Check metadata
+grep "version:" .crucible/metadata/metadata.yaml | head -2  # Expected: 0.2.19
+```
+
+#### Changes
+
+**Fixed**:
+
+- Crucible version mismatch: go.mod v0.2.18 → v0.2.19 (aligns with embedded assets)
+- Updated provenance timestamp to reflect current sync state
+
+**Added**:
+
+- `crucible/version_guard_test.go` - Guardrail test (uses pathfinder + ASCII)
+- `make crucible-update` - Atomic Crucible update workflow
+- `docs/development/adr/ADR-0007-crucible-version-synchronization.md` - Process documentation
+- Dependency: `golang.org/x/mod v0.30.0` for go.mod parsing
+
+#### Files Changed
+
+```
+crucible/version_guard_test.go                     # NEW: 152 lines - Guardrail test
+docs/development/adr/ADR-0007-crucible-version-synchronization.md  # NEW: 350 lines - ADR
+Makefile                                           # +30 lines: crucible-update target
+go.mod                                             # crucible v0.2.18 → v0.2.19, +golang.org/x/mod
+go.sum                                             # Updated checksums
+.goneat/ssot/provenance.json                       # Updated timestamp
+.crucible/metadata/metadata.yaml                   # Updated timestamp
+VERSION                                            # v0.1.19
+docs/crucible-go/guides/consuming-crucible-assets.md  # +112 lines: Practical examples
+```
+
+**Total**: 9 files changed, +644 insertions, -24 deletions (2 new files, 7 updates)
+
+#### Testing
+
+- ✅ `TestCrucibleVersionMatchesMetadata` PASSES (versions now match)
+- ✅ `make check-all` PASSES (all quality checks)
+- ✅ No regressions in test suite
+- ✅ Verified manual 3-point check shows alignment
+
+#### Impact
+
+**For All Users**:
+
+- ✅ Correct Crucible version reporting via `crucible.GetVersionString()`
+- ✅ Runtime behavior matches embedded documentation
+- ✅ Future releases protected by guardrail test
+
+**For Contributors**:
+
+- ✅ Simple workflow: `make crucible-update VERSION=v0.2.X`
+- ✅ Automated verification catches mistakes before commit
+- ✅ Clear documentation in ADR-0007
+
+#### Lessons Learned
+
+This is the **second time** this mistake was made, proving that:
+
+1. **Process > Memory**: Automated workflows prevent human error better than documentation
+2. **Fail Fast**: Tests that catch mistakes before release are invaluable
+3. **Dogfooding Works**: Using our own libraries (pathfinder, ASCII) improved test quality
+
+---
+
 ## [0.1.18] - 2025-11-19
+
+### Known Issues
+
+⚠️ **Version mismatch bug**: This release has mismatched Crucible versions (go.mod requires v0.2.18 but embedded docs/schemas are v0.2.19). This primarily affects users of Crucible's DevSecOps secrets schema. Upgrade to v0.1.19 for correct alignment.
+
+### Crucible v0.2.19 Sync – DevSecOps Secrets Schema Hardening
 
 ### Crucible v0.2.19 Sync – DevSecOps Secrets Schema Hardening
 
@@ -203,130 +327,9 @@ No new dependencies added. Uses existing telemetry infrastructure.
 
 ---
 
-## [0.1.15] - 2025-11-16
+## [0.1.15] - 2025-11-16 (Archived)
 
-### Logging Redaction Middleware + Pathfinder Repository Root Discovery
-
-**Release Type**: Major Feature Release  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release adds schema-compliant logging redaction middleware for PII/secrets protection and repository root discovery for pathfinder. The redaction middleware enables automatic filtering of sensitive data in logs per Crucible v0.2.16, while repository root discovery fixes schema validation from test subdirectories and provides a foundation for tooling that needs repository context.
-
-#### Changes
-
-**Logging Redaction Middleware**:
-
-- **Schema-Compliant Redaction**: Implements Crucible v0.2.16 logging middleware specification
-  - Pattern-based filtering: API keys, tokens, passwords, SSNs, credit cards (regex)
-  - Field-based filtering: password, token, secret, apiKey, ssn, creditCard
-  - Replacement modes: `[REDACTED]` (text) or SHA-256 hash prefix
-  - Opt-in design: No behavioral changes unless explicitly configured
-- **Helper Functions**: `WithRedaction()`, `WithDefaultRedaction()` for easy configuration
-- **Bundle Helpers**: `BundleSimpleWithRedaction()`, `BundleStructuredWithRedaction()` for common patterns
-- **Backward Compatibility**: Pipeline builder maps legacy `name`→`type`, `order`→`priority` fields
-- **Documentation**: 80+ lines in logging/README.md with before/after examples
-
-**Pathfinder Repository Root Discovery**:
-
-- **FindRepositoryRoot() API**: Safe upward traversal per Crucible v0.2.15 specification
-  - Predefined markers: Git (`.git`), Go (`go.mod`), Node (`package.json`), Python (`pyproject.toml`), Monorepo (`pnpm-workspace.yaml`)
-  - Safety boundaries: Home directory ceiling (default), configurable boundaries, max depth (10)
-  - Filesystem root detection: `/` (Unix), `C:\` (Windows), UNC paths (`\\server\share`)
-- **Security Features**:
-  - Symlink loop detection with `TRAVERSAL_LOOP` error (critical severity)
-  - Boundary enforcement prevents traversal outside designated areas
-  - Multi-tenant isolation (cross-tenant data access prevention)
-  - Container escape prevention
-- **Functional Options**: `WithMaxDepth`, `WithBoundary`, `WithFollowSymlinks`, `WithMarkers`, `WithStrictBoundary`
-- **Performance**: All operations <30µs (well under Crucible spec targets of <5-20ms)
-- **Test Coverage**: 36 tests (9 basic, 17 security, 10 benchmarks)
-- **Documentation**: 150+ lines in pathfinder/README.md with usage examples
-
-**Schema Validator Fixes**:
-
-- **Repository Root Resolution**: Added `findRepoRoot()` helper to compute paths from repository root
-- **Fixed Path Mapping**: `mapSchemaURLToPath()` now handles relative schema references correctly
-- **Version Directory Detection**: Prevents duplicate path segments (e.g., `/v1.0.0/v1.0.0/`)
-- **Subdirectory Testing**: All schema validation tests pass from any subdirectory
-
-**Crucible v0.2.16 Update**:
-
-- Updated logging schemas with middleware `type` and `priority` fields
-- Added pathfinder repository root discovery specification
-- New ADR-0012: Schema reference IDs standard
-- Updated DevSecOps taxonomy with modules schema
-- Updated metrics taxonomy
-
-#### Impact
-
-**For Logging Users**:
-
-- ✅ Automatic PII/secrets redaction available (opt-in)
-- ✅ Schema-compliant middleware configuration
-- ✅ 100% backward compatibility with existing configurations
-- ✅ Default patterns cover common sensitive data (API keys, passwords, SSNs, credit cards)
-
-**For Pathfinder Users**:
-
-- ✅ Repository root discovery for tooling that needs repository context
-- ✅ Safe upward traversal with multiple safety boundaries
-- ✅ Cross-language parity with tsfulmen v0.1.9 (symlink loop detection)
-- ✅ Security-first design prevents data leakage
-
-**For Schema Validator Users**:
-
-- ✅ Schema validation works correctly from test subdirectories
-- ✅ Relative schema references resolve properly
-- ✅ Version directory detection prevents path issues
-
-#### Files Changed
-
-```
-logging/middleware_redaction_v2.go       # NEW: 241 lines - Redaction middleware
-logging/helpers.go                        # NEW: 78 lines - Helper functions
-logging/config.go                         # Updated: +25 lines - RedactionConfig, MiddlewareConfig updates
-logging/logger.go                         # Updated: +56 lines - Pipeline builder compatibility
-logging/logger_test.go                    # Updated: +7 lines - Test updates
-logging/config_test.go                    # Updated: +4 lines - Config test updates
-logging/README.md                         # Updated: +150 lines - Redaction docs
-
-pathfinder/repo_root.go                   # NEW: 385 lines - FindRepositoryRoot implementation
-pathfinder/repo_root_test.go              # NEW: 147 lines - Basic functionality tests
-pathfinder/repo_root_security_test.go     # NEW: 497 lines - Security test suite
-pathfinder/repo_root_bench_test.go        # NEW: 217 lines - Performance benchmarks
-pathfinder/README.md                      # Updated: +168 lines - Repository root docs
-
-schema/validator.go                       # Updated: +173 lines - Path resolution fixes
-
-.goneat/ssot-consumer.yaml                # Updated to v0.2.16 ref
-.goneat/ssot/provenance.json              # Updated provenance tracking
-.crucible/metadata/metadata.yaml          # Updated metadata
-VERSION                                   # v0.1.15
-go.mod                                    # Updated to Crucible v0.2.16
-go.sum                                    # Updated with v0.2.16 hashes
-
-docs/crucible-go/standards/observability/logging.md  # Updated: +193 lines
-docs/crucible-go/standards/library/extensions/pathfinder.md  # Updated: +338 lines
-docs/crucible-go/decisions/ADR-0012-schema-ref-ids.md  # NEW: 44 lines
-schemas/crucible-go/logging/v1.0.0/logger-config.schema.json  # Updated: Middleware fields
-schemas/crucible-go/devsecops/v1.0.0/devsecops-module-entry.schema.json  # NEW: 117 lines
-config/crucible-go/taxonomy/devsecops/modules/v1.0.0/modules.yaml  # NEW: 46 lines
-config/crucible-go/taxonomy/library/platform-modules/v1.0.0/modules.yaml  # Updated: +45 lines
-config/crucible-go/taxonomy/metrics.yaml  # Updated: +2 lines
-```
-
-**Total**: 27 files changed, +2905 lines, -85 lines (6 new files, 21 updates)
-
-#### Verification
-
-- ✅ All tests passing (36 pathfinder tests + existing suite)
-- ✅ Precommit checks: 0 issues (100% health)
-- ✅ Cross-language audit: Aligned with tsfulmen v0.1.9 (symlink loop detection)
-- ✅ Backward compatibility: 100% for logging configurations
-- ✅ Performance: All pathfinder benchmarks well under spec targets
-- ✅ Security: 17 security tests covering boundary enforcement, isolation, escape prevention
+Logging Redaction Middleware + Pathfinder Repository Root Discovery. See `docs/releases/v0.1.15.md`
 
 ---
 

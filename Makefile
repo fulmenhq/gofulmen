@@ -17,7 +17,7 @@ GOTEST := $(GOCMD) test
 GOFMT := $(GOCMD) fmt
 GOMOD := $(GOCMD) mod
 
-.PHONY: help bootstrap bootstrap-force tools sync version-bump lint test build build-all clean fmt version check-all precommit prepush
+.PHONY: help bootstrap bootstrap-force tools sync crucible-update version-bump lint test build build-all clean fmt version check-all precommit prepush
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
 .PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example
 
@@ -48,6 +48,35 @@ sync: ## Sync assets from Crucible SSOT
 	@echo "Syncing assets from Crucible..."
 	@$(GONEAT) ssot sync
 	@echo "✅ Sync completed"
+
+crucible-update: ## Update Crucible dependency to specific version (usage: make crucible-update VERSION=v0.2.19)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "❌ VERSION not specified. Usage: make crucible-update VERSION=v0.2.19"; \
+		exit 1; \
+	fi
+	@echo "Updating Crucible to $(VERSION)..."
+	@echo ""
+	@echo "Step 1: Updating .goneat/ssot-consumer.yaml..."
+	@sed -i.bak 's|ref: v[0-9]*\.[0-9]*\.[0-9]*|ref: $(VERSION)|' .goneat/ssot-consumer.yaml && rm .goneat/ssot-consumer.yaml.bak
+	@echo "✅ Updated ssot-consumer.yaml ref to $(VERSION)"
+	@echo ""
+	@echo "Step 2: Running make sync to update provenance..."
+	@$(MAKE) sync
+	@echo ""
+	@echo "Step 3: Updating go.mod..."
+	@go get github.com/fulmenhq/crucible@$(VERSION)
+	@go mod tidy
+	@echo "✅ Updated go.mod to $(VERSION)"
+	@echo ""
+	@echo "Step 4: Running tests to verify compatibility..."
+	@go test ./crucible -run TestCrucibleVersionMatchesMetadata -v
+	@echo ""
+	@echo "✅ Crucible updated successfully to $(VERSION)"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Review changes: git diff"
+	@echo "  2. Run full checks: make check-all"
+	@echo "  3. Commit changes with proper attribution"
 
 version-bump: ## Bump version (usage: make version-bump TYPE=patch|minor|major|calver)
 	@if [ ! -f $(GONEAT) ]; then \
