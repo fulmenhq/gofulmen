@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.18] - 2025-11-19
+
+### Changed
+
+- **Crucible v0.2.19 Update** - Updated DevSecOps secrets schema with comprehensive hardening
+  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.19 ref
+  - Updated provenance tracking with Crucible commit f17e5fa
+  - Enhanced DevSecOps secrets schema with DoS protection (size limits: 256 projects/file, 1024 credentials/project, 65KB values)
+  - Migrated from flat `secrets` strings to structured `credentials` objects with type/value/ref fields
+  - Added description fields at file, project, and credential levels for compliance documentation
+  - Added global `env_prefix` support with per-project override capability
+  - Enhanced `project_slug` pattern to allow underscores alongside hyphens
+  - Added credential types (api_key, password, token) for masking behavior
+  - Added external reference support via `ref` field for vault/secrets-manager integration
+  - Updated telemetry metrics taxonomy and documentation
+
 ## [0.1.17] - 2025-11-17
 
 ### Added

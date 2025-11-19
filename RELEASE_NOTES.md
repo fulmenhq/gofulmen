@@ -4,6 +4,87 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.18] - 2025-11-19
+
+### Crucible v0.2.19 Sync – DevSecOps Secrets Schema Hardening
+
+**Release Type**: Dependency Update (Crucible SSOT Sync)  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release syncs gofulmen to Crucible v0.2.19, which introduces comprehensive DevSecOps secrets schema hardening with DoS protection, structured credentials, and enhanced metadata support. No gofulmen code changes beyond the SSOT sync.
+
+#### Changes
+
+**DevSecOps Secrets Schema Hardening** (Primary Update):
+
+- **DoS Protection**: Defensive size limits to prevent resource exhaustion
+  - 256 projects per file maximum
+  - 1,024 credentials per project maximum
+  - 65,536 character limit for credential values (64KB, UTF-8 encoded)
+  - 2,048 character limit for external references (vault URIs, ARNs)
+  - 4,096 character limit for descriptions (file, project, credential levels)
+  - 255 character limit for environment variable names (POSIX standard)
+- **Structured Credentials**: Migrated from flat `secrets` (string values) to `credentials` (objects)
+  - Type field: `api_key`, `password`, or `token` (determines masking behavior)
+  - Value field: Plaintext credential value (mutually exclusive with `ref`)
+  - Ref field: External reference for vault integration (mutually exclusive with `value`)
+  - Description field: Audit-friendly documentation for each credential
+- **Enhanced Metadata**:
+  - Global `env_prefix` field for all projects (e.g., `MYAPP_`)
+  - Per-project `env_prefix` override capability
+  - Description fields at file, project, and credential levels (compliance documentation)
+- **Improved Patterns**:
+  - Enhanced `project_slug` pattern: Now allows underscores alongside hyphens (`my_service-v2`)
+  - Start/end must be alphanumeric: `^[a-z0-9]([a-z0-9_-]*[a-z0-9])?$`
+
+**Additional Updates**:
+
+- Updated telemetry metrics taxonomy with latest definitions
+- Updated metrics documentation with enhanced module standards
+
+#### Files Changed
+
+```
+.crucible/metadata/metadata.yaml                   # Updated metadata
+.goneat/ssot-consumer.yaml                         # Updated to v0.2.19 ref
+.goneat/ssot/provenance.json                       # Updated provenance (commit f17e5fa)
+VERSION                                            # v0.1.18
+config/crucible-go/devsecops/secrets/v1.0.0/defaults.yaml         # Enhanced with structured credentials
+config/crucible-go/taxonomy/metrics.yaml                          # Updated taxonomy
+docs/crucible-go/standards/devsecops/project-secrets.md           # +348 lines: Size limits, credential objects
+docs/crucible-go/standards/library/modules/telemetry-metrics.md  # +552 lines: Enhanced documentation
+schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json # +358 lines: Hardened schema
+```
+
+**Total**: 9 files changed, +1424 insertions, -179 deletions
+
+#### Impact
+
+**For Secrets Management Users**:
+
+- ✅ Enhanced security with DoS protection limits
+- ✅ Structured credentials enable type-aware masking
+- ✅ External reference support for vault/secrets-manager integration
+- ✅ Compliance-friendly with description fields at all levels
+- ⚠️ Schema changes require update to fulmen-secrets v0.1.1+ (if using secrets tooling)
+
+**For All Users**:
+
+- ✅ No breaking changes to gofulmen APIs
+- ✅ Updated Crucible standards available via `crucible` package
+- ✅ Enhanced documentation for DevSecOps workflows
+
+#### Verification
+
+- ✅ All tests passing (no code changes, sync only)
+- ✅ `make check-all`: 100% health (0 issues)
+- ✅ Crucible provenance confirmed: commit f17e5fa (v0.2.19)
+- ✅ Schema validation: All embedded schemas valid
+
+---
+
 ## [0.1.17] - 2025-11-17
 
 ### HTTP Server Metrics Middleware – Production-Ready Performance
@@ -249,80 +330,9 @@ config/crucible-go/taxonomy/metrics.yaml  # Updated: +2 lines
 
 ---
 
-## [0.1.14] - 2025-11-15
+## [0.1.14] - 2025-11-15 (Archived)
 
-### Fulpack Module Complete + Crucible v0.2.14 Update
-
-**Release Type**: Major Feature Release + Dependency Update  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release completes the fulpack archive module implementation (all 5 operations now functional) and updates to Crucible v0.2.14. The fulpack module now provides production-ready archive creation, extraction, and verification with mandatory security protections.
-
-#### Changes
-
-**Fulpack Archive Module - Complete Implementation**:
-
-- **Create()**: Archive creation with pathfinder source selection and fulhash checksums
-  - Supports TAR, TAR.GZ, ZIP, GZIP formats
-  - Pathfinder integration for glob-based source filtering (include/exclude patterns)
-  - Fulhash checksum generation (SHA-256 default, XXH3-128 for speed)
-  - Configurable compression levels (1-9, ignored for TAR)
-  - Proper algorithm labeling (unsupported algorithms fallback to SHA-256 with correct label)
-- **Extract()**: Secure extraction with **mandatory** security protections
-  - Path traversal prevention (rejects `../` and absolute paths via `isPathTraversal()`)
-  - Symlink validation (ensures targets stay within destination via `isWithinBounds()`)
-  - **Decompression bomb detection during extraction** (enforces compression ratio, size, and entry limits)
-  - Overwrite policy support (error/skip/overwrite modes)
-  - **Include/exclude pattern filtering** during extraction
-  - MaxSize (1GB default) and MaxEntries (10000 default) enforcement
-- **Verify()**: Integrity and security validation
-  - Archive structure validation (corrupt archive detection)
-  - Path traversal scanning across all entries
-  - Decompression bomb characteristic detection
-  - Symlink safety validation
-  - Checksum presence detection
-- **All 5 Operations Complete**: Info, Scan, Create, Extract, Verify
-- **22 Comprehensive Tests**: Covering all formats, security scenarios, and edge cases
-- **Spec Compliance**: 100% compliant with Fulpack Archive Module Standard v1.0.0
-
-**Security Fixes (Audit Findings)**:
-
-- Fixed exclude patterns now honored during extraction (was being ignored)
-- Added decompression bomb detection to extract operation (was only in verify)
-- Fixed checksum algorithm mislabeling (now correctly reports actual algorithm used)
-
-**Crucible v0.2.14 Update**:
-
-- **Dependency Update**: Updated with comprehensive verification process
-  - Updated `go.mod` from v0.2.13 to v0.2.14 and verified via `go list -m github.com/fulmenhq/crucible`
-  - Updated `.goneat/ssot-consumer.yaml` sync configuration to use v0.2.14 ref
-  - Verified no vendor directory drift (clean dependency management)
-  - Added DevSecOps secrets management standards (docs + schema + defaults)
-  - Updated metrics taxonomy with latest definitions
-  - Updated provenance tracking with latest Crucible metadata (commit 089b4c7)
-
-#### Files Changed
-
-```
-fulpack/create.go                    # NEW: Archive creation implementation
-fulpack/extract.go                   # NEW: Secure extraction implementation
-fulpack/verify.go                    # NEW: Security validation implementation
-fulpack/types.go                     # Added ExcludePatterns field
-fulpack/api.go                       # Wired up Create/Extract/Verify operations
-fulpack/fulpack_test.go              # +513 lines: Comprehensive test coverage
-.goneat/ssot-consumer.yaml           # Updated to v0.2.14 ref
-.goneat/ssot/provenance.json         # Updated provenance tracking (commit 089b4c7)
-VERSION                              # v0.1.14
-go.mod                               # Updated to Crucible v0.2.14
-go.sum                               # Updated with v0.2.14 hashes
-docs/crucible-go/standards/devsecops/secrets-management.md # NEW: Secrets management standard
-schemas/crucible-go/devsecops/v1.0.0/secrets.schema.json  # NEW: Secrets schema
-config/crucible-go/devsecops/secrets-defaults.yaml        # NEW: Secrets defaults
-```
-
-**Total**: 14 files changed (+3 new fulpack ops, +3 new DevSecOps assets, +8 updates)
+Fulpack Module Complete + Crucible v0.2.14 Update. See `docs/releases/v0.1.14.md`
 
 ---
 
