@@ -104,15 +104,16 @@ func TestErrorHandlingMetricNames(t *testing.T) {
 // TestFulHashMetricNames ensures FulHash metric names follow conventions
 func TestFulHashMetricNames(t *testing.T) {
 	tests := []struct {
-		name     string
-		metric   string
-		wantUnit string
+		name   string
+		metric string
 	}{
-		{"xxh3_128 operations", metrics.FulHashOperationsTotalXXH3128, metrics.UnitCount},
-		{"sha256 operations", metrics.FulHashOperationsTotalSHA256, metrics.UnitCount},
-		{"hash string total", metrics.FulHashHashStringTotal, metrics.UnitCount},
-		{"bytes hashed", metrics.FulHashBytesHashedTotal, metrics.UnitBytes},
-		{"operation latency", metrics.FulHashOperationMs, metrics.UnitMs},
+		{"xxh3_128 operations", metrics.FulHashOperationsTotalXXH3128},
+		{"sha256 operations", metrics.FulHashOperationsTotalSHA256},
+		{"crc32 operations", metrics.FulHashOperationsTotalCRC32},
+		{"crc32c operations", metrics.FulHashOperationsTotalCRC32C},
+		{"hash_string_total", metrics.FulHashHashStringTotal},
+		{"bytes_hashed", metrics.FulHashBytesHashedTotal},
+		{"operation_latency", metrics.FulHashOperationMs},
 	}
 
 	for _, tt := range tests {

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.20] - 2025-11-26
+
+### Added
+
+- **FulHash CRC32 + CRC32C Support** – Added IEEE and Castagnoli CRC algorithms across block, streaming, and pooled hasher APIs, including fixture coverage and reader parity tests.
+- **FulHash MultiHash Helpers** – New `MultiHash`, `MultiHashString`, and `MultiHashReader` fan out a single read into multiple algorithms with deterministic ordering and duplicate filtering.
+- **FulHash Verify Helpers** – `Verify`, `VerifyString`, and `VerifyReader` parse Crucible-formatted digests, stream data once, and emit mismatch telemetry for auditing.
+
+### Changed
+
+- **Crucible v0.2.20 Sync** – Embedded taxonomy, schemas, and docs now include the fulhash algorithms catalog that powers the new CRC entries; `go.mod` tracks the same version.
+- **Digest Interop** – `Digest.ToCrucible()`/`FromCrucible()` round-trip Crucible digests, falling back to hex decoding when `Bytes` is omitted and adding regression tests for every algorithm.
+- **Telemetry Metrics** – Added CRC32/CRC32C operation counters plus verify result tags so mismatch/error events are visible via `FulHashErrorsCount` and `FulHashHashCount`.
+
 ## [0.1.19] - 2025-11-19
 
 ### Fixed

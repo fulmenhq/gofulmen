@@ -7,16 +7,6 @@
 // Fixtures: config/crucible-go/library/fulhash/fixtures.yaml
 package fulhash
 
-// Algorithm represents a supported hashing algorithm.
-type Algorithm string
-
-const (
-	// XXH3_128 is the default fast non-cryptographic algorithm.
-	XXH3_128 Algorithm = "xxh3-128"
-	// SHA256 is the cryptographic algorithm for security-sensitive use cases.
-	SHA256 Algorithm = "sha256"
-)
-
 // Option configures hashing behavior.
 type Option func(*options)
 

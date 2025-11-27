@@ -4,6 +4,49 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.20] - 2025-11-26
+
+### FulHash CRC + MultiHash + Verify (Crucible v0.2.20)
+
+**Release Type**: Feature + Dependency Sync  
+**Status**: ✅ Ready for Release
+
+#### Overview
+
+This release finishes the FulHash workstream: CRC32/CRC32C support, single-pass MultiHash helpers, Crucible-compatible Verify utilities, and refreshed telemetry. All APIs pull algorithms directly from Crucible v0.2.20 so FulHash stays SSOT-aligned with pyfulmen and tsfulmen.
+
+#### Highlights
+
+- **CRC Algorithms** – Added IEEE and Castagnoli CRC32 implementations across block, streaming, and pooled hashers with fixture coverage and streaming parity tests.
+- **MultiHash Helpers** – `MultiHash`, `MultiHashString`, and `MultiHashReader` dedupe algorithms, fan out via `io.MultiWriter`, emit per-algorithm counters, and record bytes only once.
+- **Verify Helpers** – `Verify`, `VerifyString`, and `VerifyReader` parse Crucible-formatted digests, compute the required algorithm once, and emit `result=match|mismatch` telemetry plus mismatch counters.
+- **Crucible Digest Interop** – `Digest.ToCrucible()`/`FromCrucible()` bridge SSOT digests, decoding hex when Crucible omits raw bytes and round-tripping every algorithm in regression tests.
+- **Telemetry** – New counters for CRC32/CRC32C, verify result tagging, and mismatch error counters so dashboards surface digest drift quickly.
+
+#### Files Changed
+
+```
+fulhash/*                    # CRC hashers, multi-hash fanout, verify helpers, options, tests, benches
+telemetry/metrics/*          # CRC metrics + taxonomy tests
+schemas/config/docs          # Crucible v0.2.20 fulhash taxonomy + documentation sync
+.crucible/.goneat/VERSION    # Provenance + version bump aligned with Crucible sync
+go.mod / go.sum              # Dependency update to github.com/fulmenhq/crucible v0.2.20
+```
+
+#### Testing
+
+- ✅ `make check-all`
+- ✅ `go test ./fulhash -run .`
+- ✅ `go test ./...` (implicit via make target)
+
+#### Impact
+
+- FulHash consumers now have CRC32/CRC32C plus helper utilities without double-reading data.
+- Telemetry dashboards can differentiate successes vs mismatches with algorithm tags.
+- Future FulHash algorithms ship automatically via Crucible taxonomy imports.
+
+---
+
 ## [0.1.19] - 2025-11-19
 
 ### Crucible Version Synchronization Fix + Guardrail
@@ -209,195 +252,9 @@ schemas/crucible-go/devsecops/secrets/v1.0.0/secrets.schema.json # +358 lines: H
 
 ---
 
-## [0.1.17] - 2025-11-17
-
-### HTTP Server Metrics Middleware – Production-Ready Performance
-
-**Release Type**: New Feature + Performance Optimization  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release introduces comprehensive HTTP server metrics middleware with production-ready performance (~21% overhead) and proper cardinality control. The implementation provides all 5 HTTP metrics from the Crucible v0.2.18 taxonomy with framework integration support and enterprise-grade reliability.
-
-#### Key Features
-
-**Complete HTTP Metrics Collection**:
-
-- All 5 HTTP metrics: requests total, duration, request size, response size, active requests
-- Proper histogram bucket mathematics for size metrics
-- Minimal label sets for cardinality control per taxonomy
-- Thread-safe concurrent operation with atomic counters
-
-**Route Normalization & Cardinality Control**:
-
-- UUID segment normalization: `/api/users/550e8400-e29b-41d4-a716-446655440000` → `/api/users/{uuid}`
-- Numeric segment normalization: `/users/123` → `/users/{id}`
-- Query parameter stripping: `/api/search?q=test` → `/api/search`
-- Configurable custom route normalizers
-
-**Performance Optimization**:
-
-- **~21% overhead** (reduced from 55-84% during development)
-- Tag pooling using `sync.Pool` to reduce allocations
-- Histogram bucket pooling for size metrics
-- Pre-compiled UUID regex patterns
-- Optimized fast-path handling for simple routes
-
-**Framework Integration**:
-
-- Native net/http support
-- Chi router integration patterns
-- Gin router integration patterns
-- Easy middleware composition
-
-#### Critical Fixes
-
-**UUID Normalization Bug**:
-
-- **Issue**: Route normalizer checked for UUID patterns but only replaced hardcoded UUID string
-- **Impact**: Real UUIDs would slip through unchanged, causing cardinality explosion
-- **Fix**: Implemented proper regex replacement with `uuidPattern.ReplaceAllString(path, "{uuid}")`
-- **Result**: All UUID segments now correctly normalized to prevent metric explosion
-
-**Duration Buckets API Cleanup**:
-
-- **Issue**: `DurationBuckets` option was settable but never used (emitter-driven)
-- **Impact**: Misleading API suggesting configurable duration buckets
-- **Fix**: Removed unused option and renamed `WithCustomBuckets()` to `WithCustomSizeBuckets()`
-- **Result**: Honest API design with clear emitter-driven behavior documentation
-
-#### API Changes
-
-```go
-// New HTTP metrics middleware
-middleware := telemetry.HTTPMetricsMiddleware(
-    emitter,
-    telemetry.WithServiceName("my-api"),
-    telemetry.WithCustomSizeBuckets([]float64{1024, 10240, 102400, 1048576}),
-)
-
-// Framework integration examples documented in README.md
-```
-
-**Removed**:
-
-- `WithCustomBuckets()` function (replaced with `WithCustomSizeBuckets()`)
-- `DurationBuckets` field from `HTTPMetricsConfig`
-- `DefaultHTTPDurationBuckets` constant
-
-#### Performance Benchmarks
-
-```
-Baseline (no middleware):     ~1336 ns/op
-With HTTP metrics middleware: ~1726 ns/op
-Overhead: ~21% (390ns additional)
-Memory: ~5.5KB per request
-Allocations: ~22 per request
-```
-
-#### Testing & Quality
-
-- **Comprehensive test coverage**: All HTTP metrics, route normalization, framework integration
-- **Performance validation**: Hotspot analysis and optimization verification
-- **Cross-language consistency**: 95% alignment with expected patterns
-- **Schema compliance**: Full Crucible v0.2.18 taxonomy alignment
-- **Framework validation**: Chi and Gin integration patterns tested
-
-#### Documentation
-
-- Updated `telemetry/README.md` with HTTP metrics section and performance claims
-- Added `telemetry/HTTP_METRICS_MIGRATION.md` with comprehensive migration guide
-- Updated `telemetry/CROSS_LANGUAGE_CONSISTENCY.md` with performance analysis
-- Framework integration examples and best practices included
-
-#### Migration
-
-No breaking changes for existing users. New HTTP metrics functionality is opt-in:
-
-```go
-// Add to existing HTTP server
-middleware := telemetry.HTTPMetricsMiddleware(emitter)
-handler := middleware(existingHandler)
-```
-
-#### Dependencies
-
-No new dependencies added. Uses existing telemetry infrastructure.
-
----
-
-## [0.1.15] - 2025-11-16 (Archived)
-
-Logging Redaction Middleware + Pathfinder Repository Root Discovery. See `docs/releases/v0.1.15.md`
-
----
-
-## [0.1.14] - 2025-11-15 (Archived)
-
-Fulpack Module Complete + Crucible v0.2.14 Update. See `docs/releases/v0.1.14.md`
-
----
-
 ## Archived Releases
 
-Older releases (v0.1.13 and earlier) are archived in `docs/releases/`. See those files for complete release documentation.
-
-## [0.1.13] - 2025-11-13 (Archived)
-
-Windows Build Compatibility & Crucible v0.2.11 Update. See `docs/releases/v0.1.13.md`
-
-## [0.1.12] - 2025-11-10 (Archived)
-
-Critical Dependency Fix - Updated go.mod to Crucible v0.2.9. See `docs/releases/v0.1.12.md`
-
-## [0.1.11] - 2025-11-10 (Archived)
-
-Crucible v0.2.9 sync with enhanced documentation. See `docs/releases/v0.1.11.md`
-
-## [0.1.10] - 2025-11-09 (Archived)
-
-Signals package migration to top-level. See `docs/releases/v0.1.10.md`
-
-## [0.1.9] - 2025-11-08 (Archived)
-
-Prometheus exporter, App Identity module, and Signal Handling module. See `docs/releases/v0.1.9.md`
-
-## [0.1.8] - 2025-11-03 (Archived)
-
-Schema export utilities and Foundry exit codes integration. See `docs/releases/v0.1.8.md`
-
-## [0.1.7] - 2025-10-29 (Archived)
-
-GitHub Actions CI infrastructure + test fixes. See `docs/releases/v0.1.7.md`
-
-## [0.1.6] - 2025-10-29 (Archived)
-
-Crucible v0.2.1 config embedding. See `docs/releases/v0.1.6.md`
-
-## [0.1.5] - 2025-10-27 (Archived)
-
-Similarity v2 API + Telemetry + Error Handling. See `docs/releases/v0.1.5.md`
-
-## [0.1.4] - 2025-10-23 (Archived)
-
-FulHash package + Pathfinder enhancements. See `docs/releases/v0.1.4.md`
-
-## [0.1.3] - 2025-10-22 (Archived)
-
-Similarity & Docscribe modules + Crucible SSOT sync. See `docs/releases/v0.1.3.md`
-
-## [0.1.2] - 2025-10-20 (Archived)
-
-Progressive logging + Schema + Config packages. See `docs/releases/v0.1.2.md`
-
-## [0.1.1] - 2025-10-17 (Archived)
-
-Foundry package + Guardian hooks. See `docs/releases/v0.1.1.md`
-
-## [0.1.0] - 2025-10-13 (Archived)
-
-Initial bootstrap with 7 core packages. See `docs/releases/v0.1.0.md`
+Older release notes are archived under `docs/releases/`. Refer to those files for versions prior to v0.1.18.
 
 ---
 

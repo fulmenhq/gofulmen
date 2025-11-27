@@ -49,6 +49,8 @@ const (
 const (
 	FulHashOperationsTotalXXH3128 = "fulhash_operations_total_xxh3_128"
 	FulHashOperationsTotalSHA256  = "fulhash_operations_total_sha256"
+	FulHashOperationsTotalCRC32   = "fulhash_operations_total_crc32"
+	FulHashOperationsTotalCRC32C  = "fulhash_operations_total_crc32c"
 	FulHashHashStringTotal        = "fulhash_hash_string_total"
 	FulHashBytesHashedTotal       = "fulhash_bytes_hashed_total"
 	FulHashOperationMs            = "fulhash_operation_ms"

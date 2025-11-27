@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"hash/crc32"
 	"io"
 	"sync"
 	"time"
@@ -42,6 +43,9 @@ func getTelemetrySystem() *telemetry.System {
 	return globalTelemetrySystem
 }
 
+// keep deprecated getter referenced to satisfy static analyzers
+var _ = getTelemetrySystem
+
 // Hash computes the hash of the given data.
 //
 // Telemetry: Emits algorithm-specific operation counters, bytes_hashed_total, and operation latency.
@@ -70,6 +74,20 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 		bytes = h.Sum(nil)
 		// Emit SHA256 specific counter
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
+	case CRC32:
+		h := crc32.NewIEEE()
+		h.Write(data)
+		sum := h.Sum32()
+		bytes = []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+		// Emit CRC32 specific counter
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32, 1, tags)
+	case CRC32C:
+		h := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+		h.Write(data)
+		sum := h.Sum32()
+		bytes = []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+		// Emit CRC32C specific counter
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32C, 1, tags)
 	default:
 		// Emit error telemetry for unsupported algorithm
 		errorTags := map[string]string{
@@ -77,7 +95,7 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 			metrics.TagStatus:    metrics.StatusError,
 		}
 		telemetry.EmitCounter(metrics.FulHashErrorsCount, 1, errorTags)
-		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, o.algorithm, XXH3_128, SHA256)
+		return Digest{}, fmt.Errorf("%w %q, supported algorithms: %s, %s, %s, %s", ErrUnsupportedAlgorithm, o.algorithm, XXH3_128, SHA256, CRC32, CRC32C)
 	}
 
 	// Emit bytes hashed counter
@@ -135,6 +153,10 @@ func HashReader(r io.Reader, opts ...Option) (Digest, error) {
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalXXH3128, 1, tags)
 	case SHA256:
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
+	case CRC32:
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32, 1, tags)
+	case CRC32C:
+		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32C, 1, tags)
 	}
 
 	// Emit bytes hashed counter
@@ -170,8 +192,12 @@ func newHasher(alg Algorithm) (Hasher, error) {
 		return &xxh3Hasher{hasher: xxh3.New()}, nil
 	case SHA256:
 		return &sha256Hasher{hasher: sha256.New()}, nil
+	case CRC32:
+		return &crc32Hasher{hasher: crc32.NewIEEE(), algorithm: CRC32}, nil
+	case CRC32C:
+		return &crc32Hasher{hasher: crc32.New(crc32.MakeTable(crc32.Castagnoli)), algorithm: CRC32C}, nil
 	default:
-		return nil, fmt.Errorf("%w %q, supported algorithms: %s, %s", ErrUnsupportedAlgorithm, alg, XXH3_128, SHA256)
+		return nil, fmt.Errorf("%w %q, supported algorithms: %s, %s, %s, %s", ErrUnsupportedAlgorithm, alg, XXH3_128, SHA256, CRC32, CRC32C)
 	}
 }
 
@@ -209,5 +235,26 @@ func (h *sha256Hasher) Sum() Digest {
 }
 
 func (h *sha256Hasher) Reset() {
+	h.hasher.Reset()
+}
+
+// crc32Hasher implements Hasher for CRC32 (IEEE) and CRC32C (Castagnoli).
+type crc32Hasher struct {
+	hasher    hash.Hash32
+	algorithm Algorithm
+}
+
+func (h *crc32Hasher) Write(p []byte) (n int, err error) {
+	return h.hasher.Write(p)
+}
+
+func (h *crc32Hasher) Sum() Digest {
+	sum := h.hasher.Sum32()
+	// Convert uint32 to big-endian bytes
+	bytes := []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+	return Digest{algorithm: h.algorithm, bytes: bytes}
+}
+
+func (h *crc32Hasher) Reset() {
 	h.hasher.Reset()
 }
