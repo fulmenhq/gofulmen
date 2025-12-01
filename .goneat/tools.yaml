@@ -6,11 +6,11 @@ tools:
     required: true
     install:
       type: download
-      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.4/goneat_v0.3.4_{{os}}_{{arch}}.tar.gz
+      url: https://github.com/fulmenhq/goneat/releases/download/v0.3.8/goneat_v0.3.8_{{os}}_{{arch}}.tar.gz
       binName: goneat
       destination: ./bin
       checksum:
-        darwin-arm64: "b87403dca4a94d126702f5380723090b313f8b4b8e3b9373e249e42c151b2c86"
-        darwin-amd64: "0eede3132241da92c3253f3375b8140f1c3f7e05ca3dd0562f9f30de4ddba36b"
-        linux-amd64: "7e888b876b1d4b129c54daeb1e2a6406fb369654084820055a26501043692318"
-        linux-arm64: "383ebd088bb022968cea106e72377508d3a32704a4173becacf9a605bb87e5d0"
+        darwin-arm64: "ce1509344b615db30e1fd6addfbf0f57451dc07459bad66fb1291942f3235d79"
+        darwin-amd64: "e373d8a644577d2bbcf5645d11f333b5203664a303ebc7c47c03ab9c9068eb85"
+        linux-amd64: "2614bf090aefb99ae76fd75d9a73da47d5b6c5f10a6db3b792dd9c0f4bfb9d50"
+        linux-arm64: "9d3c4e2f159451b0dd9ba726e5126792bb949e8fdb7d0dfb92f018aba9258b79"
