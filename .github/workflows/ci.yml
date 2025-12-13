@@ -1,23 +1,28 @@
 name: CI
-on:
+"on":
   push:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   test:
-    name: Test
+    name: Test (container)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.21', '1.22', '1.23', '1.25.x']
+    container:
+      image: ghcr.io/fulmenhq/goneat-tools:v0.1.5
+      options: --user 1001
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Go ${{ matrix.go-version }}
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: "1.25.x"
           cache: true
       - name: Verify Go version
         run: go version
@@ -25,8 +30,33 @@ jobs:
         run: go mod download
       - name: Verify dependencies
         run: go mod verify
-      - name: Bootstrap tools
-        run: make bootstrap
+      - name: Install sfetch + goneat (verified)
+        run: |
+          set -euo pipefail
+          BIN_DIR="$HOME/.local/bin"
+          mkdir -p "$BIN_DIR"
+          SFETCH_INSTALL_URL="https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh"
+          curl -sSfL "$SFETCH_INSTALL_URL" | bash -s -- --yes --dir "$BIN_DIR"
+          export PATH="$BIN_DIR:$PATH"
+          sfetch --self-verify
+          sfetch --repo fulmenhq/goneat \
+            --tag v0.3.17 \
+            --dest-dir "$BIN_DIR" \
+            --require-minisign
+          if [ -f "$BIN_DIR/goneat.exe" ] && [ ! -f "$BIN_DIR/goneat" ]; then
+            mv "$BIN_DIR/goneat.exe" "$BIN_DIR/goneat"
+          fi
+          goneat --version
+      - name: Format (fail on diff)
+        run: |
+          set -euo pipefail
+          make fmt
+          git diff --exit-code
+      - name: Install golangci-lint (v2.4.0)
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.4.0
+          args: --help
       - name: Run tests
         run: make test
       - name: Run lint

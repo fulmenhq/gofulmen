@@ -377,7 +377,7 @@ make lint       # Run Go vet
 ### Continuous Integration
 
 - GitHub Actions runs `make check-all` on every PR
-- Release builds require `make release-check` to pass
+- Releases require `make release-check` to pass (and a signed tag)
 - Version bumps validated via `make version-bump-{patch|minor|major}`
 
 ## Contributing

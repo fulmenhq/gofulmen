@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.21] - 2025-12-13
+
+### Added
+
+- **Signed Release Tag Tooling** – Added `make release-tag`, `make release-verify-tag`, and `RELEASE_CHECKLIST.md` for a consistent signed-tag release workflow.
+- **Release Guardrails** – Added `make release-guard-tag-version` to enforce `tag == v$(cat VERSION)` on release verification paths.
+- **Provenance Checks** – Added `make release-provenance-check` to surface Crucible SSOT provenance before tagging.
+
+### Changed
+
+- **Bootstrap Trust Anchor** – `make bootstrap` now uses `sfetch` as the trust anchor, prints `sfetch --self-verify --json`, and installs `goneat` via `sfetch --require-minisign`.
+- **No Local goneat Binary** – Make targets no longer assume `./bin/goneat`; they resolve `goneat` from `PATH`/user bin dir.
+
 ## [0.1.20] - 2025-11-26
 
 ### Added
@@ -649,7 +662,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Bootstrap symlink creation** - installLink() now creates proper symlinks instead of copies
   - Replaced io.Copy with os.Symlink for type:link tools
-  - bin/goneat now correctly tracks source without re-bootstrap
+  - goneat now correctly tracks source without re-bootstrap (type:link)
 
 ### Security
 

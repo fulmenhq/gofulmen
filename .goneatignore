@@ -5,6 +5,7 @@
 docs/crucible-go/
 schemas/crucible-go/
 config/crucible-go/
+.crucible/metadata/
 
 # Vendor and dependencies
 vendor/

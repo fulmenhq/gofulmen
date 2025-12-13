@@ -1,0 +1,15 @@
+version: 1
+lint:
+  github_actions:
+    actionlint:
+      enabled: true
+      paths:
+        - ".github/workflows/**/*.yml"
+        - ".github/workflows/**/*.yaml"
+      ignore: []
+  make:
+    checkmake:
+      enabled: true
+    paths:
+      - "**/Makefile"
+    ignore: []

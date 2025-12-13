@@ -51,16 +51,22 @@ make prepush         # Pre-push hooks
 
 - **Semantic Versioning**: Follow MAJOR.MINOR.PATCH for API changes
 - **Changelog Maintenance**: Document all changes in CHANGELOG.md
-- **Tagging**: Use Git tags with signed releases
-- **GitHub Releases**: Automated with comprehensive release notes
+- **Tagging**: Releases are **GPG-signed annotated git tags** (`vX.Y.Z`)
+- **GitHub Releases**: Optional (notes-only); gofulmen does not ship binaries
 
 ### Release Checklist
 
 ```bash
-# Complete release preparation
-make release-check   # Verify all requirements
-make release-prepare # Update docs and sync
-make release-build   # Build distribution
+# Verify requirements
+make release-check              # Quality gates (sync + fmt + lint + test)
+make release-provenance-check   # SSOT provenance present and current
+
+# Create/verify signed tag for VERSION
+make release-tag
+make release-verify-tag
+
+# Guard: tag must match VERSION (use GOFULMEN_REQUIRE_TAG=1 in CI)
+make release-guard-tag-version
 ```
 
 ### Version Bumping
@@ -92,7 +98,7 @@ This capability is useful for monorepos with Go + JavaScript + Python components
 
 ### Development Tools
 
-- **Bootstrap**: `make bootstrap` - Install goneat and verify tools
+- **Bootstrap**: `make bootstrap` - Install `sfetch`, install `goneat` (minisign-required), then install foundation tools
 - **Sync**: `make sync` - Sync assets from Crucible SSOT
 - **Testing**: `make test` - Run test suite
 - **Quality**: `make lint` - Code quality checks

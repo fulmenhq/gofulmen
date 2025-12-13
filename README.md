@@ -69,7 +69,7 @@ Simple, dependency-free tool installation for Go repositories using the goneat b
 - SHA-256 checksum verification
 - Support for tar.gz and zip archives
 - Cross-platform (macOS, Linux, Windows)
-- Local development overrides via `.goneat/tools.local.yaml`
+- Local development overrides via `.goneat/tools.local.yaml` (goneat doctor pattern; never commit)
 
 ### Logging (`logging/`)
 
@@ -561,18 +561,12 @@ go run ./cmd/gofulmen-schema -- schema validate \
 
 ### Bootstrap
 
-Install external tools using goneat bootstrap pattern:
+Install external tools (trust anchor `sfetch`, then `goneat`) and foundation toolchain:
 
 ```bash
-# Install tools from .goneat/tools.yaml
+# Installs sfetch (if missing), then installs goneat (minisign required),
+# then installs foundation tools via goneat doctor.
 make bootstrap
-
-# Or run directly
-go run ./cmd/bootstrap --install --verbose
-
-# For local development, create override:
-cp .goneat/tools.local.yaml.example .goneat/tools.local.yaml
-# Then edit .goneat/tools.local.yaml to point to local binaries
 ```
 
 ## Development
@@ -607,6 +601,10 @@ make sync
 
 See [GONEAT.md](docs/GONEAT.md) for development tooling guide.
 
+### Releases
+
+gofulmen releases are **GPG-signed annotated git tags** (`vX.Y.Z`). See `RELEASE_CHECKLIST.md`.
+
 ## Documentation
 
 ### For Library Consumers
@@ -634,7 +632,7 @@ import "github.com/fulmenhq/gofulmen/crucible"
 
 // Access version info
 fmt.Println(crucible.GetVersionString())
-// Output: gofulmen/v0.1.19 crucible/v0.2.19
+// Output: gofulmen/v0.1.21 crucible/v0.2.21
 ```
 
 ## Contributing

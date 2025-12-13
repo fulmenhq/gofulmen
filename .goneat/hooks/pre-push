@@ -121,4 +121,4 @@ echo "✅ Guardian approval satisfied"
 # Use goneat's orchestrated assessment (manifest-driven)
 "$GONEAT_BIN" assess --hook pre-push --hook-manifest "$REPO_ROOT/.goneat/hooks.yaml" --package-mode
 
-echo "✅ Pre-push validation passed!"}
+echo "✅ Pre-push validation passed!"

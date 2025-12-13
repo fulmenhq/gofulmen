@@ -144,8 +144,8 @@ make license-audit
 
 **Resources consulted**:
 
-- `bin/goneat docs show user-guide/commands/hooks` - Comprehensive hooks documentation
-- `bin/goneat docs show user-guide/commands/guardian` - Guardian approval workflow
+- `goneat docs show user-guide/commands/hooks` - Comprehensive hooks documentation
+- `goneat docs show user-guide/commands/guardian` - Guardian approval workflow
 - `../pyfulmen/.goneat/hooks.yaml` - Reference implementation
 - `/Users/davethompson/dev/fulmenhq/goneat/.plans/active/v0.3.1/hooks-set-command.md` - Future automation plans
 
@@ -162,7 +162,7 @@ make license-audit
 
 ```bash
 # Initialize hooks manifest (auto-detects format commands)
-bin/goneat hooks init
+goneat hooks init
 
 # Manual edit: Changed commands to use make targets
 # Before: goneat assess --hook pre-commit
@@ -195,13 +195,13 @@ optimization:
 
 ```bash
 # Generate hooks with guardian integration
-bin/goneat hooks generate --with-guardian
+goneat hooks generate --with-guardian
 
 # Install to .git/hooks/
-bin/goneat hooks install
+goneat hooks install
 
 # Validate installation
-bin/goneat hooks validate
+goneat hooks validate
 ```
 
 **Result**: Pre-commit and pre-push hooks installed with guardian enforcement.
@@ -241,7 +241,7 @@ echo "✅ Guardian approval satisfied"
 **Test performed**:
 
 ```bash
-bin/goneat guardian check git commit --branch main
+goneat guardian check git commit --branch main
 ```
 
 **Test result**:
@@ -348,27 +348,27 @@ make check-all
 
 ```bash
 # Initialize hooks manifest
-bin/goneat hooks init
+goneat hooks init
 
 # Generate hooks (with guardian)
-bin/goneat hooks generate --with-guardian
+goneat hooks generate --with-guardian
 
 # Install hooks to .git/hooks/
-bin/goneat hooks install
+goneat hooks install
 
 # Validate hooks installation
-bin/goneat hooks validate
+goneat hooks validate
 ```
 
 ### Guardian Approval
 
 ```bash
 # Check if operation is approved
-bin/goneat guardian check git commit --branch main
+goneat guardian check git commit --branch main
 
 # Approve and execute operation
-bin/goneat guardian approve git commit -- git commit -m "message"
-bin/goneat guardian approve git push -- git push origin main
+goneat guardian approve git commit -- git commit -m "message"
+goneat guardian approve git push -- git push origin main
 ```
 
 ### License Compliance
