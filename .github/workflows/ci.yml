@@ -44,12 +44,12 @@ jobs:
           # Also update PATH for this step.
           export PATH="$BIN_DIR:$PATH"
 
-          SFETCH_VERSION="v0.2.6"
+          SFETCH_VERSION="v0.2.7"
           curl -sSfL "https://github.com/3leaps/sfetch/releases/download/${SFETCH_VERSION}/install-sfetch.sh" | bash -s -- --yes --dir "$BIN_DIR"
 
           sfetch --self-verify
           sfetch --repo fulmenhq/goneat \
-            --tag v0.3.18 \
+            --tag v0.3.19 \
             --dest-dir "$BIN_DIR" \
             --require-minisign
 
