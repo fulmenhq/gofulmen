@@ -54,20 +54,12 @@ jobs:
           set -euo pipefail
           BIN_DIR="$HOME/.local/bin"
           mkdir -p "$BIN_DIR"
-          SFETCH_INSTALL_URL="https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh"
-          curl -sSfL "$SFETCH_INSTALL_URL" | bash -s -- --yes --dir "$BIN_DIR"
+          curl -sSfL https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh | bash -s -- --yes --dir "$BIN_DIR"
           export PATH="$BIN_DIR:$PATH"
           sfetch --self-verify
-          # GitHub Actions container mounts can make `$HOME` and `/tmp` different filesystems.
-          # sfetch caches downloaded assets by `rename(2)` into its cache dir; if the cache dir is on a
-          # different filesystem, this fails with "invalid cross-device link" (EXDEV).
-          # Workaround: force the sfetch cache dir into `/tmp` so the move stays on the same device.
-          SFETCH_CACHE_DIR="/tmp/sfetch-cache"
-          mkdir -p "$SFETCH_CACHE_DIR"
           sfetch --repo fulmenhq/goneat \
-            --tag v0.3.17 \
+            --tag v0.3.18 \
             --dest-dir "$BIN_DIR" \
-            --cache-dir "$SFETCH_CACHE_DIR" \
             --require-minisign
           if [ -f "$BIN_DIR/goneat.exe" ] && [ ! -f "$BIN_DIR/goneat" ]; then
             mv "$BIN_DIR/goneat.exe" "$BIN_DIR/goneat"
