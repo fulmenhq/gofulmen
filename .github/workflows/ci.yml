@@ -31,21 +31,46 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
       - name: Install sfetch + goneat (verified)
+        shell: bash
         run: |
           set -euo pipefail
-          BIN_DIR="$HOME/.local/bin"
+
+          BIN_DIR="${HOME:?}/.local/bin"
           mkdir -p "$BIN_DIR"
-          curl -sSfL https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh | bash -s -- --yes --dir "$BIN_DIR"
+
+          # Make the bin directory available to subsequent steps.
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+
+          # Also update PATH for this step.
           export PATH="$BIN_DIR:$PATH"
+
+          SFETCH_VERSION="v0.2.6"
+          curl -sSfL "https://github.com/3leaps/sfetch/releases/download/${SFETCH_VERSION}/install-sfetch.sh" | bash -s -- --yes --dir "$BIN_DIR"
+
           sfetch --self-verify
           sfetch --repo fulmenhq/goneat \
             --tag v0.3.18 \
             --dest-dir "$BIN_DIR" \
             --require-minisign
+
           if [ -f "$BIN_DIR/goneat.exe" ] && [ ! -f "$BIN_DIR/goneat" ]; then
             mv "$BIN_DIR/goneat.exe" "$BIN_DIR/goneat"
           fi
-          goneat --version
+
+          # Clear any shell command-path cache.
+          hash -r || true
+
+          # Call via full path to disambiguate PATH vs exec issues.
+          "$BIN_DIR/goneat" --version || {
+            echo "❌ goneat failed to execute" >&2
+            echo "HOME=$HOME" >&2
+            echo "PATH=$PATH" >&2
+            echo "BIN_DIR=$BIN_DIR" >&2
+            ls -la "$BIN_DIR" >&2 || true
+            command -v file >/dev/null 2>&1 && file "$BIN_DIR/goneat" >&2 || true
+            command -v ldd >/dev/null 2>&1 && ldd "$BIN_DIR/goneat" >&2 || true
+            exit 1
+          }
       - name: Format (fail on diff)
         run: |
           set -euo pipefail
