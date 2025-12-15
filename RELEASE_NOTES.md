@@ -24,6 +24,8 @@ This release upgrades gofulmen’s bootstrap and release workflow for higher sup
 - **Bootstrap Trust Pyramid** – `make bootstrap` verifies `sfetch` and prints `sfetch --self-verify --json`, then installs `goneat` via `sfetch --require-minisign`.
 - **No Local goneat Assumptions** – Make targets resolve `goneat` from `PATH`/user bin dir (no `./bin/goneat`).
 - **Signed Tag Workflow** – New `make release-tag` + `make release-verify-tag` and a contributor-friendly `RELEASE_CHECKLIST.md`.
+- **Signing Key Env Alignment** – Release scripts use `GOFULMEN_GPG_HOMEDIR` (deprecated alias: `GOFULMEN_GPG_HOME`).
+- **Optional Minisign Attestation** – `make release-tag` can write `dist/release/vX.Y.Z.tag.txt.minisig` when `GOFULMEN_MINISIGN_KEY` + `GOFULMEN_MINISIGN_PUB` are set.
 - **Version/Tag Guard** – New `make release-guard-tag-version` to fail when `VERSION` and release tag diverge.
 - **Provenance Visibility** – New `make release-provenance-check` prints Crucible provenance from `.goneat/ssot/provenance.json` and `.crucible/metadata/metadata.yaml`.
 - **Stable CI Repo Root Discovery** – New `pathfinder.DetectCIBoundaryHint()` helps applications constrain `FindRepositoryRoot` to the CI workspace without adding a production env bypass.

@@ -15,11 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release Guardrails** – Added `make release-guard-tag-version` to enforce `tag == v$(cat VERSION)` on release verification paths.
 - **Provenance Checks** – Added `make release-provenance-check` to surface Crucible SSOT provenance before tagging.
 - **CI Boundary Hints for Repo Root Discovery** – Added `pathfinder.DetectCIBoundaryHint()` to derive a safe `WithBoundary()` ceiling from common CI workspace env vars (opt-in; preserves default safety behavior).
+- **Minisign Tag Attestation (Optional)** – `make release-tag` can generate a `dist/release/vX.Y.Z.tag.txt.minisig` sidecar signature when minisign keys are provided.
 
 ### Changed
 
 - **Bootstrap Trust Anchor** – `make bootstrap` now uses `sfetch` as the trust anchor, prints `sfetch --self-verify --json`, and installs `goneat` via `sfetch --require-minisign`.
 - **No Local goneat Binary** – Make targets no longer assume `./bin/goneat`; they resolve `goneat` from `PATH`/user bin dir.
+- **Signing Env Alignment** – Standardized on `GOFULMEN_GPG_HOMEDIR` for release tag signing (accepts `GOFULMEN_GPG_HOME` as a deprecated alias).
 
 ## [0.1.20] - 2025-11-26
 

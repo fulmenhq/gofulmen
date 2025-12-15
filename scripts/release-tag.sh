@@ -46,16 +46,21 @@ main() {
 		exit 1
 	fi
 
-	if [ -n "${GOFULMEN_GPG_HOME:-}" ]; then
-		if [ ! -d "${GOFULMEN_GPG_HOME}" ]; then
-			echo "error: GOFULMEN_GPG_HOME=${GOFULMEN_GPG_HOME} is not a directory" >&2
-			exit 1
-		fi
-		export GNUPGHOME="${GOFULMEN_GPG_HOME}"
+	local gpg_homedir="${GOFULMEN_GPG_HOMEDIR:-${GOFULMEN_GPG_HOME:-}}"
+	if [ -n "${GOFULMEN_GPG_HOME:-}" ] && [ -z "${GOFULMEN_GPG_HOMEDIR:-}" ]; then
+		echo "warning: GOFULMEN_GPG_HOME is deprecated; use GOFULMEN_GPG_HOMEDIR" >&2
 	fi
 
-	if [ -n "${GOFULMEN_PGP_KEY_ID:-}" ] && [ -z "${GOFULMEN_GPG_HOME:-}" ]; then
-		echo "error: GOFULMEN_PGP_KEY_ID is set but GOFULMEN_GPG_HOME is not; set a dedicated signing homedir" >&2
+	if [ -n "${gpg_homedir}" ]; then
+		if [ ! -d "${gpg_homedir}" ]; then
+			echo "error: GOFULMEN_GPG_HOMEDIR=${gpg_homedir} is not a directory" >&2
+			exit 1
+		fi
+		export GNUPGHOME="${gpg_homedir}"
+	fi
+
+	if [ -n "${GOFULMEN_PGP_KEY_ID:-}" ] && [ -z "${gpg_homedir}" ]; then
+		echo "error: GOFULMEN_PGP_KEY_ID is set but GOFULMEN_GPG_HOMEDIR is not; set a dedicated signing homedir" >&2
 		exit 1
 	fi
 
@@ -71,9 +76,47 @@ main() {
 	git verify-tag "$tag" >/dev/null
 
 	echo "✅ Created and verified signed tag: $tag"
+
+	# Optional: produce a minisign signature for a deterministic tag attestation.
+	# This does NOT modify the git tag object; it creates a sidecar signature
+	# that can be uploaded as a release asset.
+	if [ -n "${GOFULMEN_MINISIGN_KEY:-}" ] || [ -n "${GOFULMEN_MINISIGN_PUB:-}" ]; then
+		if ! command -v minisign >/dev/null 2>&1; then
+			echo "error: minisign requested but not found in PATH" >&2
+			exit 1
+		fi
+		if [ -z "${GOFULMEN_MINISIGN_KEY:-}" ] || [ -z "${GOFULMEN_MINISIGN_PUB:-}" ]; then
+			echo "error: minisign requires both GOFULMEN_MINISIGN_KEY and GOFULMEN_MINISIGN_PUB" >&2
+			exit 1
+		fi
+
+		local out_dir="dist/release"
+		mkdir -p "${out_dir}"
+		local payload="${out_dir}/${tag}.tag.txt"
+
+		local tag_object
+		tag_object="$(git rev-parse "${tag}^{tag}")"
+		local tag_target
+		tag_target="$(git rev-parse "${tag}^{}")"
+
+		cat >"${payload}" <<EOF
+	tag: ${tag}
+	tag_object: ${tag_object}
+	tag_target: ${tag_target}
+EOF
+
+		echo "→ Minisign tag attestation: ${payload}"
+		minisign -Sm "${payload}" -s "${GOFULMEN_MINISIGN_KEY}"
+		minisign -Vm "${payload}" -p "${GOFULMEN_MINISIGN_PUB}" >/dev/null
+		echo "✅ Minisign signature verified: ${payload}.minisig"
+	fi
+
 	echo "Next:"
 	echo "  git push origin main"
 	echo "  git push origin $tag"
+	if [ -f "dist/release/${tag}.tag.txt.minisig" ]; then
+		echo "  # Optional: upload dist/release/${tag}.tag.txt* as release assets"
+	fi
 }
 
 main "$@"
