@@ -166,24 +166,24 @@ func FindRepositoryRoot(startPath string, markers []string, opts ...FindOption) 
 	// Get filesystem root for this path
 	fsRoot := getFilesystemRoot(absStart)
 
-	// Determine boundary (default: user home if it contains startPath).
+	// Determine boundary.
 	//
-	// In CI/container environments (e.g. GitHub Actions), the workspace is often mounted
-	// outside $HOME (commonly under /__w). In that case, using $HOME as a boundary would
-	// prevent any upward traversal and break repository discovery.
+	// By default, FindRepositoryRoot uses the user's home directory as a safety ceiling.
+	// This is intentionally conservative: if startPath is outside $HOME (common in
+	// containerized CI), callers should supply an explicit boundary.
 	boundary := options.Boundary
 	if boundary == "" {
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
 			absHome, err := filepath.Abs(homeDir)
-			if err == nil && absHome != "/" && absHome != "/root" && isWithinBoundary(absStart, absHome) {
+			if err == nil && absHome != "" {
 				boundary = absHome
-			} else {
-				boundary = fsRoot
 			}
-		} else {
-			boundary = fsRoot
 		}
+	}
+	if boundary == "" {
+		// Last resort: prevent runaway traversal if home cannot be determined.
+		boundary = absStart
 	}
 
 	// Get absolute boundary path

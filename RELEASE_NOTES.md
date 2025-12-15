@@ -26,6 +26,7 @@ This release upgrades gofulmen’s bootstrap and release workflow for higher sup
 - **Signed Tag Workflow** – New `make release-tag` + `make release-verify-tag` and a contributor-friendly `RELEASE_CHECKLIST.md`.
 - **Version/Tag Guard** – New `make release-guard-tag-version` to fail when `VERSION` and release tag diverge.
 - **Provenance Visibility** – New `make release-provenance-check` prints Crucible provenance from `.goneat/ssot/provenance.json` and `.crucible/metadata/metadata.yaml`.
+- **Stable CI Repo Root Discovery** – New `pathfinder.DetectCIBoundaryHint()` helps applications constrain `FindRepositoryRoot` to the CI workspace without adding a production env bypass.
 
 #### Testing
 

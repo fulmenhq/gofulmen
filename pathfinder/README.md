@@ -409,6 +409,28 @@ FindRepositoryRoot enforces multiple safety boundaries to prevent runaway traver
 3. **Max Depth Guard**: Limits upward traversal (default: 10 directories)
 4. **Custom Boundary**: Optional explicit ceiling path via `WithBoundary()`
 
+#### CI Workspaces (Boundary Hints)
+
+In some CI/container environments the workspace is not under `$HOME` (for example GitHub Actions mounts under `/__w`). In those cases you should supply an explicit boundary so repo-root discovery remains both reliable and safe.
+
+`DetectCIBoundaryHint()` is an opt-in helper that derives a safe boundary from common CI workspace environment variables. It only returns a hint when it can prove the candidate boundary contains `startPath`.
+
+```go
+start := "." // or cwd
+markers := []string{"go.mod", ".git"}
+
+if hint, ok := pathfinder.DetectCIBoundaryHint(start); ok {
+	root, err := pathfinder.FindRepositoryRoot(start, markers,
+		pathfinder.WithBoundary(hint.Boundary),
+		pathfinder.WithMaxDepth(20),
+	)
+	// handle root/err
+}
+
+// Fallback for non-CI or when no hint is available
+root, err := pathfinder.FindRepositoryRoot(start, markers)
+```
+
 **Example with boundaries:**
 
 ```go

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Signed Release Tag Tooling** – Added `make release-tag`, `make release-verify-tag`, and `RELEASE_CHECKLIST.md` for a consistent signed-tag release workflow.
 - **Release Guardrails** – Added `make release-guard-tag-version` to enforce `tag == v$(cat VERSION)` on release verification paths.
 - **Provenance Checks** – Added `make release-provenance-check` to surface Crucible SSOT provenance before tagging.
+- **CI Boundary Hints for Repo Root Discovery** – Added `pathfinder.DetectCIBoundaryHint()` to derive a safe `WithBoundary()` ceiling from common CI workspace env vars (opt-in; preserves default safety behavior).
 
 ### Changed
 
