@@ -11,7 +11,7 @@ jobs:
     name: Test (container)
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/fulmenhq/goneat-tools:v0.1.6
+      image: ghcr.io/fulmenhq/goneat-tools-runner:v0.2.1
       options: --user 1001
     steps:
       - name: Checkout code
@@ -30,111 +30,17 @@ jobs:
         run: go mod download
       - name: Verify dependencies
         run: go mod verify
-      - name: Install sfetch + goneat (verified)
+      - name: Verify runner toolchain
         shell: bash
         run: |
           set -euo pipefail
-
-          BIN_DIR="${HOME:?}/.local/bin"
-          mkdir -p "$BIN_DIR"
-
-          # Make the bin directory available to subsequent steps.
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-
-          # Also update PATH for this step.
-          export PATH="$BIN_DIR:$PATH"
-
-          SFETCH_VERSION="v0.2.7"
-          curl -sSfL "https://github.com/3leaps/sfetch/releases/download/${SFETCH_VERSION}/install-sfetch.sh" | bash -s -- --yes --dir "$BIN_DIR"
-
-          sfetch --self-verify
-          sfetch --repo fulmenhq/goneat \
-            --tag v0.3.19 \
-            --dest-dir "$BIN_DIR" \
-            --require-minisign
-
-          if [ -f "$BIN_DIR/goneat.exe" ] && [ ! -f "$BIN_DIR/goneat" ]; then
-            mv "$BIN_DIR/goneat.exe" "$BIN_DIR/goneat"
-          fi
-
-          # Clear any shell command-path cache.
-          hash -r || true
-
-          # Call via full path to disambiguate PATH vs exec issues.
-          "$BIN_DIR/goneat" --version || {
-            echo "❌ goneat failed to execute" >&2
-            echo "HOME=$HOME" >&2
-            echo "PATH=$PATH" >&2
-            echo "BIN_DIR=$BIN_DIR" >&2
-            ls -la "$BIN_DIR" >&2 || true
-            command -v file >/dev/null 2>&1 && file "$BIN_DIR/goneat" >&2 || true
-            command -v ldd >/dev/null 2>&1 && ldd "$BIN_DIR/goneat" >&2 || true
-            exit 1
-          }
-      - name: Verify runner prerequisites
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          required_cmds=(bash curl git make tar)
-          missing_cmds=()
-
-          for cmd in "${required_cmds[@]}"; do
-            if ! command -v "$cmd" >/dev/null 2>&1; then
-              missing_cmds+=("$cmd")
-            fi
-          done
-
-          if [ "${#missing_cmds[@]}" -eq 0 ]; then
-            echo "✅ Runner prerequisites present"
-            make --version | head -n1 || true
-            exit 0
-          fi
-
-          echo "⚠️  Missing runner prerequisites: ${missing_cmds[*]}" >&2
-
-          run_as_root() {
-            if [ "$(id -u)" -eq 0 ]; then
-              "$@"
-              return
-            fi
-            if command -v sudo >/dev/null 2>&1; then
-              sudo "$@"
-              return
-            fi
-            echo "❌ Cannot install packages (not root, no sudo)." >&2
-            echo "   Update the runner image (goneat-tools) to include: ${missing_cmds[*]}" >&2
-            exit 1
-          }
-
-          if command -v apk >/dev/null 2>&1; then
-            # Alpine
-            run_as_root apk add --no-cache bash ca-certificates coreutils curl git gzip make tar unzip xz
-          elif command -v apt-get >/dev/null 2>&1; then
-            # Debian/Ubuntu
-            run_as_root bash -c '
-              set -e
-              apt-get update
-              apt-get install -y --no-install-recommends \
-                bash \
-                ca-certificates \
-                coreutils \
-                curl \
-                git \
-                gzip \
-                make \
-                tar \
-                unzip \
-                xz-utils
-              rm -rf /var/lib/apt/lists/*
-            '
-          else
-            echo "❌ Unsupported base image: no apk/apt-get found." >&2
-            exit 1
-          fi
-
-          command -v make >/dev/null 2>&1
-          make --version | head -n1
+          echo "PATH=$PATH"
+          echo "go: $(go version)"
+          echo "goneat: $(goneat --version | head -n1)"
+          echo "sfetch: $(sfetch --version | head -n1)"
+          echo "actionlint: $(actionlint -version 2>/dev/null || true)"
+          echo "make: $(make --version | head -n1)"
+          echo "bash: $(bash --version | head -n1)"
       - name: Format (fail on diff)
         run: |
           set -euo pipefail
