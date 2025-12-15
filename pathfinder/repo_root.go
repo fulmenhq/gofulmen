@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/fulmenhq/gofulmen/errors"
 )
@@ -162,20 +163,26 @@ func FindRepositoryRoot(startPath string, markers []string, opts ...FindOption) 
 		absStart = filepath.Dir(absStart)
 	}
 
-	// Determine boundary (default: home directory)
+	// Get filesystem root for this path
+	fsRoot := getFilesystemRoot(absStart)
+
+	// Determine boundary (default: user home if it contains startPath).
+	//
+	// In CI/container environments (e.g. GitHub Actions), the workspace is often mounted
+	// outside $HOME (commonly under /__w). In that case, using $HOME as a boundary would
+	// prevent any upward traversal and break repository discovery.
 	boundary := options.Boundary
 	if boundary == "" {
 		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			// Fallback: if we can't get home dir (container/CI), use start path as boundary
-			boundary = absStart
-		} else {
-			// Special case: if home is /root or /, use start path instead to prevent filesystem traversal
-			if homeDir == "/" || homeDir == "/root" {
-				boundary = absStart
+		if err == nil {
+			absHome, err := filepath.Abs(homeDir)
+			if err == nil && absHome != "/" && absHome != "/root" && isWithinBoundary(absStart, absHome) {
+				boundary = absHome
 			} else {
-				boundary = homeDir
+				boundary = fsRoot
 			}
+		} else {
+			boundary = fsRoot
 		}
 	}
 
@@ -202,9 +209,6 @@ func FindRepositoryRoot(startPath string, markers []string, opts ...FindOption) 
 		})
 		return "", envelope
 	}
-
-	// Get filesystem root for this path
-	fsRoot := getFilesystemRoot(absStart)
 
 	// Track visited paths to detect symlink loops
 	visited := make(map[string]bool)
@@ -337,20 +341,24 @@ func getFilesystemRoot(absPath string) string {
 
 // isWithinBoundary checks if path is within or equal to boundary
 func isWithinBoundary(path, boundary string) bool {
-	// Clean paths for comparison
 	cleanPath := filepath.Clean(path)
 	cleanBoundary := filepath.Clean(boundary)
 
-	// Path must be equal to or a subdirectory of boundary
-	// We check if path has boundary as prefix
 	rel, err := filepath.Rel(cleanBoundary, cleanPath)
 	if err != nil {
 		return false
 	}
 
-	// If rel is "." then path == boundary (within boundary)
-	// If rel doesn't start with ".." then path is under boundary
-	return rel == "." || (!filepath.IsAbs(rel) && len(rel) > 0 && rel[0] != '.')
+	if rel == "." {
+		return true
+	}
+	if rel == ".." {
+		return false
+	}
+
+	// If rel starts with "../" (or "..\" on Windows), path is outside boundary.
+	prefix := ".." + string(filepath.Separator)
+	return !strings.HasPrefix(rel, prefix)
 }
 
 // checkForMarkers checks if any marker exists in the given directory

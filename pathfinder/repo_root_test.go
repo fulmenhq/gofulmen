@@ -7,41 +7,59 @@ import (
 )
 
 func TestFindRepositoryRoot_GitMarker(t *testing.T) {
-	// This test runs from pathfinder/ directory
-	// We expect to find .git at the repo root
-	root, err := FindRepositoryRoot(".", GitMarkers)
+	tempDir := t.TempDir()
+
+	nestedPath := filepath.Join(tempDir, "a", "b", "c")
+	if err := os.MkdirAll(nestedPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitPath := filepath.Join(tempDir, ".git")
+	if err := os.Mkdir(gitPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	boundary := filepath.Dir(tempDir)
+	root, err := FindRepositoryRoot(nestedPath, GitMarkers, WithBoundary(boundary))
 	if err != nil {
 		t.Fatalf("FindRepositoryRoot failed: %v", err)
 	}
 
-	// Verify we found a directory
-	if root == "" {
-		t.Fatal("FindRepositoryRoot returned empty string")
+	if root != tempDir {
+		t.Fatalf("Expected repository root %s, got %s", tempDir, root)
 	}
 
-	// Verify .git exists in the found directory
-	gitPath := filepath.Join(root, ".git")
-	if _, err := os.Stat(gitPath); err != nil {
-		t.Fatalf("Expected .git directory at %s, but got error: %v", gitPath, err)
+	if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
+		t.Fatalf("Expected .git marker at %s, but got error: %v", filepath.Join(root, ".git"), err)
 	}
-
-	t.Logf("Found repository root at: %s", root)
 }
 
 func TestFindRepositoryRoot_GoModMarker(t *testing.T) {
-	// This test should find go.mod at the repo root
-	root, err := FindRepositoryRoot(".", GoModMarkers)
+	tempDir := t.TempDir()
+
+	nestedPath := filepath.Join(tempDir, "a", "b", "c")
+	if err := os.MkdirAll(nestedPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	goModPath := filepath.Join(tempDir, "go.mod")
+	if err := os.WriteFile(goModPath, []byte("module example.com/test\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	boundary := filepath.Dir(tempDir)
+	root, err := FindRepositoryRoot(nestedPath, GoModMarkers, WithBoundary(boundary))
 	if err != nil {
 		t.Fatalf("FindRepositoryRoot failed: %v", err)
 	}
 
-	// Verify go.mod exists
-	goModPath := filepath.Join(root, "go.mod")
-	if _, err := os.Stat(goModPath); err != nil {
-		t.Fatalf("Expected go.mod at %s, but got error: %v", goModPath, err)
+	if root != tempDir {
+		t.Fatalf("Expected repository root %s, got %s", tempDir, root)
 	}
 
-	t.Logf("Found Go module root at: %s", root)
+	if _, err := os.Stat(filepath.Join(root, "go.mod")); err != nil {
+		t.Fatalf("Expected go.mod marker at %s, but got error: %v", filepath.Join(root, "go.mod"), err)
+	}
 }
 
 func TestFindRepositoryRoot_InvalidStartPath(t *testing.T) {
