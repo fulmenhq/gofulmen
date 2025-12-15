@@ -27,13 +27,24 @@ import (
 //
 // This test runs as part of 'make check-all' to catch this mistake before release.
 func TestCrucibleVersionMatchesMetadata(t *testing.T) {
-	// Find repository root using pathfinder (dogfooding our own library)
+	// Find repository root using pathfinder (dogfooding our own library).
+	//
+	// IMPORTANT: In containerized CI the workspace is often mounted outside $HOME
+	// (e.g. GitHub Actions /__w) and FindRepositoryRoot defaults to a home-dir
+	// boundary ceiling. Use DetectCIBoundaryHint() as an opt-in boundary hint to
+	// keep discovery both reliable and safe.
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
 
-	root, err := pathfinder.FindRepositoryRoot(cwd, pathfinder.GoModMarkers)
+	markers := []string{"go.mod", ".git"}
+	options := []pathfinder.FindOption{}
+	if hint, ok := pathfinder.DetectCIBoundaryHint(cwd); ok {
+		options = append(options, pathfinder.WithBoundary(hint.Boundary))
+	}
+
+	root, err := pathfinder.FindRepositoryRoot(cwd, markers, options...)
 	if err != nil {
 		t.Fatalf("Failed to find repository root: %v", err)
 	}
