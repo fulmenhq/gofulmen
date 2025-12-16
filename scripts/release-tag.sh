@@ -13,6 +13,27 @@ read_version() {
 	tr -d ' \t\r\n' <VERSION
 }
 
+setup_gpg_tty() {
+	# When using passphrase-protected keys, gpg will invoke pinentry.
+	# Ensure it has a real TTY to talk to, otherwise signing fails with:
+	# "Inappropriate ioctl for device".
+	if [ ! -t 0 ] || [ ! -t 1 ]; then
+		echo "error: no TTY available for interactive gpg signing" >&2
+		echo "hint: run make release-tag in an interactive terminal" >&2
+		echo "hint: export GPG_TTY=\"$(tty)\" && gpg-connect-agent updatestartuptty /bye" >&2
+		exit 1
+	fi
+
+	if command -v tty >/dev/null 2>&1; then
+		local tty_path
+		tty_path="$(tty 2>/dev/null || true)"
+		if [ -n "${tty_path}" ] && [ "${tty_path}" != "not a tty" ]; then
+			export GPG_TTY="${tty_path}"
+			gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+		fi
+	fi
+}
+
 main() {
 	local root
 	root="$(repo_root)"
@@ -63,6 +84,8 @@ main() {
 		echo "error: GOFULMEN_PGP_KEY_ID is set but GOFULMEN_GPG_HOMEDIR is not; set a dedicated signing homedir" >&2
 		exit 1
 	fi
+
+	setup_gpg_tty
 
 	echo "→ Creating signed tag: $tag"
 

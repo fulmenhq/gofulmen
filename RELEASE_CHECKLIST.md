@@ -34,6 +34,11 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
 
 ## Tagging (Signed Tag Required)
 
+- [ ] Ensure interactive GPG signing can prompt for passphrase (recommended):
+  ```bash
+  export GPG_TTY="$(tty)"
+  gpg-connect-agent updatestartuptty /bye
+  ```
 - [ ] Create and verify the signed tag:
   ```bash
   make release-tag
