@@ -46,6 +46,10 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
 
 ## Post-Release
 
+- [ ] Optionally remove local release artifacts:
+  ```bash
+  make release-clean
+  ```
 - [ ] Spot-check downstream consumption:
   ```bash
   go list -m github.com/fulmenhq/gofulmen@v$(cat VERSION)

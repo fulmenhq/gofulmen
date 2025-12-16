@@ -199,6 +199,11 @@ release-prepare: ## Prepare for release (sync, tests, version bump)
 release-build: build-all ## Build release artifacts (binaries + checksums)
 	@echo "✅ Release build complete"
 
+release-clean: ## Remove local release artifacts (dist/release)
+	@echo "Cleaning release artifacts..."
+	@rm -rf dist/release
+	@echo "✅ Release artifacts removed"
+
 # Help target
 help: ## Show this help message
 	@echo "Gofulmen - Available Make Targets"
@@ -224,6 +229,7 @@ help: ## Show this help message
 	@echo "  release-check   - Run release checklist validation"
 	@echo "  release-prepare - Prepare for release"
 	@echo "  release-build   - Build release artifacts"
+	@echo "  release-clean   - Remove local release artifacts"
 	@echo "  release-provenance-check - Verify SSOT provenance files"
 	@echo "  release-guard-tag-version - Guard tag matches VERSION"
 	@echo "  release-tag     - Create signed git tag for VERSION"
