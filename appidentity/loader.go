@@ -242,12 +242,19 @@ func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 
 	exeStartDir, exeErr := executableStartDir()
 	if exeErr != nil {
+		if embedded, ok := getEmbeddedIdentity(); ok {
+			return embedded, nil
+		}
 		return nil, err
 	}
 
 	fallbackPath, fallbackErr := findIdentityFile(exeStartDir)
 	if fallbackErr == nil {
 		return loadIdentityFile(fallbackPath)
+	}
+
+	if embedded, ok := getEmbeddedIdentity(); ok {
+		return embedded, nil
 	}
 
 	var fallbackNotFoundErr *NotFoundError

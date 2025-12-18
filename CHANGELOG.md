@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.23] - 2025-12-18
+
+### Added
+
+- **AppIdentity Embedded Fallback** – Added `RegisterEmbeddedIdentityYAML` so distributed artifacts can include a compiled-in `.fulmen/app.yaml` fallback when no external identity file is available.
+
+### Fixed
+
+- **Standalone Tool UX** – `appidentity.Get()` can now resolve identity for binaries executed outside a repository tree (after env/path + filesystem discovery fail).
+
+### Changed
+
+- **Crucible v0.2.24 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.2.24`.
+- **Release Checklist Clarity** – Expanded `RELEASE_CHECKLIST.md` with explicit tag verification, remote verification (GitHub API), and minisign attestation publishing guidance.
+
 ## [0.1.22] - 2025-12-18
 
 ### Fixed

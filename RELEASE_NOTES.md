@@ -4,6 +4,30 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.23] - 2025-12-18
+
+### AppIdentity embedded identity fallback (standalone artifacts) + Crucible v0.2.24
+
+**Release Type**: Bug Fix / DX Contract Hardening
+
+#### Overview
+
+This release closes the remaining gap in App Identity portability: distributed artifacts can now ship a compiled-in `.fulmen/app.yaml` so basic commands work even when the binary/package runs outside a repository checkout.
+
+#### Highlights
+
+- **Embedded identity fallback** – Applications can call `appidentity.RegisterEmbeddedIdentityYAML()` to register a compiled-in identity used only after explicit path/env overrides and filesystem discovery fail.
+- **Keeps overrides authoritative** – `FULMEN_APP_IDENTITY_PATH` and `Options.ExplicitPath` continue to short-circuit discovery and will not fall back to embedded identity.
+- **Template-ready contract** – Supports the template pattern of mirroring `.fulmen/app.yaml` to an embeddable location (e.g. `internal/assets/appidentity/app.yaml`) and embedding it via `//go:embed`.
+- **Crucible SSOT sync** – Updated embedded Crucible assets and `go.mod` dependency to Crucible `v0.2.24`.
+
+#### Testing
+
+- ✅ `go test ./appidentity -v`
+- ✅ `go test ./...`
+
+---
+
 ## [0.1.22] - 2025-12-18
 
 ### AppIdentity portable discovery (binary outside repo) + Crucible v0.2.23
@@ -61,49 +85,6 @@ This release upgrades gofulmen’s bootstrap and release workflow for higher sup
 - ✅ `make sync` (provenance unchanged for Crucible v0.2.21)
 - ✅ `make tools`
 - ✅ `make -n release-*` (Makefile sanity)
-
----
-
-## [0.1.20] - 2025-11-26
-
-### FulHash CRC + MultiHash + Verify (Crucible v0.2.20)
-
-**Release Type**: Feature + Dependency Sync  
-**Status**: ✅ Ready for Release
-
-#### Overview
-
-This release finishes the FulHash workstream: CRC32/CRC32C support, single-pass MultiHash helpers, Crucible-compatible Verify utilities, and refreshed telemetry. All APIs pull algorithms directly from Crucible v0.2.20 so FulHash stays SSOT-aligned with pyfulmen and tsfulmen.
-
-#### Highlights
-
-- **CRC Algorithms** – Added IEEE and Castagnoli CRC32 implementations across block, streaming, and pooled hashers with fixture coverage and streaming parity tests.
-- **MultiHash Helpers** – `MultiHash`, `MultiHashString`, and `MultiHashReader` dedupe algorithms, fan out via `io.MultiWriter`, emit per-algorithm counters, and record bytes only once.
-- **Verify Helpers** – `Verify`, `VerifyString`, and `VerifyReader` parse Crucible-formatted digests, compute the required algorithm once, and emit `result=match|mismatch` telemetry plus mismatch counters.
-- **Crucible Digest Interop** – `Digest.ToCrucible()`/`FromCrucible()` bridge SSOT digests, decoding hex when Crucible omits raw bytes and round-tripping every algorithm in regression tests.
-- **Telemetry** – New counters for CRC32/CRC32C, verify result tagging, and mismatch error counters so dashboards surface digest drift quickly.
-
-#### Files Changed
-
-```
-fulhash/*                    # CRC hashers, multi-hash fanout, verify helpers, options, tests, benches
-telemetry/metrics/*          # CRC metrics + taxonomy tests
-schemas/config/docs          # Crucible v0.2.20 fulhash taxonomy + documentation sync
-.crucible/.goneat/VERSION    # Provenance + version bump aligned with Crucible sync
-go.mod / go.sum              # Dependency update to github.com/fulmenhq/crucible v0.2.20
-```
-
-#### Testing
-
-- ✅ `make check-all`
-- ✅ `go test ./fulhash -run .`
-- ✅ `go test ./...` (implicit via make target)
-
-#### Impact
-
-- FulHash consumers now have CRC32/CRC32C plus helper utilities without double-reading data.
-- Telemetry dashboards can differentiate successes vs mismatches with algorithm tags.
-- Future FulHash algorithms ship automatically via Crucible taxonomy imports.
 
 ---
 

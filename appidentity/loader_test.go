@@ -348,7 +348,7 @@ func TestDiscoverIdentityExecutableFallback(t *testing.T) {
 	// Neutralize any developer ambient environment. If FULMEN_APP_IDENTITY_PATH
 	// is set in the shell, identity discovery must treat it as authoritative and
 	// skip the executable-dir fallback, which would make this test flaky.
-	t.Setenv(EnvIdentityPath, "")
+	neutralizeIdentityPathEnv(t)
 
 	ctx := context.Background()
 
@@ -464,7 +464,7 @@ func TestDiscoverIdentityNotFoundIncludesFallback(t *testing.T) {
 	// Neutralize any developer ambient environment. If FULMEN_APP_IDENTITY_PATH
 	// is set in the shell, discovery should short-circuit to that value and not
 	// record a fallback search trace.
-	t.Setenv(EnvIdentityPath, "")
+	neutralizeIdentityPathEnv(t)
 
 	ctx := context.Background()
 
@@ -507,6 +507,89 @@ func TestDiscoverIdentityNotFoundIncludesFallback(t *testing.T) {
 	}
 	if notFoundErr.FallbackStartDir == "" || len(notFoundErr.FallbackSearchedPaths) == 0 {
 		t.Fatal("expected fallback search paths in NotFoundError")
+	}
+}
+
+// TestDiscoverIdentityEmbeddedFallback verifies discovery falls back to an
+// embedded identity payload when no external file can be found.
+func TestDiscoverIdentityEmbeddedFallback(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
+	ctx := context.Background()
+	Reset()
+	t.Cleanup(Reset)
+
+	embedded := []byte("app:\n  binary_name: embedded\n  vendor: embedded\n  env_prefix: EMBEDDED_\n  config_name: embedded\n  description: Embedded identity test\n")
+	if err := RegisterEmbeddedIdentityYAML(embedded); err != nil {
+		t.Fatalf("RegisterEmbeddedIdentityYAML() failed: %v", err)
+	}
+
+	cwdDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldDir) })
+	if err := os.Chdir(cwdDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	identity, err := Get(ctx)
+	if err != nil {
+		t.Fatalf("Get() failed: %v", err)
+	}
+	if identity.BinaryName != "embedded" {
+		t.Errorf("BinaryName = %q, want %q", identity.BinaryName, "embedded")
+	}
+}
+
+// TestDiscoverIdentityEmbeddedRespectsEnvVar verifies an env var override remains
+// authoritative even when an embedded identity is registered.
+func TestDiscoverIdentityEmbeddedRespectsEnvVar(t *testing.T) {
+	ctx := context.Background()
+	Reset()
+	t.Cleanup(Reset)
+
+	embedded := []byte("app:\n  binary_name: embedded\n  vendor: embedded\n  env_prefix: EMBEDDED_\n  config_name: embedded\n  description: Embedded identity test\n")
+	if err := RegisterEmbeddedIdentityYAML(embedded); err != nil {
+		t.Fatalf("RegisterEmbeddedIdentityYAML() failed: %v", err)
+	}
+
+	t.Setenv(EnvIdentityPath, filepath.Join(t.TempDir(), "missing.yaml"))
+
+	_, err := Get(ctx)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var notFoundErr *NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Fatalf("expected NotFoundError, got %T", err)
+	}
+}
+
+// TestDiscoverIdentityEmbeddedRespectsExplicitPath verifies ExplicitPath remains
+// authoritative even when an embedded identity is registered.
+func TestDiscoverIdentityEmbeddedRespectsExplicitPath(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
+	ctx := context.Background()
+	Reset()
+	t.Cleanup(Reset)
+
+	embedded := []byte("app:\n  binary_name: embedded\n  vendor: embedded\n  env_prefix: EMBEDDED_\n  config_name: embedded\n  description: Embedded identity test\n")
+	if err := RegisterEmbeddedIdentityYAML(embedded); err != nil {
+		t.Fatalf("RegisterEmbeddedIdentityYAML() failed: %v", err)
+	}
+
+	_, err := GetWithOptions(ctx, Options{ExplicitPath: filepath.Join(t.TempDir(), "missing.yaml")})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var notFoundErr *NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Fatalf("expected NotFoundError, got %T", err)
 	}
 }
 

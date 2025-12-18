@@ -30,6 +30,7 @@ var (
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
 //  4. Nearest ancestor search from current directory
 //  5. Fallback: Nearest ancestor search from executable directory
+//  6. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
 //
 // This function is thread-safe and ensures only one discovery attempt runs at
 // a time under concurrent access.
@@ -49,6 +50,8 @@ func Get(ctx context.Context) (*Identity, error) {
 //  2. opts.ExplicitPath
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
 //  4. Nearest ancestor search from opts.RepoRoot (default: cwd)
+//  5. Fallback: Nearest ancestor search from executable directory
+//  6. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
 func GetWithOptions(ctx context.Context, opts Options) (*Identity, error) {
 	// Priority 1: Check for context injection (override).
 	if identity := fromContext(ctx); identity != nil {
@@ -110,9 +113,10 @@ func Must(ctx context.Context) *Identity {
 // IMPORTANT: Reset is NOT safe to call concurrently with Get/GetWithOptions.
 func Reset() {
 	cacheMu.Lock()
-	defer cacheMu.Unlock()
-
 	cachedIdentity = nil
 	cacheLoading = false
 	cacheCond.Broadcast()
+	cacheMu.Unlock()
+
+	resetEmbeddedIdentity()
 }

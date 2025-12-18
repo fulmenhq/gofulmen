@@ -21,6 +21,10 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
 
 ## Pre-Release
 
+- [ ] Optional: start from a clean slate (removes `dist/release`):
+  ```bash
+  make release-clean
+  ```
 - [ ] `git status` is clean
 - [ ] `make sync` completed and provenance reviewed:
   - [ ] `.goneat/ssot/provenance.json` is present/current
@@ -31,6 +35,10 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
 - [ ] `docs/releases/vX.Y.Z.md` created/updated
 - [ ] `RELEASE_NOTES.md` updated (keep only latest 3 entries)
 - [ ] `VERSION` matches the intended tag (`v$(cat VERSION)`)
+- [ ] Guard: ensure tag/version match:
+  ```bash
+  make release-guard-tag-version
+  ```
 
 ## Tagging (Signed Tag Required)
 
@@ -39,9 +47,20 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
   export GPG_TTY="$(tty)"
   gpg-connect-agent updatestartuptty /bye
   ```
-- [ ] Create and verify the signed tag:
+- [ ] Sanity checks (CI-friendly):
+  ```bash
+  make release-guard-tag-version
+  make release-provenance-check
+  ```
+- [ ] Create the signed tag:
   ```bash
   make release-tag
+  ```
+- [ ] Verify the signed tag locally:
+  ```bash
+  make release-verify-tag
+  # or:
+  git tag -v v$(cat VERSION)
   ```
 - [ ] Push:
   ```bash
@@ -51,12 +70,30 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
 
 ## Post-Release
 
-- [ ] Optionally remove local release artifacts:
-  ```bash
-  make release-clean
-  ```
 - [ ] Spot-check downstream consumption:
   ```bash
   go list -m github.com/fulmenhq/gofulmen@v$(cat VERSION)
   ```
+- [ ] Optional: remove local release artifacts:
+  ```bash
+  make release-clean
+  ```
+- [ ] Optional: show consumers how to verify the tag signature:
+  - [ ] **Local git** (most reliable):
+    ```bash
+    git fetch --tags origin
+    git tag -v v$(cat VERSION)
+    ```
+  - [ ] **GitHub API (CI-friendly)**:
+    ```bash
+    TAG_SHA=$(gh api repos/fulmenhq/gofulmen/git/ref/tags/v$(cat VERSION) --jq .object.sha)
+    gh api repos/fulmenhq/gofulmen/git/tags/$TAG_SHA --jq .verification
+    ```
+  - [ ] **GitHub Web UI (note)**: a green "Verified" badge only appears if the signing public key is uploaded to the GitHub account and the tagger email matches a verified email on that account. Otherwise GitHub may show "Unverified" even though `git tag -v` succeeds.
+- [ ] Optional: publish minisign attestation (if enabled):
+  - `make release-tag` can produce `dist/release/vX.Y.Z.tag.txt` + `.minisig` when `GOFULMEN_MINISIGN_KEY` and `GOFULMEN_MINISIGN_PUB` are set.
+  - These files are **not uploaded automatically**; to distribute them, attach them to a GitHub Release (or another artifact channel):
+    ```bash
+    gh release create v$(cat VERSION) --notes-file docs/releases/v$(cat VERSION).md dist/release/v$(cat VERSION).tag.txt dist/release/v$(cat VERSION).tag.txt.minisig
+    ```
 - [ ] Announce / coordinate downstream upgrades as needed (templates, workhorses, CLIs).
