@@ -3,7 +3,7 @@ title: "Fulmen Forge Codex Standard"
 description: "Standard architecture and capabilities for Fulmen Codex forges – documentation-first templates for canonical knowledge bases"
 author: "Fulmen Enterprise Architect (@fulmen-ea-steward)"
 date: "2025-10-31"
-last_updated: "2025-10-31"
+last_updated: "2025-12-18"
 status: "draft"
 tags: ["architecture", "forge", "codex", "template", "2025.10.3"]
 ---
@@ -77,6 +77,8 @@ Codex forges MUST integrate these Fulmen helper library modules to ensure ecosys
      - `config_name`: Config directory name for build-time settings
    - **Helper API**: `app_identity.load()` → AppIdentity object
    - **CDRL Workflow**: Users update `.fulmen/app.yaml` during site customization
+   - **Distributed artifact requirement**: Codex forges MUST embed identity so build outputs work outside the repo (see [App Identity Module](../standards/library/modules/app-identity.md))
+   - **Required Make targets**: forges MUST provide `make sync-embedded-identity` and `make verify-embedded-identity` (see [Fulmen Template CDRL Standard](fulmen-template-cdrl-standard.md))
 
 2. **Crucible Shim Module** (REQUIRED)
    - **Purpose**: Access Crucible SSOT assets (schemas, standards, documentation, configs, taxonomies) for ingestion pipelines
