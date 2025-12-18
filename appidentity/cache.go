@@ -5,34 +5,34 @@ import (
 	"sync"
 )
 
-// Package-level cache for process-wide identity singleton
+// Package-level cache for process-wide identity singleton.
+//
+// Cache behavior:
+//   - The first successful discovery is cached for the process lifetime.
+//   - Errors are not cached, so callers can retry after fixing environment
+//     conditions (changing CWD, setting env vars, creating files, etc.).
 var (
+	cacheMu      sync.Mutex
+	cacheCond    = sync.NewCond(&cacheMu)
+	cacheLoading bool
+
 	cachedIdentity *Identity
-	cacheErr       error
-	cacheOnce      sync.Once
-	cacheMu        sync.RWMutex
 )
 
 // Get loads the application identity using automatic discovery and caching.
 //
-// Identity is loaded once per process and cached. Subsequent calls return
-// the cached instance. Discovery follows this precedence:
+// Identity is loaded once per process and cached on the first successful
+// discovery. Subsequent calls return the cached instance. Discovery follows
+// this precedence:
 //
 //  1. Context injection (via WithIdentity) - highest priority
 //  2. ExplicitPath in options (via GetWithOptions)
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
 //  4. Nearest ancestor search from current directory
+//  5. Fallback: Nearest ancestor search from executable directory
 //
-// This function is thread-safe and uses sync.Once to ensure the identity
-// is loaded exactly once, even under concurrent access.
-//
-// Example:
-//
-//	identity, err := appidentity.Get(ctx)
-//	if err != nil {
-//	    return fmt.Errorf("failed to load identity: %w", err)
-//	}
-//	fmt.Println("Binary:", identity.Binary())
+// This function is thread-safe and ensures only one discovery attempt runs at
+// a time under concurrent access.
 func Get(ctx context.Context) (*Identity, error) {
 	return GetWithOptions(ctx, Options{})
 }
@@ -49,44 +49,51 @@ func Get(ctx context.Context) (*Identity, error) {
 //  2. opts.ExplicitPath
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
 //  4. Nearest ancestor search from opts.RepoRoot (default: cwd)
-//
-// Example:
-//
-//	identity, err := appidentity.GetWithOptions(ctx, appidentity.Options{
-//	    ExplicitPath: "/custom/path/app.yaml",
-//	    NoCache:      true,
-//	})
 func GetWithOptions(ctx context.Context, opts Options) (*Identity, error) {
-	// Priority 1: Check for context injection (override)
+	// Priority 1: Check for context injection (override).
 	if identity := fromContext(ctx); identity != nil {
 		return identity, nil
 	}
 
-	// If NoCache is set, bypass the cache (useful for testing)
+	// If NoCache is set, bypass the cache (useful for testing).
 	if opts.NoCache {
 		return discoverIdentity(ctx, opts)
 	}
 
-	// Use process-level cache with sync.Once
-	cacheOnce.Do(func() {
-		cachedIdentity, cacheErr = discoverIdentity(ctx, opts)
-	})
+	cacheMu.Lock()
+	for {
+		if cachedIdentity != nil {
+			identity := cachedIdentity
+			cacheMu.Unlock()
+			return identity, nil
+		}
 
-	return cachedIdentity, cacheErr
+		if !cacheLoading {
+			cacheLoading = true
+			break
+		}
+
+		cacheCond.Wait()
+	}
+	cacheMu.Unlock()
+
+	identity, err := discoverIdentity(ctx, opts)
+
+	cacheMu.Lock()
+	cacheLoading = false
+	if err == nil && identity != nil {
+		cachedIdentity = identity
+	}
+	cacheCond.Broadcast()
+	cacheMu.Unlock()
+
+	return identity, err
 }
 
 // Must loads the application identity and panics on error.
 //
 // This is a convenience wrapper around Get for use in main() or init()
 // functions where identity is required for the application to function.
-//
-// Example:
-//
-//	func main() {
-//	    identity := appidentity.Must(context.Background())
-//	    fmt.Println("Starting", identity.Binary())
-//	    // ... rest of application
-//	}
 func Must(ctx context.Context) *Identity {
 	identity, err := Get(ctx)
 	if err != nil {
@@ -98,26 +105,14 @@ func Must(ctx context.Context) *Identity {
 // Reset clears the process-level cache.
 //
 // This function is intended for testing only. It allows tests to reload
-// identity configuration between test cases. In production code, identity
-// should be loaded once and remain constant for the process lifetime.
-//
-// Example:
-//
-//	func TestMultipleIdentities(t *testing.T) {
-//	    defer appidentity.Reset() // Clean up after test
-//	    // ... test code
-//	}
+// identity configuration between test cases.
 //
 // IMPORTANT: Reset is NOT safe to call concurrently with Get/GetWithOptions.
-// It takes cacheMu lock to protect cache state, but Get/GetWithOptions use
-// sync.Once without taking the lock (for performance). Only call Reset in
-// single-threaded test contexts, or ensure all Get/GetWithOptions calls have
-// completed before calling Reset.
 func Reset() {
 	cacheMu.Lock()
 	defer cacheMu.Unlock()
 
 	cachedIdentity = nil
-	cacheErr = nil
-	cacheOnce = sync.Once{}
+	cacheLoading = false
+	cacheCond.Broadcast()
 }

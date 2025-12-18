@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+func neutralizeIdentityPathEnv(t *testing.T) {
+	// Neutralize any developer ambient environment. If FULMEN_APP_IDENTITY_PATH
+	// is set in the shell, discovery should treat it as authoritative and will
+	// bypass normal ancestor/executable fallback discovery.
+	t.Setenv(EnvIdentityPath, "")
+}
+
 func TestNewFixture(t *testing.T) {
 	t.Run("default_values", func(t *testing.T) {
 		identity := NewFixture()

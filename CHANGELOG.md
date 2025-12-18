@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.22] - 2025-12-18
+
+### Fixed
+
+- **AppIdentity Portable Discovery** – Identity lookup now falls back to searching ancestors of the running executable when CWD/repo-root discovery fails (keeps `FULMEN_APP_IDENTITY_PATH` authoritative).
+- **AppIdentity Caching Semantics** – Only successful identity loads are cached; discovery errors are no longer cached, allowing recovery after environment changes.
+- **AppIdentity Diagnostics** – Not-found errors now include both the primary search trace and the executable-dir fallback trace.
+
+### Changed
+
+- **Crucible v0.2.23 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.2.23`.
+
 ## [0.1.21] - 2025-12-13
 
 ### Added

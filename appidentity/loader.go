@@ -2,6 +2,7 @@ package appidentity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +25,10 @@ const (
 
 	// MaxSearchDepth is the maximum number of parent directories to search.
 	MaxSearchDepth = 20
+)
+
+var (
+	osExecutable = os.Executable
 )
 
 // identityFile represents the YAML file structure with "app" and "metadata" keys.
@@ -164,6 +169,25 @@ func findIdentityFile(startDir string) (string, error) {
 	}
 }
 
+// executableStartDir returns the directory that should be used as the start point
+// for the executable-dir fallback search.
+func executableStartDir() (string, error) {
+	exePath, err := osExecutable()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine executable path: %w", err)
+	}
+	if exePath == "" {
+		return "", fmt.Errorf("failed to determine executable path: empty path")
+	}
+
+	absExePath, err := filepath.Abs(exePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve executable path: %w", err)
+	}
+
+	return filepath.Dir(absExePath), nil
+}
+
 // discoverIdentity discovers and loads identity using the standard search process.
 //
 // Discovery precedence:
@@ -171,6 +195,7 @@ func findIdentityFile(startDir string) (string, error) {
 //  2. ExplicitPath in Options
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
 //  4. Nearest ancestor search from RepoRoot (default: cwd)
+//  5. Fallback: Nearest ancestor search from executable directory
 func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 	var identityPath string
 	var err error
@@ -186,21 +211,54 @@ func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 			}
 			return nil, fmt.Errorf("failed to access identity file: %w", err)
 		}
-	} else {
-		// Priority 2-4: Environment variable or ancestor search (handled by findIdentityFile)
-		startDir := opts.RepoRoot
-		if startDir == "" {
-			startDir, err = os.Getwd()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get current directory: %w", err)
-			}
-		}
 
-		identityPath, err = findIdentityFile(startDir)
+		return loadIdentityFile(identityPath)
+	}
+
+	// Priority 2-5: Environment variable, ancestor search, and fallback.
+	startDir := opts.RepoRoot
+	if startDir == "" {
+		startDir, err = os.Getwd()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get current directory: %w", err)
 		}
 	}
 
-	return loadIdentityFile(identityPath)
+	identityPath, err = findIdentityFile(startDir)
+	if err == nil {
+		return loadIdentityFile(identityPath)
+	}
+
+	// Respect environment variable precedence: if it's set and points at a
+	// missing file, that result is authoritative and should not fall back.
+	if os.Getenv(EnvIdentityPath) != "" {
+		return nil, err
+	}
+
+	var notFoundErr *NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		return nil, err
+	}
+
+	exeStartDir, exeErr := executableStartDir()
+	if exeErr != nil {
+		return nil, err
+	}
+
+	fallbackPath, fallbackErr := findIdentityFile(exeStartDir)
+	if fallbackErr == nil {
+		return loadIdentityFile(fallbackPath)
+	}
+
+	var fallbackNotFoundErr *NotFoundError
+	if errors.As(fallbackErr, &fallbackNotFoundErr) {
+		return nil, &NotFoundError{
+			SearchedPaths:         notFoundErr.SearchedPaths,
+			StartDir:              notFoundErr.StartDir,
+			FallbackStartDir:      fallbackNotFoundErr.StartDir,
+			FallbackSearchedPaths: fallbackNotFoundErr.SearchedPaths,
+		}
+	}
+
+	return nil, fallbackErr
 }

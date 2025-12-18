@@ -10,6 +10,8 @@ import (
 
 // TestGetCaching verifies that Get caches identity after first load.
 func TestGetCaching(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary identity file
 	tmpDir := t.TempDir()
 	identityDir := filepath.Join(tmpDir, ".fulmen")
@@ -67,6 +69,8 @@ func TestGetCaching(t *testing.T) {
 
 // TestGetConcurrent verifies thread-safe concurrent access.
 func TestGetConcurrent(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary identity file
 	tmpDir := t.TempDir()
 	identityDir := filepath.Join(tmpDir, ".fulmen")
@@ -135,6 +139,8 @@ func TestGetConcurrent(t *testing.T) {
 
 // TestGetWithOptionsNoCache verifies NoCache option bypasses cache.
 func TestGetWithOptionsNoCache(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary identity file
 	tmpDir := t.TempDir()
 	identityDir := filepath.Join(tmpDir, ".fulmen")
@@ -193,6 +199,8 @@ func TestGetWithOptionsNoCache(t *testing.T) {
 
 // TestMust verifies Must panics on error.
 func TestMust(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create a context with no identity file available
 	tmpDir := t.TempDir()
 
@@ -229,6 +237,8 @@ func TestMust(t *testing.T) {
 
 // TestMustSuccess verifies Must returns identity when available.
 func TestMustSuccess(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary identity file
 	tmpDir := t.TempDir()
 	identityDir := filepath.Join(tmpDir, ".fulmen")
@@ -276,6 +286,8 @@ func TestMustSuccess(t *testing.T) {
 
 // TestReset verifies Reset clears the cache.
 func TestReset(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary identity file
 	tmpDir := t.TempDir()
 	identityDir := filepath.Join(tmpDir, ".fulmen")

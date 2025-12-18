@@ -26,8 +26,18 @@ type NotFoundError struct {
 	// SearchedPaths contains all paths checked during discovery.
 	SearchedPaths []string
 
-	// StartDir is the directory where the search began.
+	// StartDir is the directory where the primary search began.
 	StartDir string
+
+	// FallbackStartDir is the directory where the fallback search began.
+	//
+	// When populated, discovery performed a secondary search (for example,
+	// starting from the running executable directory) after the primary search
+	// failed.
+	FallbackStartDir string
+
+	// FallbackSearchedPaths contains all paths checked during the fallback search.
+	FallbackSearchedPaths []string
 }
 
 // Error implements the error interface.
@@ -46,10 +56,22 @@ func (e *NotFoundError) Error() string {
 		}
 	}
 
+	if len(e.FallbackSearchedPaths) > 0 {
+		label := "Searched paths (fallback)"
+		if e.FallbackStartDir != "" {
+			label = fmt.Sprintf("Searched paths (fallback started from: %s)", e.FallbackStartDir)
+		}
+		sb.WriteString("\n" + label + ":")
+		for _, path := range e.FallbackSearchedPaths {
+			sb.WriteString(fmt.Sprintf("\n  - %s", path))
+		}
+	}
+
 	sb.WriteString("\n\nTo resolve:")
 	sb.WriteString("\n  1. Create .fulmen/app.yaml in your project root")
-	sb.WriteString("\n  2. Set FULMEN_APP_IDENTITY_PATH environment variable")
-	sb.WriteString("\n  3. Use LoadFrom() with explicit path")
+	sb.WriteString("\n  2. For installed binaries, place .fulmen/app.yaml above the executable")
+	sb.WriteString("\n  3. Set FULMEN_APP_IDENTITY_PATH environment variable")
+	sb.WriteString("\n  4. Use LoadFrom() with explicit path")
 	sb.WriteString("\n\nSee docs/appidentity/README.md for guidance on generating and managing identity files.")
 
 	return sb.String()

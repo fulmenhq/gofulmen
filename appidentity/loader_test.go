@@ -194,6 +194,8 @@ func TestLoadFromValidComplete(t *testing.T) {
 
 // TestFindIdentityFile verifies ancestor directory search.
 func TestFindIdentityFile(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary directory structure for testing
 	tmpDir := t.TempDir()
 
@@ -234,6 +236,8 @@ func TestFindIdentityFile(t *testing.T) {
 
 // TestFindIdentityFileNotFound verifies not-found error with searched paths.
 func TestFindIdentityFileNotFound(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
 	// Create temporary directory with NO identity file
 	tmpDir := t.TempDir()
 	deepDir := filepath.Join(tmpDir, "project", "subdir")
@@ -335,6 +339,174 @@ func TestEnvIdentityPathNotFound(t *testing.T) {
 	// Should show the env var path in error
 	if len(notFoundErr.SearchedPaths) == 0 {
 		t.Error("should include env var path in searched paths")
+	}
+}
+
+// TestDiscoverIdentityExecutableFallback verifies discovery falls back to the
+// executable directory when the current working directory search fails.
+func TestDiscoverIdentityExecutableFallback(t *testing.T) {
+	// Neutralize any developer ambient environment. If FULMEN_APP_IDENTITY_PATH
+	// is set in the shell, identity discovery must treat it as authoritative and
+	// skip the executable-dir fallback, which would make this test flaky.
+	t.Setenv(EnvIdentityPath, "")
+
+	ctx := context.Background()
+
+	identityRoot := t.TempDir()
+	identityDir := filepath.Join(identityRoot, DefaultIdentityDir)
+	if err := os.MkdirAll(identityDir, 0755); err != nil {
+		t.Fatalf("failed to create identity dir: %v", err)
+	}
+
+	identityPath := filepath.Join(identityDir, DefaultIdentityFilename)
+	content := []byte("app:\n  binary_name: exefallback\n  vendor: exefallback\n  env_prefix: EXEFALLBACK_\n  config_name: exefallback\n  description: Executable fallback test\n")
+	if err := os.WriteFile(identityPath, content, 0644); err != nil {
+		t.Fatalf("failed to write identity file: %v", err)
+	}
+
+	// Force CWD to a directory that does not contain an identity file.
+	cwdDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(oldDir)
+	})
+	if err := os.Chdir(cwdDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	// Stub executable path to live under identityRoot.
+	oldExecutable := osExecutable
+	t.Cleanup(func() {
+		osExecutable = oldExecutable
+	})
+	execPath := filepath.Join(identityRoot, "bin", "app")
+	osExecutable = func() (string, error) {
+		return execPath, nil
+	}
+
+	Reset()
+	t.Cleanup(Reset)
+
+	identity, err := Get(ctx)
+	if err != nil {
+		t.Fatalf("Get() failed: %v", err)
+	}
+	if identity.BinaryName != "exefallback" {
+		t.Errorf("BinaryName = %q, want %q", identity.BinaryName, "exefallback")
+	}
+}
+
+// TestDiscoverIdentityEnvVarRemainsAuthoritative verifies the environment
+// variable override remains authoritative even if the executable-dir fallback
+// would have found an identity file.
+func TestDiscoverIdentityEnvVarRemainsAuthoritative(t *testing.T) {
+	ctx := context.Background()
+
+	identityRoot := t.TempDir()
+	identityDir := filepath.Join(identityRoot, DefaultIdentityDir)
+	if err := os.MkdirAll(identityDir, 0755); err != nil {
+		t.Fatalf("failed to create identity dir: %v", err)
+	}
+
+	identityPath := filepath.Join(identityDir, DefaultIdentityFilename)
+	content := []byte("app:\n  binary_name: envwins\n  vendor: envwins\n  env_prefix: ENVWINS_\n  config_name: envwins\n  description: Env var wins test\n")
+	if err := os.WriteFile(identityPath, content, 0644); err != nil {
+		t.Fatalf("failed to write identity file: %v", err)
+	}
+
+	cwdDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(oldDir)
+	})
+	if err := os.Chdir(cwdDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	oldExecutable := osExecutable
+	t.Cleanup(func() {
+		osExecutable = oldExecutable
+	})
+	execPath := filepath.Join(identityRoot, "bin", "app")
+	osExecutable = func() (string, error) {
+		return execPath, nil
+	}
+
+	t.Setenv(EnvIdentityPath, filepath.Join(t.TempDir(), "missing.yaml"))
+
+	Reset()
+	t.Cleanup(Reset)
+
+	_, err = Get(ctx)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var notFoundErr *NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Fatalf("expected NotFoundError, got %T", err)
+	}
+
+	if notFoundErr.FallbackStartDir != "" || len(notFoundErr.FallbackSearchedPaths) != 0 {
+		t.Fatalf("expected no fallback search when %s is set", EnvIdentityPath)
+	}
+}
+
+// TestDiscoverIdentityNotFoundIncludesFallback verifies a not-found error
+// includes both the primary search paths and the executable-dir fallback paths.
+func TestDiscoverIdentityNotFoundIncludesFallback(t *testing.T) {
+	// Neutralize any developer ambient environment. If FULMEN_APP_IDENTITY_PATH
+	// is set in the shell, discovery should short-circuit to that value and not
+	// record a fallback search trace.
+	t.Setenv(EnvIdentityPath, "")
+
+	ctx := context.Background()
+
+	cwdDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(oldDir)
+	})
+	if err := os.Chdir(cwdDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	execRoot := t.TempDir()
+	oldExecutable := osExecutable
+	t.Cleanup(func() {
+		osExecutable = oldExecutable
+	})
+	osExecutable = func() (string, error) {
+		return filepath.Join(execRoot, "bin", "app"), nil
+	}
+
+	Reset()
+	t.Cleanup(Reset)
+
+	_, err = Get(ctx)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var notFoundErr *NotFoundError
+	if !errors.As(err, &notFoundErr) {
+		t.Fatalf("expected NotFoundError, got %T", err)
+	}
+
+	if notFoundErr.StartDir == "" || len(notFoundErr.SearchedPaths) == 0 {
+		t.Fatal("expected primary search paths in NotFoundError")
+	}
+	if notFoundErr.FallbackStartDir == "" || len(notFoundErr.FallbackSearchedPaths) == 0 {
+		t.Fatal("expected fallback search paths in NotFoundError")
 	}
 }
 
