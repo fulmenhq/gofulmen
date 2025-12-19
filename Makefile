@@ -50,6 +50,7 @@ BINDIR_RESOLVE = \
 
 # Tooling
 GONEAT_VERSION ?= v0.3.17
+SFETCH_INSTALL_URL ?= https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh
 
 SFETCH_RESOLVE = \
 	$(BINDIR_RESOLVE); \
@@ -75,34 +76,7 @@ all: fmt test
 # Bootstrap targets
 bootstrap: ## Install external tools (sfetch, goneat + foundation tools)
 	@echo "Installing external tools..."
-	@$(BINDIR_RESOLVE); mkdir -p "$$BINDIR"
-	@$(SFETCH_RESOLVE); if [ -z "$$SFETCH" ]; then \
-		echo "→ sfetch not found; installing trust anchor via published installer..."; \
-		if command -v curl >/dev/null 2>&1; then \
-			curl -sSfL https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh | bash -s -- --dir "$$BINDIR" --yes; \
-		elif command -v wget >/dev/null 2>&1; then \
-			wget -qO- https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh | bash -s -- --dir "$$BINDIR" --yes; \
-		else \
-			echo "❌ Need curl or wget to bootstrap sfetch."; \
-			exit 1; \
-		fi; \
-	fi
-	@$(SFETCH_RESOLVE); echo "→ sfetch self-verify (trust anchor):"; $$SFETCH --self-verify
-	@$(SFETCH_RESOLVE); echo "→ sfetch self-verify (json):"; \
-		if command -v jq >/dev/null 2>&1; then \
-			$$SFETCH --self-verify --json | jq; \
-		else \
-			$$SFETCH --self-verify --json; \
-		fi
-	@$(BINDIR_RESOLVE); if [ "$(FORCE)" = "1" ] || [ "$(FORCE)" = "true" ]; then rm -f "$$BINDIR/goneat" "$$BINDIR/goneat.exe"; fi; \
-		echo "→ Installing goneat $(GONEAT_VERSION) to $$BINDIR via sfetch..."; \
-		$(SFETCH_RESOLVE); $$SFETCH --repo fulmenhq/goneat --tag $(GONEAT_VERSION) --dest-dir "$$BINDIR" --require-minisign; \
-		OS_RAW="$$(uname -s 2>/dev/null || echo unknown)"; \
-		case "$$OS_RAW" in MINGW*|MSYS*|CYGWIN*) if [ -f "$$BINDIR/goneat.exe" ] && [ ! -f "$$BINDIR/goneat" ]; then mv "$$BINDIR/goneat.exe" "$$BINDIR/goneat"; fi ;; esac
-	@$(GONEAT_RESOLVE); echo "→ goneat: $$($$GONEAT --version 2>&1 | head -n1 || true)"
-	@echo "→ Installing foundation tools via goneat doctor..."
-	@$(GONEAT_RESOLVE); $$GONEAT doctor tools --scope foundation --install --install-package-managers --yes --no-cooling
-	@$(BINDIR_RESOLVE); echo "✅ Bootstrap completed. Ensure '$$BINDIR' is on PATH."
+	@$(BINDIR_RESOLVE); BINDIR="$$BINDIR" GONEAT_VERSION="$(GONEAT_VERSION)" SFETCH_INSTALL_URL="$(SFETCH_INSTALL_URL)" ./scripts/make-bootstrap.sh
 
 bootstrap-force: ## Force reinstall external tools
 	@$(MAKE) bootstrap FORCE=1
@@ -206,47 +180,7 @@ release-clean: ## Remove local release artifacts (dist/release)
 
 # Help target
 help: ## Show this help message
-	@echo "Gofulmen - Available Make Targets"
-	@echo ""
-	@echo "Required targets (Makefile Standard):"
-	@echo "  help            - Show this help message"
-	@echo "Required targets (Makefile Standard):"
-	@echo "  help            - Show this help message"
-	@echo "  bootstrap       - Install external tools (sfetch, goneat)"
-	@echo "  bootstrap-force - Force reinstall external tools"
-	@echo "  tools           - Verify external tools are available"
-	@echo "  lint            - Run lint/format/style checks"
-	@echo "  test            - Run all tests"
-	@echo "  build           - Build distributable artifacts (no-op for libraries)"
-	@echo "  build-all       - Build multi-platform binaries (no-op for libraries)"
-	@echo "  clean           - Remove build artifacts and caches"
-	@echo "  fmt             - Format code"
-	@echo "  version         - Print current version"
-	@echo "  version-set     - Set version to specific value"
-	@echo "  version-bump-major - Bump major version"
-	@echo "  version-bump-minor - Bump minor version"
-	@echo "  version-bump-patch - Bump patch version"
-	@echo "  release-check   - Run release checklist validation"
-	@echo "  release-prepare - Prepare for release"
-	@echo "  release-build   - Build release artifacts"
-	@echo "  release-clean   - Remove local release artifacts"
-	@echo "  release-provenance-check - Verify SSOT provenance files"
-	@echo "  release-guard-tag-version - Guard tag matches VERSION"
-	@echo "  release-tag     - Create signed git tag for VERSION"
-	@echo "  release-verify-tag - Verify signed git tag for VERSION"
-	@echo "  check-all       - Run all quality checks (sync, fmt, lint, test)"
-	@echo "  precommit       - Run pre-commit hooks (check-all)"
-	@echo "  prepush         - Run pre-push hooks (check-all)"
-	@echo ""
-	@echo "Goneat targets:"
-	@echo "  sync            - Sync assets from Crucible SSOT"
-	@echo "  version-bump    - Bump version (usage: make version-bump TYPE=patch|minor|major|calver)"
-	@echo ""
-	@echo "Additional targets:"
-	@echo "  test-coverage   - Run tests with coverage report"
-	@echo "  assess          - Run goneat assessment (requires bootstrap)"
-	@echo "  license-audit   - Audit dependency licenses"
-	@echo ""
+	@./scripts/make-help.sh
 
 # Lint target (required by standard)
 lint: ## Run lint checks
@@ -276,21 +210,12 @@ check-all: build fmt lint test ## Run all quality checks (ensures sync, fmt, lin
 # Hook targets (required by standard)
 precommit: ## Run pre-commit hooks
 	@echo "Running pre-commit validation..."
-	@$(GONEAT_RESOLVE); $$GONEAT format
-	@$(GONEAT_RESOLVE); $$GONEAT assess --check --categories format,lint,static-analysis --fail-on critical
+	@$(GONEAT_RESOLVE); $$GONEAT assess --hook pre-commit --hook-manifest .goneat/hooks.yaml --package-mode
 	@echo "✅ Pre-commit checks passed"
 
 prepush: ## Run pre-push hooks
 	@echo "Running pre-push validation..."
-	@if [ -d vendor ]; then \
-		echo "⚠️  Removing stale vendor directory to ensure fresh dependencies..."; \
-		rm -rf vendor; \
-	fi
-	@echo "Verifying go.mod consistency..."
-	@$(GOCMD) mod verify
-	@$(GOCMD) mod tidy
-	@$(GONEAT_RESOLVE); $$GONEAT format
-	@$(GONEAT_RESOLVE); $$GONEAT assess --check --categories format,lint,security,static-analysis --fail-on high
+	@$(GONEAT_RESOLVE); $$GONEAT assess --hook pre-push --hook-manifest .goneat/hooks.yaml --package-mode
 	@echo "✅ Pre-push checks passed"
 
 # Test targets

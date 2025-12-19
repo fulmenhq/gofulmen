@@ -9,7 +9,9 @@ validated here and then codified into Crucible.
 ## Variables (Quick Reference)
 
 - `RELEASE_TAG`: optional override tag (recommended for manual release commands; e.g. `v0.1.21`)
-- `GOFULMEN_RELEASE_TAG`: optional override tag (alias; scripts accept either)
+- `GOFULMEN_RELEASE_TAG`: optional override tag (scripts accept either)
+  - **Precedence**: `GOFULMEN_RELEASE_TAG` overrides `RELEASE_TAG` if both are set.
+  - Recommendation: set both to the same value, or leave `GOFULMEN_RELEASE_TAG` unset.
 - `GOFULMEN_GPG_HOMEDIR`: recommended dedicated signing keyring directory (separate from personal `~/.gnupg`)
 - `GOFULMEN_PGP_KEY_ID`: optional key id/email/fingerprint for signing
 - `GOFULMEN_MINISIGN_KEY`: optional minisign secret key path (creates a sidecar signature for the tag attestation)
@@ -52,7 +54,10 @@ Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’
   make release-guard-tag-version
   make release-provenance-check
   ```
-- [ ] Create the signed tag:
+- [ ] Create the signed tag (this is _release process_ surface, not app code surface):
+  - Signs an annotated git tag for the Go module version.
+  - Does not upload release assets by default.
+  - Does not publish public keys (GitHub verifies signatures using public keys attached to the signer account).
   ```bash
   make release-tag
   ```
