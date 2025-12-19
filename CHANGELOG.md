@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.24] - 2025-12-19
+
+### Changed
+
+- **Crucible v0.2.25 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.2.25`.
+
 ## [0.1.23] - 2025-12-18
 
 ### Added
