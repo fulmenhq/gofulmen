@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.25] - 2025-12-20
+
+### Added
+
+- **Hooks Compatibility Guard** – Added `make verify-hooks-compat` to detect known goneat hook template regressions (stray braces, missing `set -f`/noglob) and prevent broken regenerated hooks.
+
+### Changed
+
+- **Quality Gate** – `make check-all` now includes `verify-hooks-compat`.
+- **Crucible v0.2.26 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.2.26`.
+
 ## [0.1.24] - 2025-12-19
 
 ### Changed

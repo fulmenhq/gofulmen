@@ -68,7 +68,7 @@ GONEAT_RESOLVE = \
 .PHONY: all help bootstrap bootstrap-force tools sync crucible-update version-bump lint test build build-all clean fmt version check-all precommit prepush
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
 .PHONY: release-tag release-verify-tag release-provenance-check release-guard-tag-version
-.PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example
+.PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example verify-hooks-compat
 
 # Default target
 all: fmt test
@@ -204,10 +204,13 @@ version: ## Print current version
 	@echo "$(VERSION)"
 
 # Quality targets
-check-all: build fmt lint test ## Run all quality checks (ensures sync, fmt, lint, test)
+check-all: build fmt lint verify-hooks-compat test ## Run all quality checks (ensures sync, fmt, lint, hooks, test)
 	@echo "✅ All quality checks passed"
 
 # Hook targets (required by standard)
+verify-hooks-compat: ## Verify generated goneat hooks are compatible
+	@./scripts/verify-hooks-compat.sh
+
 precommit: ## Run pre-commit hooks
 	@echo "Running pre-commit validation..."
 	@$(GONEAT_RESOLVE); $$GONEAT assess --hook pre-commit --hook-manifest .goneat/hooks.yaml --package-mode
