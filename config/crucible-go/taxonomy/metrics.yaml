@@ -108,7 +108,7 @@ required:
   - version
   - metrics
 additionalProperties: false
-version: "0.2.26"
+version: "0.2.27"
 defaults:
   histogram_buckets:
     ms_metrics:

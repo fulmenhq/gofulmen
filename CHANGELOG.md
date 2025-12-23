@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.26] - 2025-12-23
+
+### Added
+
+- **Fixture Directory Tracking** – Added `.gitkeep` markers for intentionally empty fixture directories so they survive clean checkouts.
+
+### Changed
+
+- **Crucible v0.2.27 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.2.27`.
+
 ## [0.1.25] - 2025-12-20
 
 ### Added
