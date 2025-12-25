@@ -1,4 +1,4 @@
-# ADR-001: Bootstrap Local Override Pattern
+# ADR-0001: Bootstrap Local Override Pattern
 
 **Date**: 2025-10-07  
 **Status**: Accepted

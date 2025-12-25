@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.27] - 2025-12-24
+
+### Fixed
+
+- **AppIdentity Schema Drift** – Synced `appidentity/app-identity.schema.json` to match Crucible SSOT and added a drift guard test to prevent divergence.
+
+### Changed
+
+- **Sync Behavior** – `make sync` now also refreshes `appidentity/app-identity.schema.json` from the synced Crucible schema.
+
 ## [0.1.26] - 2025-12-23
 
 ### Added

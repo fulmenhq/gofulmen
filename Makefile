@@ -90,6 +90,7 @@ tools: ## Verify external tools are available
 sync: ## Sync assets from Crucible SSOT
 	@echo "Syncing assets from Crucible..."
 	@$(GONEAT_RESOLVE); $$GONEAT ssot sync
+	@./scripts/sync-appidentity-schema.sh
 	@echo "✅ Sync completed"
 
 crucible-update: ## Update Crucible dependency to specific version (usage: make crucible-update VERSION=v0.2.19)
