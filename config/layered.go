@@ -24,6 +24,18 @@ type LayeredConfigOptions struct {
 	UserPaths    []string        // Explicit user override file paths (checked in order)
 	DefaultsRoot string          // Optional override for defaults root (defaults to config/crucible-go)
 	Catalog      *schema.Catalog // Optional catalog to use for validation
+
+	// TelemetrySystem optionally overrides the telemetry system used for config
+	// load instrumentation.
+	//
+	// When unset, config loading uses telemetry.GetGlobalSystem(), which is
+	// disabled by default unless the application explicitly enables telemetry.
+	//
+	// Note: if an application enables telemetry without providing an emitter
+	// (telemetry.Config.Emitter), the telemetry system will fall back to emitting
+	// JSON metrics on stdout. For CLI/stdio-based integrations, always configure a
+	// non-stdout emitter (or leave telemetry disabled).
+	TelemetrySystem *telemetry.System
 }
 
 // LoadLayeredConfig loads defaults, applies user overrides, then applies runtime overrides.
@@ -36,9 +48,16 @@ func LoadLayeredConfig(opts LayeredConfigOptions, runtimeOverrides ...map[string
 // LoadLayeredConfigWithEnvelope loads defaults, applies user overrides, then applies runtime overrides.
 // Returns merged configuration map and validation diagnostics (empty when valid).
 // Provides structured error envelopes with correlation ID for better error tracking.
+//
+// Telemetry: by default, config loading uses telemetry.GetGlobalSystem(). To
+// avoid polluting stdout (e.g., in CLI tools), ensure any enabled telemetry
+// system is configured with a non-stdout emitter.
 func LoadLayeredConfigWithEnvelope(opts LayeredConfigOptions, correlationID string, runtimeOverrides ...map[string]any) (map[string]any, []schema.Diagnostic, error) {
 	start := time.Now()
-	telSys := getTelemetrySystem()
+	telSys := telemetry.GetGlobalSystem()
+	if opts.TelemetrySystem != nil {
+		telSys = opts.TelemetrySystem
+	}
 	status := metrics.StatusSuccess
 
 	defer func() {
@@ -388,8 +407,6 @@ var (
 	configDefaultsDir  string
 	schemaCatalogOnce  sync.Once
 	schemaCatalogInst  *schema.Catalog
-	telemetrySystem    *telemetry.System
-	telemetryOnce      sync.Once
 )
 
 func defaultConfigBaseDir() string {
@@ -437,20 +454,4 @@ func schemaCatalog() *schema.Catalog {
 		schemaCatalogInst = schema.DefaultCatalog()
 	})
 	return schemaCatalogInst
-}
-
-func getTelemetrySystem() *telemetry.System {
-	telemetryOnce.Do(func() {
-		config := telemetry.DefaultConfig()
-		config.Enabled = true // Enable telemetry for config operations
-		sys, err := telemetry.NewSystem(config)
-		if err != nil {
-			// If telemetry initialization fails, we'll operate without it
-			// This ensures the config loader remains functional
-			telemetrySystem = nil
-		} else {
-			telemetrySystem = sys
-		}
-	})
-	return telemetrySystem
 }

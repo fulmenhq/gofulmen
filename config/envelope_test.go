@@ -164,14 +164,12 @@ func TestLoadLayeredConfigWithEnvelope_MetricsEmission(t *testing.T) {
 		t.Fatalf("failed to create telemetry system: %v", err)
 	}
 
-	telemetryOnce.Do(func() {})
-	telemetrySystem = telSys
-
 	opts := LayeredConfigOptions{
-		Category:     "",
-		Version:      "",
-		DefaultsFile: "",
-		SchemaID:     "",
+		Category:        "",
+		Version:         "",
+		DefaultsFile:    "",
+		SchemaID:        "",
+		TelemetrySystem: telSys,
 	}
 
 	_, _, err = LoadLayeredConfigWithEnvelope(opts, "test-correlation-id")

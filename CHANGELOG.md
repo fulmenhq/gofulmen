@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.28] - 2025-12-28
+
+### Fixed
+
+- **Config Telemetry Stdout Leak** – `config.LoadLayeredConfig*` no longer instantiates an enabled-by-default telemetry system that emits JSON metrics to stdout.
+  - Uses `telemetry.GetGlobalSystem()` (disabled-by-default) unless the caller injects `LayeredConfigOptions.TelemetrySystem`.
+  - Adds a regression test to ensure config load produces no stdout output by default.
+
 ## [0.1.27] - 2025-12-24
 
 ### Fixed

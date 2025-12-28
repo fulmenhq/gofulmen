@@ -1,8 +1,11 @@
 package config
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	schemaPkg "github.com/fulmenhq/gofulmen/schema"
@@ -18,6 +21,52 @@ func sampleOptions() LayeredConfigOptions {
 		SchemaID:     "sample/v1.0.0/schema",
 		DefaultsRoot: defaultsRoot,
 		Catalog:      schemaPkg.NewCatalog(catalogRoot),
+	}
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+
+	os.Stdout = w
+
+	var buf bytes.Buffer
+	done := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(&buf, r)
+		close(done)
+	}()
+
+	defer func() {
+		_ = w.Close()
+		os.Stdout = origStdout
+		<-done
+		_ = r.Close()
+	}()
+
+	fn()
+	return buf.String()
+}
+
+func TestLoadLayeredConfig_DoesNotWriteToStdoutByDefault(t *testing.T) {
+	opts := sampleOptions()
+	out := captureStdout(t, func() {
+		_, diags, err := LoadLayeredConfig(opts)
+		if err != nil {
+			t.Fatalf("LoadLayeredConfig returned error: %v", err)
+		}
+		if len(diags) != 0 {
+			t.Fatalf("expected zero diagnostics, got %v", diags)
+		}
+	})
+
+	if strings.TrimSpace(out) != "" {
+		t.Fatalf("expected no stdout output, got %q", out)
 	}
 }
 
