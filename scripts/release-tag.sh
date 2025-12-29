@@ -34,6 +34,47 @@ setup_gpg_tty() {
 	fi
 }
 
+ensure_gpg_signing_ready() {
+	if ! command -v gpg >/dev/null 2>&1; then
+		echo "error: gpg not found in PATH (required for signed tags)" >&2
+		echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
+		exit 1
+	fi
+
+	local key_id="${GOFULMEN_PGP_KEY_ID:-}"
+	local listing
+
+	if [ -n "${key_id}" ]; then
+		listing="$(gpg --list-secret-keys --with-colons --keyid-format=long "${key_id}" 2>/dev/null || true)"
+		if ! echo "${listing}" | grep -q '^sec'; then
+			echo "error: no usable GPG secret key found for GOFULMEN_PGP_KEY_ID=${key_id}" >&2
+			echo "hint: ensure your release env vars are loaded (shell restart is common)" >&2
+			if [ -n "${GNUPGHOME:-}" ]; then
+				echo "hint: GNUPGHOME=${GNUPGHOME}" >&2
+			else
+				echo "hint: set GOFULMEN_GPG_HOMEDIR to your signing keyring directory" >&2
+			fi
+			echo "hint: run: gpg --list-secret-keys --keyid-format=long" >&2
+			echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
+			exit 1
+		fi
+		return 0
+	fi
+
+	listing="$(gpg --list-secret-keys --with-colons --keyid-format=long 2>/dev/null || true)"
+	if ! echo "${listing}" | grep -q '^sec'; then
+		echo "error: no usable GPG secret key found for signed tag creation" >&2
+		echo "hint: ensure your release env vars are loaded (GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
+		if [ -n "${GNUPGHOME:-}" ]; then
+			echo "hint: GNUPGHOME=${GNUPGHOME}" >&2
+		else
+			echo "hint: set GOFULMEN_GPG_HOMEDIR to your signing keyring directory" >&2
+		fi
+		echo "hint: run: gpg --list-secret-keys --keyid-format=long" >&2
+		echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
+		exit 1
+	fi
+}
 main() {
 	local root
 	root="$(repo_root)"
@@ -86,14 +127,36 @@ main() {
 	fi
 
 	setup_gpg_tty
+	ensure_gpg_signing_ready
 
 	echo "→ Creating signed tag: $tag"
 
+	local tag_err
+	tag_err="$(mktemp)"
+
 	if [ -n "${GOFULMEN_PGP_KEY_ID:-}" ]; then
-		git tag -s -a "$tag" -u "${GOFULMEN_PGP_KEY_ID}" -m "Release $tag"
+		if ! git tag -s -a "$tag" -u "${GOFULMEN_PGP_KEY_ID}" -m "Release $tag" 2>"${tag_err}"; then
+			cat "${tag_err}" >&2
+			if grep -qi "no secret key" "${tag_err}"; then
+				echo "hint: no secret key available for signing (check GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
+				echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
+			fi
+			rm -f "${tag_err}"
+			exit 1
+		fi
 	else
-		git tag -s -a "$tag" -m "Release $tag"
+		if ! git tag -s -a "$tag" -m "Release $tag" 2>"${tag_err}"; then
+			cat "${tag_err}" >&2
+			if grep -qi "no secret key" "${tag_err}"; then
+				echo "hint: no secret key available for signing (check GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
+				echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
+			fi
+			rm -f "${tag_err}"
+			exit 1
+		fi
 	fi
+
+	rm -f "${tag_err}"
 
 	echo "→ Verifying tag signature: $tag"
 	git verify-tag "$tag" >/dev/null
