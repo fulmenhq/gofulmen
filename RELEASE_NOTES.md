@@ -19,6 +19,7 @@ This release closes a workflow gap where license violations could slip through i
 - **Pre-push hook updated** – `.goneat/hooks.yaml` pre-push now includes `format,lint,security,dependencies`.
 - **Automatic license checks** – No manual `make license-audit` required; dependencies category runs via assess.
 - **Unified workflow** – License compliance is now part of the standard goneat assess pipeline.
+- **Crucible v0.3.1** – Updated embedded Crucible assets and `go.mod` dependency.
 
 #### Testing
 

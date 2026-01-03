@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Pre-push License Compliance** – Added `dependencies` category to `.goneat/hooks.yaml` pre-push hook, ensuring license compliance checks run automatically via `goneat assess --categories dependencies` on every push.
+- **Crucible v0.3.1 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.3.1`.
 
 ## [0.2.0] - 2026-01-03
 
