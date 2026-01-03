@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.29] - 2026-01-03
+
+### Added
+
+- **Agentic Role Catalog** – Synced the Crucible role catalog (`config/crucible-go/agentic/roles/`) including `devlead`, `devrev`, `infoarch`, `secrev`, and other ecosystem roles.
+- **Role Adoption ADR** – Added `docs/development/adr/ADR-0008-agentic-roles-adoption.md` documenting the gofulmen transition to role-based agent operation.
+
+### Changed
+
+- **Crucible v0.3.0 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.3.0`.
+- **Agentic Guidance** – Updated evergreen governance docs (`AGENTS.md`, `MAINTAINERS.md`) to remove identity-based agent naming and standardize on roles + attribution.
+- **Tooling Minimums** – Updated `Makefile` documented minimum `GONEAT_VERSION` to `v0.4.0`.
+
 ## [0.1.28] - 2025-12-28
 
 ### Fixed

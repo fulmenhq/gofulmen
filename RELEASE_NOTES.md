@@ -4,6 +4,33 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.1.29] - 2026-01-03
+
+### Crucible v0.3.0 sync + agentic roles adoption
+
+**Release Type**: Dependency Sync / Repo Governance
+
+#### Overview
+
+This release syncs gofulmen’s embedded Crucible SSOT assets to `v0.3.0` and updates `go.mod` to match.
+
+It also completes gofulmen’s migration away from an identity-based agent scheme in favor of Crucible’s role-based agent interface. Evergreen governance docs now reference roles (`devlead`, `devrev`, `infoarch`, `secrev`) and standardized attribution (model + interface + role), with an ADR documenting the transition.
+
+#### Highlights
+
+- **Crucible SSOT v0.3.0** – Synced `docs/crucible-go/`, `schemas/crucible-go/`, and `config/crucible-go/` and updated `go.mod` to `github.com/fulmenhq/crucible v0.3.0`.
+- **Role catalog embedded** – Added the synced role catalog under `config/crucible-go/agentic/roles/`.
+- **Roles-first governance** – Updated `AGENTS.md` and `MAINTAINERS.md` to remove identity-based agent naming and standardize on roles + attribution.
+- **Secrev escalation** – Explicitly calls out `secrev` for security-sensitive changes (secrets, crypto, supply chain).
+- **Tooling minimums** – Updated `Makefile` documented minimum `GONEAT_VERSION` to `v0.4.0`.
+
+#### Testing
+
+- ✅ `make check-all`
+- ✅ `.goneat/hooks/pre-push`
+
+---
+
 ## [0.1.28] - 2025-12-28
 
 ### Config telemetry stdout hygiene
@@ -49,27 +76,6 @@ This release fixes a schema drift bug where gofulmen’s embedded AppIdentity sc
 #### Testing
 
 - ✅ `go test ./appidentity -run TestEmbeddedAppIdentitySchemaMatchesCrucible -v`
-
----
-
-## [0.1.26] - 2025-12-23
-
-### Crucible v0.2.27 sync + fixture directory markers
-
-**Release Type**: Dependency Sync / Repo Hygiene
-
-#### Overview
-
-This release syncs Crucible SSOT assets to `v0.2.27` and adds `.gitkeep` marker files for intentionally empty fixture directories so they persist across clean checkouts.
-
-#### Highlights
-
-- **Crucible SSOT sync** – Updated embedded Crucible assets and `go.mod` dependency to Crucible `v0.2.27`.
-- **Fixture markers** – Added `.gitkeep` to empty fixture directories used for edge-case tests.
-
-#### Testing
-
-- ✅ `go test ./...`
 
 ---
 

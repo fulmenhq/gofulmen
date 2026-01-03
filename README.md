@@ -632,7 +632,7 @@ import "github.com/fulmenhq/gofulmen/crucible"
 
 // Access version info
 fmt.Println(crucible.GetVersionString())
-// Output: gofulmen/v0.1.21 crucible/v0.2.21
+// Output: gofulmen/v0.1.29 crucible/v0.3.0
 ```
 
 ## Contributing

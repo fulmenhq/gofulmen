@@ -1,9 +1,9 @@
 ---
 title: "Gofulmen Library Overview"
 description: "Comprehensive overview of the Go foundation library for FulmenHQ ecosystem"
-author: "Foundation Forge"
+author: "infoarch"
 date: "2025-10-11"
-last_updated: "2025-11-05"
+last_updated: "2026-01-03"
 status: "active"
 tags: ["overview", "library", "go", "foundation"]
 ---
@@ -57,7 +57,7 @@ Rather than copying Crucible assets into every project, helper libraries provide
 
 ## Accessing Crucible Assets via gofulmen
 
-Downstream users frequently reference [Crucible’s asset guide](../crucible/docs/guides/consuming-crucible-assets.md). The `github.com/fulmenhq/gofulmen/crucible` package is how you access those same assets directly from Go without cloning the Crucible repository:
+Downstream users frequently reference [Crucible’s asset guide](crucible-go/guides/consuming-crucible-assets.md). The `github.com/fulmenhq/gofulmen/crucible` package is how you access those same assets directly from Go without cloning the Crucible repository:
 
 1. **Navigate the registry**
    ```go
@@ -83,7 +83,7 @@ Downstream users frequently reference [Crucible’s asset guide](../crucible/doc
    ```
 5. **Track versions for support tickets**
    ```go
-    version := crucible.GetVersionString() // "gofulmen/v0.1.19 crucible/v0.2.19"
+    version := crucible.GetVersionString() // "gofulmen/v0.1.29 crucible/v0.3.0"
    ```
 
 See `crucible/README.md` (shipped inside gofulmen) for a longer catalog, including helper functions such as `GetPathfinderFindQuerySchema()` and `LoadLoggingSchemas()`. Together, the Crucible guide + this shim let you explore assets even if you never clone the Crucible repo locally.
@@ -168,7 +168,7 @@ Policy files are resolved in order:
 
 ## Roadmap & Gaps
 
-### Current Version: 0.1.19 (released)
+### Current Version: 0.1.29 (development)
 
 **Completed**:
 
@@ -423,14 +423,15 @@ See [MAINTAINERS.md](../MAINTAINERS.md) for governance structure and [REPOSITORY
 
 ## Version Information
 
-- **Current Version**: 0.1.19 (released)
-- **Crucible Version**: v0.2.19
+- **Current Version**: 0.1.29 (development)
+- **Latest Release**: 0.1.28
+- **Crucible Version**: v0.3.0
 - **Go Version**: 1.21+
 - **License**: MIT
 
 ## Contact & Support
 
 - **Maintainer**: @3leapsdave (Dave Thompson)
-- **AI Co-Maintainer**: 🔧 Foundation Forge (@foundation-forge)
+- **Agentic Roles**: `devlead`, `devrev`, `infoarch`, `secrev` (see `AGENTS.md`)
 - **Issues**: [GitHub Issues](https://github.com/fulmenhq/gofulmen/issues)
 - **Mattermost**: `#agents-gofulmen` (provisioning in progress)
