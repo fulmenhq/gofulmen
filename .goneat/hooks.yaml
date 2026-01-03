@@ -23,7 +23,7 @@ hooks:
     - command: "assess"
       args:
         - "--categories"
-        - "format,lint,security"
+        - "format,lint,security,dependencies"
         - "--fail-on"
         - "high"
         - "--exclude"

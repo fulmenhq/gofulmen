@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-01-03
+
+### Changed
+
+- **Pre-push License Compliance** – Added `dependencies` category to `.goneat/hooks.yaml` pre-push hook, ensuring license compliance checks run automatically via `goneat assess --categories dependencies` on every push.
+
 ## [0.2.0] - 2026-01-03
 
 ### Changed

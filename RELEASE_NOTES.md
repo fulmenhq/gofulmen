@@ -4,6 +4,29 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.2.1] - 2026-01-03
+
+### Pre-push license compliance via goneat assess
+
+**Release Type**: DX Improvement
+
+#### Overview
+
+This release closes a workflow gap where license violations could slip through if developers only ran `make prepush` or relied on git hooks. The `dependencies` category is now included in the pre-push hook, ensuring `goneat assess --categories dependencies` runs automatically and catches forbidden licenses (GPL, LGPL, AGPL, MPL, CDDL) before code reaches the remote.
+
+#### Highlights
+
+- **Pre-push hook updated** – `.goneat/hooks.yaml` pre-push now includes `format,lint,security,dependencies`.
+- **Automatic license checks** – No manual `make license-audit` required; dependencies category runs via assess.
+- **Unified workflow** – License compliance is now part of the standard goneat assess pipeline.
+
+#### Testing
+
+- `make prepush`
+- `goneat assess --categories dependencies`
+
+---
+
 ## [0.2.0] - 2026-01-03
 
 ### Native similarity algorithms for MIT-compatible SBOM
@@ -55,32 +78,6 @@ It also completes gofulmen's migration away from an identity-based agent scheme 
 
 - `make check-all`
 - `.goneat/hooks/pre-push`
-
----
-
-## [0.1.28] - 2025-12-28
-
-### Config telemetry stdout hygiene
-
-**Release Type**: Bug Fix
-
-#### Overview
-
-This release fixes an output hygiene issue for CLI tooling and stdio-based MCP servers: `config.LoadLayeredConfig*` previously instantiated an internal telemetry system with telemetry enabled and no emitter, which caused JSON metrics to be written to stdout.
-
-Config loading now uses `telemetry.GetGlobalSystem()` by default (disabled unless the application explicitly enables it), and callers can inject a telemetry system explicitly via `LayeredConfigOptions.TelemetrySystem`.
-
-#### Highlights
-
-- **No stdout by default** – Config loading no longer writes telemetry metrics to stdout unless telemetry is explicitly enabled.
-- **Per-call override** – Added `LayeredConfigOptions.TelemetrySystem` to allow callers to route metrics to a non-stdout emitter.
-- **Caller guidance** – Documented that enabling telemetry without setting `telemetry.Config.Emitter` will fall back to stdout emission.
-- **Regression test** – Added `TestLoadLayeredConfig_DoesNotWriteToStdoutByDefault`.
-
-#### Testing
-
-- `go test ./config -run TestLoadLayeredConfig_DoesNotWriteToStdoutByDefault -v`
-- `go test ./...`
 
 ---
 
