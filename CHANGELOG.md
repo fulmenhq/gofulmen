@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-03
+
+### Changed
+
+- **Native Similarity Algorithms** – Jaro-Winkler and unrestricted Damerau-Levenshtein now use native Go implementations, replacing external dependency for MIT-compatible SBOM.
+- **License Compliance** – Removed GPL-2.0 licensed dependency, enabling clean license audits for downstream consumers.
+- **Quality Gate** – Added `license-audit` to `make check-all` target to prevent future license regressions.
+
+### Added
+
+- `foundry/similarity/jaro_winkler.go` – Native Jaro-Winkler implementation.
+- `foundry/similarity/golden_matchr_test.go` – Golden tests for algorithm verification (58 test cases).
+
+### Removed
+
+- `foundry/similarity/levenshtein_benchmark_comparison_test.go` – External library comparison no longer needed.
+
 ## [0.1.29] - 2026-01-03
 
 ### Added

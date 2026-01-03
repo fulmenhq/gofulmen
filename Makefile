@@ -205,7 +205,7 @@ version: ## Print current version
 	@echo "$(VERSION)"
 
 # Quality targets
-check-all: build fmt lint verify-hooks-compat test ## Run all quality checks (ensures sync, fmt, lint, hooks, test)
+check-all: build fmt lint verify-hooks-compat test license-audit ## Run all quality checks (ensures sync, fmt, lint, hooks, test, license)
 	@echo "✅ All quality checks passed"
 
 # Hook targets (required by standard)

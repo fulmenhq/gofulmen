@@ -4,6 +4,33 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.2.0] - 2026-01-03
+
+### Native similarity algorithms for MIT-compatible SBOM
+
+**Release Type**: Minor Release (License Compliance)
+
+#### Overview
+
+This release replaces GPL-2.0 licensed external dependencies in the similarity package with native Go implementations. Downstream consumers can now use gofulmen with fully MIT/Apache-2.0 compatible dependency trees.
+
+#### Highlights
+
+- **Native Jaro-Winkler** – New `jaro_winkler.go` implementing standard Jaro-Winkler similarity.
+- **Native Damerau-Levenshtein** – Unrestricted variant now uses native implementation with proper transposition handling.
+- **Clean SBOM** – `make license-audit` passes with no GPL/LGPL/AGPL/MPL/CDDL licenses.
+- **Quality Gate** – Added `license-audit` to `make check-all` to prevent future license regressions.
+- **Golden Tests** – 58 test cases verifying algorithm correctness.
+
+#### Testing
+
+- `make check-all` (now includes license-audit)
+- `make license-audit`
+- All Crucible fixture tests pass
+- All golden tests pass
+
+---
+
 ## [0.1.29] - 2026-01-03
 
 ### Crucible v0.3.0 sync + agentic roles adoption
@@ -12,9 +39,9 @@ This document tracks release notes and checklists for gofulmen releases.
 
 #### Overview
 
-This release syncs gofulmen’s embedded Crucible SSOT assets to `v0.3.0` and updates `go.mod` to match.
+This release syncs gofulmen's embedded Crucible SSOT assets to `v0.3.0` and updates `go.mod` to match.
 
-It also completes gofulmen’s migration away from an identity-based agent scheme in favor of Crucible’s role-based agent interface. Evergreen governance docs now reference roles (`devlead`, `devrev`, `infoarch`, `secrev`) and standardized attribution (model + interface + role), with an ADR documenting the transition.
+It also completes gofulmen's migration away from an identity-based agent scheme in favor of Crucible's role-based agent interface. Evergreen governance docs now reference roles (`devlead`, `devrev`, `infoarch`, `secrev`) and standardized attribution (model + interface + role), with an ADR documenting the transition.
 
 #### Highlights
 
@@ -26,8 +53,8 @@ It also completes gofulmen’s migration away from an identity-based agent schem
 
 #### Testing
 
-- ✅ `make check-all`
-- ✅ `.goneat/hooks/pre-push`
+- `make check-all`
+- `.goneat/hooks/pre-push`
 
 ---
 
@@ -52,30 +79,8 @@ Config loading now uses `telemetry.GetGlobalSystem()` by default (disabled unles
 
 #### Testing
 
-- ✅ `go test ./config -run TestLoadLayeredConfig_DoesNotWriteToStdoutByDefault -v`
-- ✅ `go test ./...`
-
----
-
-## [0.1.27] - 2025-12-24
-
-### AppIdentity schema sync fix
-
-**Release Type**: Bug Fix
-
-#### Overview
-
-This release fixes a schema drift bug where gofulmen’s embedded AppIdentity schema (`appidentity/app-identity.schema.json`) did not reflect the updated Crucible SSOT schema, causing vendor validation to incorrectly reject real-world vendor IDs that begin with digits (e.g. `3leaps`, `37signals`).
-
-#### Highlights
-
-- **Schema synced** – `appidentity/app-identity.schema.json` now matches Crucible `schemas/crucible-go/config/repository/app-identity/v1.0.0/app-identity.schema.json`.
-- **Drift guard** – Added `appidentity/schema_sync_test.go` to fail CI if the embedded schema diverges.
-- **Sync hook** – `make sync` now refreshes the embedded schema via `scripts/sync-appidentity-schema.sh`.
-
-#### Testing
-
-- ✅ `go test ./appidentity -run TestEmbeddedAppIdentitySchemaMatchesCrucible -v`
+- `go test ./config -run TestLoadLayeredConfig_DoesNotWriteToStdoutByDefault -v`
+- `go test ./...`
 
 ---
 
