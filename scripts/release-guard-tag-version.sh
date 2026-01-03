@@ -18,10 +18,6 @@ detect_tag() {
 		printf '%s' "${GOFULMEN_RELEASE_TAG}"
 		return 0
 	fi
-	if [ -n "${RELEASE_TAG:-}" ]; then
-		printf '%s' "${RELEASE_TAG}"
-		return 0
-	fi
 	git describe --tags --exact-match 2>/dev/null || true
 }
 
@@ -39,7 +35,7 @@ main() {
 
 	if [ -z "$tag" ]; then
 		if [ "${GOFULMEN_REQUIRE_TAG:-}" = "1" ]; then
-			echo "error: no exact tag found for HEAD and no RELEASE_TAG/GOFULMEN_RELEASE_TAG provided" >&2
+			echo "error: no exact tag found for HEAD and no GOFULMEN_RELEASE_TAG provided" >&2
 			exit 1
 		fi
 		echo "→ release guard: no tag detected (set GOFULMEN_REQUIRE_TAG=1 to enforce in CI)"

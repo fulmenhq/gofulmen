@@ -21,7 +21,7 @@ main() {
 	local version
 	version="$(read_version)"
 
-	local tag="${GOFULMEN_RELEASE_TAG:-${RELEASE_TAG:-v${version}}}"
+	local tag="${GOFULMEN_RELEASE_TAG:-v${version}}"
 
 	local gpg_homedir="${GOFULMEN_GPG_HOMEDIR:-${GOFULMEN_GPG_HOME:-}}"
 	if [ -n "${GOFULMEN_GPG_HOME:-}" ] && [ -z "${GOFULMEN_GPG_HOMEDIR:-}" ]; then

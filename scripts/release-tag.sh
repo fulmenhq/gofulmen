@@ -83,7 +83,7 @@ main() {
 	local version
 	version="$(read_version)"
 
-	local tag="${GOFULMEN_RELEASE_TAG:-${RELEASE_TAG:-v${version}}}"
+	local tag="${GOFULMEN_RELEASE_TAG:-v${version}}"
 
 	if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 		echo "error: invalid release tag '$tag' (expected vMAJOR.MINOR.PATCH)" >&2

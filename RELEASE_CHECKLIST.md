@@ -8,10 +8,8 @@ validated here and then codified into Crucible.
 
 ## Variables (Quick Reference)
 
-- `RELEASE_TAG`: optional override tag (recommended for manual release commands; e.g. `v0.1.21`)
-- `GOFULMEN_RELEASE_TAG`: optional override tag (scripts accept either)
-  - **Precedence**: `GOFULMEN_RELEASE_TAG` overrides `RELEASE_TAG` if both are set.
-  - Recommendation: set both to the same value, or leave `GOFULMEN_RELEASE_TAG` unset.
+- `GOFULMEN_RELEASE_TAG`: optional override tag (recommended for manual release commands; e.g. `v0.1.30`)
+  - If unset, scripts default to `v$(cat VERSION)`.
 - `GOFULMEN_GPG_HOMEDIR`: recommended dedicated signing keyring directory (separate from personal `~/.gnupg`)
 - `GOFULMEN_PGP_KEY_ID`: optional key id/email/fingerprint for signing
 - `GOFULMEN_MINISIGN_KEY`: optional minisign secret key path (creates a sidecar signature for the tag attestation)
@@ -19,7 +17,7 @@ validated here and then codified into Crucible.
 - `GOFULMEN_ALLOW_NON_MAIN=1`: optional override to tag from a non-`main` branch (not recommended)
 - `GOFULMEN_REQUIRE_TAG=1`: enforce “must be on an exact tag” (intended for CI guard usage)
 
-Note: `RELEASE_TAG`/`GOFULMEN_RELEASE_TAG` are not secrets and typically aren’t stored in encrypted env bundles.
+Note: `GOFULMEN_RELEASE_TAG` is not a secret and typically isn’t stored in encrypted env bundles.
 
 ## Pre-Release
 
