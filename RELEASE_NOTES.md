@@ -4,6 +4,38 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.3.0] - 2026-01-06
+
+### Crucible v0.4.1 sync + similarity module promotion
+
+**Release Type**: Minor Release (Structural Change)
+
+#### Overview
+
+This release syncs Crucible v0.4.1 which promotes the similarity module from a foundry sub-package to a standalone module. The module registry schema (v1.1.0) now includes `weight` and `default_inclusion` fields to support feature-gating in downstream consumers.
+
+#### Highlights
+
+- **Crucible v0.4.1** – Updated embedded Crucible assets and `go.mod` dependency.
+- **Similarity promotion** – Fixtures and schemas moved from `library/foundry/` to `library/similarity/`.
+- **Module schema v1.1.0** – New fields: `weight` (light/heavy), `default_inclusion` (bool), per-language `notes`.
+- **Signals catalog** – Now contains 9 signals (added new signal).
+- **Test path updates** – Fixture and schema paths updated to new locations.
+
+#### Breaking Changes
+
+- Synced content paths changed: `config/crucible-go/library/foundry/similarity-fixtures.yaml` → `config/crucible-go/library/similarity/fixtures.yaml`
+- Schema paths changed: `schemas/crucible-go/library/foundry/v2.0.0/` → `schemas/crucible-go/library/similarity/v2.0.0/`
+
+Consumers referencing synced files directly will need to update paths. The Go API (`foundry/similarity` package) is unchanged.
+
+#### Testing
+
+- `make check-all`
+- `make release-provenance-check`
+
+---
+
 ## [0.2.1] - 2026-01-03
 
 ### Pre-push license compliance via goneat assess
@@ -52,33 +84,6 @@ This release replaces GPL-2.0 licensed external dependencies in the similarity p
 - `make license-audit`
 - All Crucible fixture tests pass
 - All golden tests pass
-
----
-
-## [0.1.29] - 2026-01-03
-
-### Crucible v0.3.0 sync + agentic roles adoption
-
-**Release Type**: Dependency Sync / Repo Governance
-
-#### Overview
-
-This release syncs gofulmen's embedded Crucible SSOT assets to `v0.3.0` and updates `go.mod` to match.
-
-It also completes gofulmen's migration away from an identity-based agent scheme in favor of Crucible's role-based agent interface. Evergreen governance docs now reference roles (`devlead`, `devrev`, `infoarch`, `secrev`) and standardized attribution (model + interface + role), with an ADR documenting the transition.
-
-#### Highlights
-
-- **Crucible SSOT v0.3.0** – Synced `docs/crucible-go/`, `schemas/crucible-go/`, and `config/crucible-go/` and updated `go.mod` to `github.com/fulmenhq/crucible v0.3.0`.
-- **Role catalog embedded** – Added the synced role catalog under `config/crucible-go/agentic/roles/`.
-- **Roles-first governance** – Updated `AGENTS.md` and `MAINTAINERS.md` to remove identity-based agent naming and standardize on roles + attribution.
-- **Secrev escalation** – Explicitly calls out `secrev` for security-sensitive changes (secrets, crypto, supply chain).
-- **Tooling minimums** – Updated `Makefile` documented minimum `GONEAT_VERSION` to `v0.4.0`.
-
-#### Testing
-
-- `make check-all`
-- `.goneat/hooks/pre-push`
 
 ---
 
