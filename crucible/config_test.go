@@ -77,12 +77,12 @@ func TestConfigListConfigs(t *testing.T) {
 		t.Fatalf("Failed to list configs: %v", err)
 	}
 
+	// Note: similarity-fixtures.yaml moved to library/similarity/fixtures.yaml in Crucible v0.4.1
 	expectedFiles := map[string]bool{
-		"patterns.yaml":            false,
-		"country-codes.yaml":       false,
-		"http-statuses.yaml":       false,
-		"mime-types.yaml":          false,
-		"similarity-fixtures.yaml": false,
+		"patterns.yaml":      false,
+		"country-codes.yaml": false,
+		"http-statuses.yaml": false,
+		"mime-types.yaml":    false,
 	}
 
 	for _, file := range files {

@@ -84,9 +84,9 @@ This implementation conforms to the Crucible Foundry Similarity Standard v1.0.0
 and maintains API parity with pyfulmen and tsfulmen helper libraries.
 
 Shared test fixtures validate cross-language consistency:
-  - docs/crucible-go/standards/library/foundry/similarity.md
-  - config/crucible-go/library/foundry/similarity-fixtures.yaml
-  - schemas/crucible-go/library/foundry/v1.0.0/similarity.schema.json
+  - docs/crucible-go/standards/library/similarity/similarity.md
+  - config/crucible-go/library/similarity/fixtures.yaml
+  - schemas/crucible-go/library/similarity/v2.0.0/similarity.schema.json
 
 # Use Cases
 

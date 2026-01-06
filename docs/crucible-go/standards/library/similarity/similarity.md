@@ -1,5 +1,5 @@
 ---
-title: "Foundry Text Similarity & Normalization Standard"
+title: "Text Similarity & Normalization Standard"
 description: "Standard for text comparison, distance metrics, and normalization utilities in Fulmen helper libraries"
 author: "Schema Cartographer"
 date: "2025-10-22"
@@ -8,7 +8,6 @@ status: "stable"
 version: "2.0.0"
 tags:
   [
-    "foundry",
     "similarity",
     "normalization",
     "text",
@@ -22,11 +21,11 @@ tags:
   ]
 ---
 
-# Foundry Text Similarity & Normalization Standard
+# Text Similarity & Normalization Standard
 
 ## Overview
 
-The Foundry similarity and normalization utilities provide standardized text comparison capabilities across all Fulmen helper libraries. This enables consistent fuzzy matching, "Did you mean...?" suggestions, and Unicode-aware text processing for Crucible shim error messages, CLI search, and Docscribe lookups.
+The similarity and normalization utilities provide standardized text comparison capabilities across all Fulmen helper libraries. This enables consistent fuzzy matching, "Did you mean...?" suggestions, and Unicode-aware text processing for Crucible shim error messages, CLI search, and Docscribe lookups.
 
 ## Scope
 

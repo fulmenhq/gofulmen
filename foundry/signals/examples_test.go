@@ -62,7 +62,7 @@ func ExampleCatalog_ListSignals() {
 		fmt.Printf("  %s (%s)\n", signal.ID, signal.Name)
 	}
 	// Output:
-	// Catalog contains 8 signals
+	// Catalog contains 9 signals
 	//   term (SIGTERM)
 	//   int (SIGINT)
 	//   hup (SIGHUP)

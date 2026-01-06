@@ -431,6 +431,11 @@
           "minimum": 0,
           "maximum": 255
         },
+        "SIGKILL": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
         "note": {
           "type": "string",
           "description": "Explanation of exit code pattern and cross-references"

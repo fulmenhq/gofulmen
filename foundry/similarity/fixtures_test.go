@@ -66,7 +66,7 @@ func loadFixtures(t *testing.T) *FixtureData {
 	t.Helper()
 
 	// Find the fixtures file relative to the gofulmen root
-	fixturesPath := filepath.Join("..", "..", "config", "crucible-go", "library", "foundry", "similarity-fixtures.yaml")
+	fixturesPath := filepath.Join("..", "..", "config", "crucible-go", "library", "similarity", "fixtures.yaml")
 
 	data, err := os.ReadFile(fixturesPath)
 	if err != nil {
@@ -83,8 +83,8 @@ func loadFixtures(t *testing.T) *FixtureData {
 
 // TestFixtures_SchemaValidation validates fixtures YAML against v2.0.0 schema
 func TestFixtures_SchemaValidation(t *testing.T) {
-	fixturesPath := filepath.Join("..", "..", "config", "crucible-go", "library", "foundry", "similarity-fixtures.yaml")
-	schemaPath := filepath.Join("..", "..", "schemas", "crucible-go", "library", "foundry", "v2.0.0", "similarity.schema.json")
+	fixturesPath := filepath.Join("..", "..", "config", "crucible-go", "library", "similarity", "fixtures.yaml")
+	schemaPath := filepath.Join("..", "..", "schemas", "crucible-go", "library", "similarity", "v2.0.0", "similarity.schema.json")
 
 	// Read fixtures file
 	fixturesData, err := os.ReadFile(fixturesPath)

@@ -15,17 +15,19 @@ Baseline role prompts for AI agent sessions in the FulmenHQ ecosystem.
 | [CI/CD Automation](cicd.yaml)          | `cicd`     | automation | Pipelines, GitHub Actions                    |
 | [Security Review](secrev.yaml)         | `secrev`   | review     | Security analysis, vulnerabilities           |
 | [Data Engineering](dataeng.yaml)       | `dataeng`  | agentic    | Database design, data pipelines              |
+| [Product Marketing](prodmktg.yaml)     | `prodmktg` | marketing  | Messaging, personas, branding, storytelling  |
 
 ## FulmenHQ Extensions
 
 These roles extend the [3leaps baseline](https://github.com/3leaps/crucible/tree/main/config/agentic/roles):
 
-| Role      | Extension Purpose                                        |
-| --------- | -------------------------------------------------------- |
-| `devlead` | Adds FulmenHQ ecosystem patterns                         |
-| `devrev`  | Four-eyes code review (FulmenHQ-specific)                |
-| `entarch` | Cross-repo coordination (FulmenHQ-specific)              |
-| `dataeng` | Enterprise-scale data infrastructure (FulmenHQ-specific) |
+| Role       | Extension Purpose                                        |
+| ---------- | -------------------------------------------------------- |
+| `devlead`  | Adds FulmenHQ ecosystem patterns                         |
+| `devrev`   | Four-eyes code review (FulmenHQ-specific)                |
+| `entarch`  | Cross-repo coordination (FulmenHQ-specific)              |
+| `dataeng`  | Enterprise-scale data infrastructure (FulmenHQ-specific) |
+| `prodmktg` | Product marketing and branding (FulmenHQ-original)       |
 
 ## Usage
 
