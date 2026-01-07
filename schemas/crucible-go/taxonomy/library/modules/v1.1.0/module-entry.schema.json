@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.fulmenhq.dev/taxonomy/library/modules/v1.1.0/module-entry.schema.json",
+  "$id": "https://schemas.fulmenhq.dev/crucible/taxonomy/library/modules/v1.1.0/module-entry.schema.json",
   "title": "Fulmen Helper Library Module Entry",
   "description": "Schema for individual module entries in the helper library module registry. v1.1.0 adds weight classification, default_inclusion, rust language support, and per-language notes.",
   "type": "object",

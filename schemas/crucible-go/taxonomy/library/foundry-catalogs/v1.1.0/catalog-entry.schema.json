@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.fulmenhq.dev/taxonomy/library/foundry-catalogs/v1.1.0/catalog-entry.schema.json",
+  "$id": "https://schemas.fulmenhq.dev/crucible/taxonomy/library/foundry-catalogs/v1.1.0/catalog-entry.schema.json",
   "title": "Fulmen Foundry Catalog Entry",
   "description": "Schema for individual catalog entries in the foundry reference data registry. v1.1.0 adds weight classification, default_inclusion, and feature_group for library feature gates.",
   "type": "object",

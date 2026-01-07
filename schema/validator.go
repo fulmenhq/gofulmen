@@ -218,6 +218,14 @@ func (l *localLoader) Load(rawURL string) (io.ReadCloser, error) {
 	}
 	if strings.HasPrefix(trimmed, "https://schemas.fulmenhq.dev/") {
 		remainder := strings.TrimPrefix(trimmed, "https://schemas.fulmenhq.dev/")
+
+		// Only resolve crucible-module schemas locally.
+		// Other modules (goneat/, enact/, etc.) are not embedded and cannot be resolved.
+		// See: Canonical URI Resolution Standard (docs/crucible-go/standards/publishing/canonical-uri-resolution.md)
+		if !strings.HasPrefix(remainder, "crucible/") {
+			return nil, fmt.Errorf("non-crucible schema not embedded locally: %s (only crucible/ module schemas are available)", rawURL)
+		}
+
 		baseDir := filepath.Dir(l.metaDir) // schemas/crucible-go (parent of metaDir)
 
 		// Map URL path to local directory structure

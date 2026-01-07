@@ -4,35 +4,38 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.3.0] - 2026-01-06
+## [0.3.0] - 2026-01-07
 
-### Crucible v0.4.1 sync + similarity module promotion
+### Crucible v0.4.2 sync + canonical URI resolution
 
-**Release Type**: Minor Release (Structural Change)
+**Release Type**: Minor Release (Breaking Change)
 
 #### Overview
 
-This release syncs Crucible v0.4.1 which promotes the similarity module from a foundry sub-package to a standalone module. The module registry schema (v1.1.0) now includes `weight` and `default_inclusion` fields to support feature-gating in downstream consumers.
+This release syncs Crucible v0.4.2 which establishes the Canonical URI Resolution Standard. All schema `$id` values now use module-qualified URIs (`schemas.fulmenhq.dev/crucible/...`). The schema resolver in `schema/validator.go` has been updated to explicitly handle only crucible-module schemas.
 
 #### Highlights
 
-- **Crucible v0.4.1** – Updated embedded Crucible assets and `go.mod` dependency.
+- **Crucible v0.4.2** – Updated embedded Crucible assets and `go.mod` dependency.
+- **Canonical URIs** – All ~63 schemas updated with `crucible/` module prefix in `$id`.
+- **Resolver fix** – `localLoader.Load()` now rejects non-crucible modules with clear error.
+- **Fixture Standard** – New standard for test infrastructure repositories.
 - **Similarity promotion** – Fixtures and schemas moved from `library/foundry/` to `library/similarity/`.
-- **Module schema v1.1.0** – New fields: `weight` (light/heavy), `default_inclusion` (bool), per-language `notes`.
-- **Signals catalog** – Now contains 9 signals (added new signal).
-- **Test path updates** – Fixture and schema paths updated to new locations.
+- **Module schema v1.1.0** – New fields: `weight`, `default_inclusion`, per-language `notes`.
 
 #### Breaking Changes
 
-- Synced content paths changed: `config/crucible-go/library/foundry/similarity-fixtures.yaml` → `config/crucible-go/library/similarity/fixtures.yaml`
-- Schema paths changed: `schemas/crucible-go/library/foundry/v2.0.0/` → `schemas/crucible-go/library/similarity/v2.0.0/`
+- Schema `$id` URIs changed: `schemas.fulmenhq.dev/<topic>/...` → `schemas.fulmenhq.dev/crucible/<topic>/...`
+- Enact schemas (11 files) removed – moved to enacthq organization.
+- Goneat schemas (6 files) removed – moved to goneat repository.
+- Similarity paths changed: `library/foundry/` → `library/similarity/`.
 
-Consumers referencing synced files directly will need to update paths. The Go API (`foundry/similarity` package) is unchanged.
+The Go API (`foundry/similarity` package) and schema validation are unchanged.
 
 #### Testing
 
 - `make check-all`
-- `make release-provenance-check`
+- `make test`
 
 ---
 

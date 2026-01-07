@@ -7,17 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-01-06
+## [0.3.0] - 2026-01-07
 
 ### Changed
 
-- **Crucible v0.4.1 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.4.1`.
+- **Crucible v0.4.2 Sync** – Updated embedded Crucible assets and `go.mod` dependency to `github.com/fulmenhq/crucible v0.4.2`.
+- **Canonical URI Resolution** – All schema `$id` values now use module-qualified URIs (`schemas.fulmenhq.dev/crucible/...`).
+- **Schema Resolver Fix** – `schema/validator.go` now explicitly handles only `crucible/` module schemas; other modules return clear error.
 - **Similarity Module Promotion** – Similarity fixtures and schemas moved from `library/foundry/` to `library/similarity/` as a standalone module.
 - **Module Schema v1.1.0** – Synced new module registry schema with `weight`, `default_inclusion`, and per-language `notes` fields.
-- **Signals Catalog** – Now contains 9 signals (added new signal in Crucible v0.4.x).
+- **Fixture Standard** – New standard for test infrastructure repositories (`docs/crucible-go/architecture/fulmen-fixture-standard.md`).
+
+### Removed
+
+- **Enact Schemas** – 11 schemas moved to enacthq organization.
+- **Goneat Schemas** – 6 schemas moved to goneat repository.
 
 ### Breaking Changes
 
+- Schema `$id` URIs now include `crucible/` module prefix. Resolvers using `$id` lookup must handle the new pattern.
 - Synced content paths changed for similarity:
   - `config/crucible-go/library/foundry/similarity-fixtures.yaml` → `config/crucible-go/library/similarity/fixtures.yaml`
   - `schemas/crucible-go/library/foundry/v2.0.0/similarity.schema.json` → `schemas/crucible-go/library/similarity/v2.0.0/similarity.schema.json`
