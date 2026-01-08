@@ -45,6 +45,30 @@ fixtures:
       "003":
         name: "apikey"
         description: "API key authentication with rate limiting"
+  rampart:
+    # Full repo name: fixture-server-proving-rampart-001
+    category: proving
+    mode: server
+    default_lang: en
+    summary: "HTTP protocol testing server for client validation"
+    summary_i18n:
+      ja: "クライアント検証用HTTPプロトコルテストサーバー"
+    description: |
+      Tests HTTP client correctness across protocol scenarios: status codes,
+      redirects, content types, chunked encoding, delays, and HTTP/2 features.
+      Useful for integration testing HTTP client libraries and load testing.
+    variants:
+      "001":
+        name: "http-scenarios"
+        description: "Core HTTP/1.1 scenarios: status codes, redirects, delays, content types, chunked encoding"
+      "002":
+        name: "http2-extended"
+        description: "HTTP/2 support, server push, compression negotiation, range requests"
+        status: planned
+      "003":
+        name: "performance"
+        description: "Throughput testing, streaming, rate limiting simulation, WebSocket echo"
+        status: planned
   # sentinel:
   #   category: proving
   #   mode: identity

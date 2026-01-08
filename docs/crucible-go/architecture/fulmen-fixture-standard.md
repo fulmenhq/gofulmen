@@ -64,6 +64,8 @@ All components are required. No implicit defaults.
 
 **Full regex**: `^fixture-(server|client|datastore|identity)-(proving|utility|chaos)-[a-z][a-z0-9]{1,20}-[0-9]{3}$`
 
+**Note**: The variant suffix (e.g., `-001`) is always required. There is no implicit default variant - all fixture repositories and images must include the explicit 3-digit variant code.
+
 ### Modes
 
 | Mode        | Purpose                            | Examples                          |
@@ -81,6 +83,27 @@ All components are required. No implicit defaults.
 - `000` is reserved (unused)
 - Sequential assignment within a fixture name
 - Variants represent different configurations or capabilities of the same fixture concept
+- **Variant codes are REQUIRED** - no implicit defaults (e.g., `fixture-server-proving-rampart-001`, never `fixture-server-proving-rampart`)
+- Variant definitions MUST be registered in `config/taxonomy/fixture-catalog.yaml` before creating a repository
+
+### Binary Naming
+
+The binary/executable name uses only the `<name>` component, without mode, category, or variant:
+
+| Repository Name                      | Binary Name | Rationale                                                               |
+| ------------------------------------ | ----------- | ----------------------------------------------------------------------- |
+| `fixture-server-proving-rampart-001` | `rampart`   | Short, clean for `docker exec` and local use                            |
+| `fixture-server-proving-rampart-002` | `rampart`   | Same binary name; variant is metadata                                   |
+| `fixture-server-utility-echo-001`    | `echo`      | Name only (conflicts with shell `echo` acceptable in container context) |
+
+**Variant identification**: The variant appears in:
+
+- Repository/image name: `ghcr.io/fulmenhq/fixture-server-proving-rampart-001`
+- App identity: `.fulmen/app.yaml`
+- Version output: `rampart v1.0.0 (variant: 001 - http-scenarios)`
+- `/version` endpoint response
+
+**Collision handling**: If running multiple variants locally (rare), users rename binaries manually or use containers (no collision since each image has its own binary).
 
 ### Examples
 
@@ -112,10 +135,12 @@ All fixture names MUST be registered in `config/taxonomy/fixture-catalog.yaml` b
 
 ### Registration Process
 
-1. Propose fixture name and category in PR to Crucible
-2. Add entry to `config/taxonomy/fixture-catalog.yaml`
-3. Create fixture repository with registered name
-4. Add variants as needed (increment variant code)
+1. Propose fixture name, category, and initial variant(s) in PR to Crucible
+2. Add entry to `config/taxonomy/fixture-catalog.yaml` with variant definitions
+3. Create fixture repository with fully-qualified name (including variant code)
+4. Add new variants by first registering in the catalog, then creating repository
+
+**Important**: The fixture catalog serves as the authoritative registry for what each variant code means. Create the catalog entry BEFORE creating the repository.
 
 ### Registry Schema
 
@@ -497,6 +522,7 @@ Each scenario should document:
 
 - [Repository Categories Taxonomy](../../config/taxonomy/repository-categories.yaml)
 - [Fixture Catalog](../../config/taxonomy/fixture-catalog.yaml)
+- [Ecosystem Brand Summary](../../config/branding/ecosystem.yaml) - For `version --extended` or `about` command
 - [Repository Category Standards](../standards/repository-category/README.md)
 - [Fulmen Ecosystem Guide](./fulmen-ecosystem-guide.md)
 - [Fulmen Forge Workhorse Standard](./fulmen-forge-workhorse-standard.md) - Layer 2 peer
