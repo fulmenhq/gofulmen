@@ -1,10 +1,24 @@
-# Gofulmen
+# gofulmen
 
-**Curated Libraries for Scale**
+**Stop reinventing catalogs. Start shipping.**
 
-Gofulmen is a collection of Go packages that provide consistent, high-quality implementations of common functionality across the FulmenHQ ecosystem. Built on top of Crucible's schemas and standards, these libraries ensure uniformity and reliability.
+Every team writes their own HTTP status helpers, exit code enums, and country code lookups. gofulmen provides production-grade Go implementations derived from a single source of truth—so your Go services use the same codes as your Rust, Python, and TypeScript services.
+
+- **Zero runtime dependencies**: All catalogs embedded at compile time
+- **Cross-language parity**: Same exit codes, signals, and schemas as rsfulmen, pyfulmen, tsfulmen
+- **Reference implementation**: gofulmen is the canonical implementation other languages follow
 
 📖 **[Read the complete library overview](docs/gofulmen_overview.md)** for comprehensive documentation including module catalog, dependency map, and roadmap.
+
+## Who Should Use This
+
+**Platform Engineers & SREs**: Standardize exit codes across all services so alerting thresholds and runbooks work consistently—whether the service is written in Go, Rust, Python, or TypeScript.
+
+**Security & Compliance Teams**: Embedded catalogs eliminate network calls for reference data. Audit the dependency tree once with `go mod graph`.
+
+**Polyglot Teams**: When your organization runs multiple languages, gofulmen ensures your Go services speak the same language as the rest of your stack. Same HTTP status groupings. Same signal handling semantics. Same error codes.
+
+**Library Authors**: Build on gofulmen's catalogs instead of maintaining your own. Context-aware APIs with proper timeout handling built in.
 
 ## Crucible Overview
 
@@ -635,6 +649,40 @@ fmt.Println(crucible.GetVersionString())
 // Output: gofulmen/v0.1.29 crucible/v0.3.0
 ```
 
+## Supply Chain & Security
+
+gofulmen is designed for environments where dependency hygiene matters.
+
+**Dependency Transparency:**
+- **Minimal by default**: Core packages have minimal external dependencies
+- **Auditable**: Run `go mod graph` to inspect the full dependency graph
+- **SBOM-ready**: Compatible with `cyclonedx-gomod` and standard Go tooling
+- **License-clean**: All dependencies use MIT, Apache-2.0, or compatible licenses
+
+**Embedded Data:**
+- All Crucible catalogs (country codes, exit codes, HTTP statuses) are embedded at compile time
+- No runtime network calls for reference data
+- Version and provenance tracked in `.crucible/metadata/metadata.yaml`
+
+**Security Practices:**
+- Context-aware APIs with proper timeout handling
+- Pattern matching uses bounded execution (no ReDoS vulnerabilities)
+- Vulnerability scanning via `govulncheck`
+
+**Audit Commands:**
+```bash
+# View dependency graph
+go mod graph
+
+# Check for known vulnerabilities
+govulncheck ./...
+
+# Generate SBOM
+cyclonedx-gomod mod -output sbom.json
+```
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting and our full security policy.
+
 ## Contributing
 
 Contributions are welcome! Please ensure:
@@ -644,12 +692,24 @@ Contributions are welcome! Please ensure:
 - Documentation is updated
 - Changes are consistent with Crucible standards
 
-See [GONEAT.md](docs/GONEAT.md) for development setup and [ops/](ops/) for operational documentation.
+See [GONEAT.md](docs/GONEAT.md) for development setup, [MAINTAINERS.md](MAINTAINERS.md) for governance, and [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## License
 
 Licensed under the MIT License. See LICENSE file for details.
 
+**Trademarks**: "Fulmen" and "3 Leaps" are trademarks of 3 Leaps, LLC. While code is open source, please use distinct names for derivative works to prevent confusion.
+
 ## Changelog
 
 See CHANGELOG.md for version history.
+
+---
+
+<div align="center">
+
+**Built by the [3 Leaps](https://3leaps.net) team**
+
+Part of the [Fulmen Ecosystem](https://github.com/fulmenhq) — Enterprise-grade libraries that thrive on scale
+
+</div>
