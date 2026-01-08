@@ -654,22 +654,26 @@ fmt.Println(crucible.GetVersionString())
 gofulmen is designed for environments where dependency hygiene matters.
 
 **Dependency Transparency:**
+
 - **Minimal by default**: Core packages have minimal external dependencies
 - **Auditable**: Run `go mod graph` to inspect the full dependency graph
 - **SBOM-ready**: Compatible with `cyclonedx-gomod` and standard Go tooling
 - **License-clean**: All dependencies use MIT, Apache-2.0, or compatible licenses
 
 **Embedded Data:**
+
 - All Crucible catalogs (country codes, exit codes, HTTP statuses) are embedded at compile time
 - No runtime network calls for reference data
 - Version and provenance tracked in `.crucible/metadata/metadata.yaml`
 
 **Security Practices:**
+
 - Context-aware APIs with proper timeout handling
 - Pattern matching uses bounded execution (no ReDoS vulnerabilities)
 - Vulnerability scanning via `govulncheck`
 
 **Audit Commands:**
+
 ```bash
 # View dependency graph
 go mod graph
