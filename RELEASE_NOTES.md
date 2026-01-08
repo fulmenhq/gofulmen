@@ -4,6 +4,27 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.3.1] - 2026-01-07
+
+### Crucible v0.4.3 sync
+
+**Release Type**: Patch Release (Dependency Update)
+
+#### Overview
+
+This release updates Crucible to v0.4.3, keeping gofulmen aligned with the latest SSOT assets.
+
+#### Highlights
+
+- **Crucible v0.4.3** – Updated embedded Crucible assets and `go.mod` dependency.
+
+#### Testing
+
+- `make check-all`
+- `make test`
+
+---
+
 ## [0.3.0] - 2026-01-07
 
 ### Crucible v0.4.2 sync + canonical URI resolution
@@ -60,33 +81,6 @@ This release closes a workflow gap where license violations could slip through i
 
 - `make prepush`
 - `goneat assess --categories dependencies`
-
----
-
-## [0.2.0] - 2026-01-03
-
-### Native similarity algorithms for MIT-compatible SBOM
-
-**Release Type**: Minor Release (License Compliance)
-
-#### Overview
-
-This release replaces GPL-2.0 licensed external dependencies in the similarity package with native Go implementations. Downstream consumers can now use gofulmen with fully MIT/Apache-2.0 compatible dependency trees.
-
-#### Highlights
-
-- **Native Jaro-Winkler** – New `jaro_winkler.go` implementing standard Jaro-Winkler similarity.
-- **Native Damerau-Levenshtein** – Unrestricted variant now uses native implementation with proper transposition handling.
-- **Clean SBOM** – `make license-audit` passes with no GPL/LGPL/AGPL/MPL/CDDL licenses.
-- **Quality Gate** – Added `license-audit` to `make check-all` to prevent future license regressions.
-- **Golden Tests** – 58 test cases verifying algorithm correctness.
-
-#### Testing
-
-- `make check-all` (now includes license-audit)
-- `make license-audit`
-- All Crucible fixture tests pass
-- All golden tests pass
 
 ---
 

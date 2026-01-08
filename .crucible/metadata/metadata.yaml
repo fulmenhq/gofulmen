@@ -2,7 +2,7 @@ schema:
     name: goneat.ssot.source-metadata
     version: v1
     url: https://github.com/fulmenhq/goneat/schemas/ssot/source-metadata.v1.1.0.json
-generated_at: 2026-01-07T18:13:15.858011Z
+generated_at: 2026-01-08T01:56:49.885217Z
 sources:
     - name: crucible
       slug: crucible
