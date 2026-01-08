@@ -87,6 +87,49 @@ correlationID := foundry.GetCorrelationID(ctx)
 traceID := foundry.GetTraceID(ctx)
 ```
 
+### Signal Resolution (Subpackage)
+
+Ergonomic signal name resolution for CLI applications (see `signals/` subdirectory).
+
+**NEW in v0.3.2: Signal Resolution API**
+
+```go
+import "github.com/fulmenhq/gofulmen/foundry/signals"
+
+catalog := signals.GetDefaultCatalog()
+
+// ResolveSignal accepts various input formats
+signal := catalog.ResolveSignal("term")     // Returns SIGTERM
+signal = catalog.ResolveSignal("SIGTERM")   // Returns SIGTERM
+signal = catalog.ResolveSignal("15")        // Returns SIGTERM (by number)
+signal = catalog.ResolveSignal("  term  ")  // Returns SIGTERM (whitespace trimmed)
+signal = catalog.ResolveSignal("SIGFOO")    // Returns nil (unknown)
+
+// ListSignalNames for CLI completion
+names, _ := catalog.ListSignalNames()
+// ["SIGTERM", "SIGINT", "SIGHUP", ...]
+
+// MatchSignalNames with glob patterns
+matches, _ := catalog.MatchSignalNames("*USR*")  // ["SIGUSR1", "SIGUSR2"]
+matches, _ = catalog.MatchSignalNames("SIG???")  // ["SIGINT", "SIGHUP"]
+```
+
+**Resolution Algorithm** (per Crucible Foundry interface standard):
+
+1. Trim whitespace
+2. Return nil if empty
+3. Exact catalog name match
+4. Numeric match by unix_number (positive integers only)
+5. Uppercase normalization with SIG prefix handling
+6. ID fallback (lowercase lookup)
+7. Return nil if not found
+
+**Glob Matching**:
+
+- `*` matches zero or more characters
+- `?` matches exactly one character
+- Case-insensitive matching
+
 ### Similarity (Subpackage)
 
 Text similarity and suggestion utilities with v1 and v2 APIs (see `similarity/` subdirectory for complete documentation).
@@ -231,6 +274,7 @@ All reference data is accessed from Crucible's embedded config (v0.2.1+):
 - **MIME Types**: Content type mappings
 - **HTTP Statuses**: Status codes and groups
 - **Countries**: ISO 3166-1 country codes
+- **Signals**: Unix signal definitions with resolution fixtures
 - **Similarity Fixtures**: Test data
 
 Crucible embeds these config files at compile time, ensuring offline operation and zero runtime I/O. The foundry package accesses them via `crucible.ConfigRegistry.Library().Foundry().*()` methods.

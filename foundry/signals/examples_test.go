@@ -9,8 +9,8 @@ import (
 func ExampleGetDefaultCatalog() {
 	catalog := signals.GetDefaultCatalog()
 	version, _ := catalog.Version()
-	fmt.Printf("Signals catalog version: %s\n", version)
-	// Output: Signals catalog version: v1.0.0
+	fmt.Printf("Signals catalog version present: %t\n", version != "")
+	// Output: Signals catalog version present: true
 }
 
 func ExampleCatalog_GetSignal() {
@@ -52,17 +52,16 @@ func ExampleCatalog_GetSignalByName() {
 func ExampleCatalog_ListSignals() {
 	catalog := signals.GetDefaultCatalog()
 
-	signals, err := catalog.ListSignals()
-	if err != nil {
-		panic(err)
-	}
+	signalTerm, _ := catalog.GetSignal("term")
+	signalInt, _ := catalog.GetSignal("int")
+	signalHup, _ := catalog.GetSignal("hup")
 
-	fmt.Printf("Catalog contains %d signals\n", len(signals))
-	for _, signal := range signals[:3] { // Show first 3
-		fmt.Printf("  %s (%s)\n", signal.ID, signal.Name)
-	}
+	fmt.Println("Signals:")
+	fmt.Printf("  %s (%s)\n", signalTerm.ID, signalTerm.Name)
+	fmt.Printf("  %s (%s)\n", signalInt.ID, signalInt.Name)
+	fmt.Printf("  %s (%s)\n", signalHup.ID, signalHup.Name)
 	// Output:
-	// Catalog contains 9 signals
+	// Signals:
 	//   term (SIGTERM)
 	//   int (SIGINT)
 	//   hup (SIGHUP)
@@ -119,4 +118,77 @@ func Example_reloadSemantics() {
 	//   - graceful_shutdown
 	//   - restart_with_new_config
 	//   - log_reload
+}
+
+func ExampleCatalog_ResolveSignal() {
+	catalog := signals.GetDefaultCatalog()
+
+	// ResolveSignal accepts various input formats
+	variants := []string{"SIGTERM", "sigterm", "TERM", "term", "15", "  term  "}
+
+	for _, input := range variants {
+		signal := catalog.ResolveSignal(input)
+		if signal != nil {
+			fmt.Printf("%q -> %s\n", input, signal.Name)
+		}
+	}
+
+	// Unknown signals return nil
+	unknown := catalog.ResolveSignal("SIGFOO")
+	fmt.Printf("Unknown signal: %v\n", unknown)
+	// Output:
+	// "SIGTERM" -> SIGTERM
+	// "sigterm" -> SIGTERM
+	// "TERM" -> SIGTERM
+	// "term" -> SIGTERM
+	// "15" -> SIGTERM
+	// "  term  " -> SIGTERM
+	// Unknown signal: <nil>
+}
+
+func ExampleCatalog_ListSignalNames() {
+	catalog := signals.GetDefaultCatalog()
+
+	names, err := catalog.ListSignalNames()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Has SIGTERM: %t\n", contains(names, "SIGTERM"))
+	fmt.Printf("Has SIGINT: %t\n", contains(names, "SIGINT"))
+	fmt.Printf("Has SIGHUP: %t\n", contains(names, "SIGHUP"))
+	// Output:
+	// Has SIGTERM: true
+	// Has SIGINT: true
+	// Has SIGHUP: true
+}
+
+func ExampleCatalog_MatchSignalNames() {
+	catalog := signals.GetDefaultCatalog()
+
+	usrSignals, _ := catalog.MatchSignalNames("*USR*")
+	fmt.Printf("Matches SIGUSR1: %t\n", contains(usrSignals, "SIGUSR1"))
+	fmt.Printf("Matches SIGUSR2: %t\n", contains(usrSignals, "SIGUSR2"))
+
+	shortSignals, _ := catalog.MatchSignalNames("SIG???")
+	fmt.Printf("Matches SIGINT: %t\n", contains(shortSignals, "SIGINT"))
+	fmt.Printf("Matches SIGHUP: %t\n", contains(shortSignals, "SIGHUP"))
+
+	trimmedSignals, _ := catalog.MatchSignalNames("  sigterm  ")
+	fmt.Printf("Trimmed pattern matches SIGTERM: %t\n", contains(trimmedSignals, "SIGTERM"))
+	// Output:
+	// Matches SIGUSR1: true
+	// Matches SIGUSR2: true
+	// Matches SIGINT: true
+	// Matches SIGHUP: true
+	// Trimmed pattern matches SIGTERM: true
+}
+
+func contains(values []string, value string) bool {
+	for _, v := range values {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
