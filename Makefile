@@ -49,7 +49,7 @@ BINDIR_RESOLVE = \
 	fi
 
 # Tooling
-GONEAT_VERSION ?= v0.4.0
+GONEAT_VERSION ?= v0.5.1
 SFETCH_INSTALL_URL ?= https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh
 
 SFETCH_RESOLVE = \
