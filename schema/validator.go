@@ -209,11 +209,35 @@ func (l *localLoader) Load(rawURL string) (io.ReadCloser, error) {
 		}
 	}
 	for _, prefix := range []string{
+		"https://json-schema.org/draft/2019-09/",
+		"http://json-schema.org/draft/2019-09/",
+	} {
+		if strings.HasPrefix(trimmed, prefix) {
+			return l.openDraftResource(trimmed, prefix, "draft-2019-09")
+		}
+	}
+	for _, prefix := range []string{
 		"https://json-schema.org/draft-07/",
 		"http://json-schema.org/draft-07/",
 	} {
 		if strings.HasPrefix(trimmed, prefix) {
 			return l.openDraftResource(trimmed, prefix, "draft-07")
+		}
+	}
+	for _, prefix := range []string{
+		"https://json-schema.org/draft-06/",
+		"http://json-schema.org/draft-06/",
+	} {
+		if strings.HasPrefix(trimmed, prefix) {
+			return l.openDraftResource(trimmed, prefix, "draft-06")
+		}
+	}
+	for _, prefix := range []string{
+		"https://json-schema.org/draft-04/",
+		"http://json-schema.org/draft-04/",
+	} {
+		if strings.HasPrefix(trimmed, prefix) {
+			return l.openDraftResource(trimmed, prefix, "draft-04")
 		}
 	}
 	if strings.HasPrefix(trimmed, "https://schemas.fulmenhq.dev/") {
