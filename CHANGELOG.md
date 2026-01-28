@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-01-28
+
+### Added
+
+- **Fulencode Module** – New `fulencode/` package providing canonical encoding/decoding with security protections.
+  - **Encode**: Base64/Base64URL/Base64-raw, Base32/Base32hex, Hex + UTF-8/UTF-16LE/UTF-16BE/ISO-8859-1/CP1252/ASCII
+  - **Decode**: All formats with expansion ratio limits, max size protection, checksum support
+  - **Detect**: BOM detection, UTF-16 null-pattern heuristic, UTF-8 validation, confidence scoring
+  - **Normalize**: NFC/NFD/NFKC/NFKD + `text_safe` profile (control char rejection, bidi/zero-width filtering, combining mark limits)
+  - **BOM Helpers**: `DetectBOM`, `RemoveBOM`, `AddBOM` for byte order mark handling
+  - Uses Crucible SSOT enums via `github.com/fulmenhq/crucible/fulencode`
+  - Fixture-backed tests using Crucible v0.4.9 test vectors
+- **JSON Schema Meta-Draft Support** – End-to-end validation for Draft-04 through Draft-2020-12.
+  - Updated `schema/validator.go` loader to resolve json-schema.org metaschemas for all drafts
+  - Added `schema/meta_drafts_test.go` regression tests using Crucible meta fixtures
+
+### Changed
+
+- **Go 1.25.5** – Updated toolchain from 1.25.1 for vulnerability remediation in standard library.
+- **golang.org/x/mod v0.32.0** – Updated from v0.30.0.
+- **golang.org/x/text v0.33.0** – Updated from v0.30.0.
+- **Crucible v0.4.9** – Synced SSOT assets including:
+  - New QA agentic role (`config/crucible-go/agentic/roles/qa.yaml`)
+  - Fulencode library schemas, fixtures, and text-safe standard
+  - JSON Schema meta-schema drafts (04, 06, 2019-09) with fixtures
+  - Classifiers framework with dimension schemas and standards
+  - Foundation schemas (error-response, lifecycle-phases, release-phase)
+  - Reorganized upstream 3leaps schemas under `crucible/` namespace
+
 ## [0.3.1] - 2026-01-07
 
 ### Changed

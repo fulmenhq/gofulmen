@@ -3,7 +3,7 @@ title: "Gofulmen Library Overview"
 description: "Comprehensive overview of the Go foundation library for FulmenHQ ecosystem"
 author: "infoarch"
 date: "2025-10-11"
-last_updated: "2026-01-03"
+last_updated: "2026-01-28"
 status: "active"
 tags: ["overview", "library", "go", "foundation"]
 ---
@@ -52,6 +52,7 @@ Rather than copying Crucible assets into every project, helper libraries provide
 | **ascii/**           | ✅ Stable | [ASCII Helpers](crucible-go/standards/library/extensions/ascii-helpers.md)      | Terminal utilities, Unicode width calculation, box drawing                                                                                   |
 | **foundry/**         | ✅ Stable | [Foundry Interfaces](crucible-go/standards/library/foundry/interfaces.md)       | Time, correlation IDs, patterns, MIME, HTTP status, country codes, similarity (v2 API with 5 algorithms), exit codes (54 standardized codes) |
 | **foundry/signals/** | ✅ Stable | [Signals Catalog](crucible-go/standards/library/foundry/signals.md)             | Typed access to Crucible signals catalog v1.0.0 with 8 standard POSIX signals                                                                |
+| **fulencode/**       | ✅ Stable | [Fulencode Module](crucible-go/standards/library/modules/fulencode.md)          | Canonical encoding/decoding with security protections: Base64, Base32, Hex, UTF encodings, BOM handling, normalization                       |
 
 **Legend**: ✅ Stable | 🚧 Planned | ⚠️ Experimental | 🔄 Refactoring
 
@@ -83,7 +84,7 @@ Downstream users frequently reference [Crucible’s asset guide](crucible-go/gui
    ```
 5. **Track versions for support tickets**
    ```go
-    version := crucible.GetVersionString() // "gofulmen/v0.1.29 crucible/v0.3.0"
+    version := crucible.GetVersionString() // "gofulmen/v0.3.2 crucible/v0.4.9"
    ```
 
 See `crucible/README.md` (shipped inside gofulmen) for a longer catalog, including helper functions such as `GetPathfinderFindQuerySchema()` and `LoadLoggingSchemas()`. Together, the Crucible guide + this shim let you explore assets even if you never clone the Crucible repo locally.

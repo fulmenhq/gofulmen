@@ -60,12 +60,13 @@ Terminal and Unicode utilities for Go applications.
 
 ### Schema (`schema/`)
 
-JSON Schema validation with support for draft 2020-12.
+JSON Schema validation with support for Draft-04 through Draft-2020-12.
 
 - Schema loading and caching
 - Versioned schema registry
 - Validation with detailed error reporting
 - Support for YAML and JSON
+- Multi-draft metaschema resolution (04, 06, 07, 2019-09, 2020-12)
 
 ### Config (`config/`)
 
@@ -126,6 +127,18 @@ Enterprise-grade foundation utilities providing consistent cross-language implem
 - **Text Similarity** (`foundry/similarity/`): v1 API (Levenshtein) + v2 API (5 algorithms: Levenshtein, OSA, Damerau, Jaro-Winkler, Substring), normalized scoring, fuzzy matching, Unicode normalization, opt-in telemetry
 
 All Foundry catalogs are embedded at compile time and work offline - no network dependencies required.
+
+### Fulencode (`fulencode/`)
+
+Canonical encoding/decoding library with built-in security protections for cross-language consistency.
+
+- **Encode**: Base64/Base64URL/Base64-raw, Base32/Base32hex, Hex + character encodings (UTF-8/16, ISO-8859-1, CP1252, ASCII)
+- **Decode**: All formats with expansion ratio limits, max size protection, checksum verification
+- **Detect**: BOM detection, UTF-16 null-pattern heuristic, UTF-8 validation, confidence scoring
+- **Normalize**: NFC/NFD/NFKC/NFKD + security-focused `text_safe` profile
+- **BOM Helpers**: `DetectBOM`, `RemoveBOM`, `AddBOM` for byte order mark handling
+- **Security by Default**: Expansion ratio limits (10x), max size (100MB decoded/500MB encoded), control char rejection
+- **SSOT Integration**: Uses Crucible-generated enums for cross-language parity
 
 ### Telemetry (`telemetry/`)
 
@@ -496,6 +509,51 @@ normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
 similarity.EnableTelemetry(telemetrySystem)
 ```
 
+### Fulencode Package
+
+```go
+import "github.com/fulmenhq/gofulmen/fulencode"
+
+// Encode bytes to base64
+data := []byte("Hello, World!")
+result, err := fulencode.Encode(data, fulencode.BASE64, nil)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(result.Data) // "SGVsbG8sIFdvcmxkIQ=="
+
+// Decode with security limits
+decoded, err := fulencode.DecodeString("SGVsbG8sIFdvcmxkIQ==", fulencode.BASE64, &fulencode.DecodeOptions{
+    MaxDecodedSize:    100 * 1024 * 1024,  // 100MB limit
+    MaxExpansionRatio: 10.0,                // Encoding bomb protection
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(string(decoded.Data)) // "Hello, World!"
+
+// Detect encoding with confidence
+unknownBytes := []byte{0xEF, 0xBB, 0xBF, 'H', 'e', 'l', 'l', 'o'}
+detection, _ := fulencode.Detect(unknownBytes, nil)
+fmt.Printf("Encoding: %s (%.0f%% confidence)\n", *detection.Encoding, detection.Confidence*100)
+// Output: Encoding: utf-8 (100% confidence)
+
+// BOM handling
+clean, _ := fulencode.RemoveBOM(unknownBytes, nil)
+fmt.Println(string(clean)) // "Hello"
+
+// Normalize text safely (reject dangerous characters)
+userInput := "Hello\x00World"  // Contains null byte
+_, err = fulencode.Normalize(userInput, fulencode.TEXT_SAFE, nil)
+if err != nil {
+    fmt.Println("Rejected: control character")
+}
+
+// Unicode normalization (NFC/NFD/NFKC/NFKD)
+result, _ := fulencode.Normalize("café", fulencode.NFC, nil)
+fmt.Println(result.Text) // "café" (composed form)
+```
+
 ### Signals Package
 
 ```go
@@ -647,7 +705,7 @@ import "github.com/fulmenhq/gofulmen/crucible"
 
 // Access version info
 fmt.Println(crucible.GetVersionString())
-// Output: gofulmen/v0.1.29 crucible/v0.3.0
+// Output: gofulmen/v0.3.2 crucible/v0.4.9
 ```
 
 ## Supply Chain & Security
