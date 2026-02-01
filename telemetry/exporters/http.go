@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/fulmenhq/gofulmen/internal/httpauth"
 	"github.com/fulmenhq/gofulmen/telemetry"
 	"github.com/fulmenhq/gofulmen/telemetry/metrics"
 	"golang.org/x/time/rate"
@@ -54,9 +55,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Check bearer token authentication if configured
 	if h.config.BearerToken != "" {
 		authHeader := r.Header.Get("Authorization")
-		expectedAuth := "Bearer " + h.config.BearerToken
-
-		if authHeader != expectedAuth {
+		if !httpauth.BearerTokenMatches(authHeader, h.config.BearerToken) {
 			h.emitHTTPError(w, http.StatusUnauthorized, "Unauthorized", tags)
 			return
 		}

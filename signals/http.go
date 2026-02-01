@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/fulmenhq/gofulmen/internal/httpauth"
 	"golang.org/x/time/rate"
 )
 
@@ -33,6 +35,22 @@ type HTTPConfig struct {
 	// Manager is the signal manager to dispatch signals to.
 	// If nil, uses the default manager.
 	Manager *Manager
+
+	// AllowedSignals restricts which signals can be requested.
+	//
+	// If nil/empty: preserves the current behavior (any supported signal present in
+	// the handler's signal map may be requested).
+	//
+	// Values are normalized (trimmed, case-insensitive, optional SIG prefix). Empty
+	// entries are ignored. If AllowedSignals is non-empty but all entries are empty,
+	// the handler will reject all signals.
+	AllowedSignals []string
+
+	// AllowClientGracePeriod controls whether grace_period_seconds from the request
+	// is used to set a context timeout.
+	//
+	// Default: false.
+	AllowClientGracePeriod bool
 }
 
 // SignalRequest represents an HTTP signal request.
@@ -70,6 +88,7 @@ type HTTPHandler struct {
 	config      HTTPConfig
 	manager     *Manager
 	rateLimiter *rate.Limiter
+	allowed     map[string]struct{}
 }
 
 // NewHTTPHandler creates a new HTTP signal handler with the given configuration.
@@ -98,10 +117,13 @@ func NewHTTPHandler(config HTTPConfig) *HTTPHandler {
 	// Create rate limiter (per-minute)
 	limiter := rate.NewLimiter(rate.Limit(float64(config.RateLimit)/60.0), config.RateBurst)
 
+	allowed := buildAllowedSignalSet(config.AllowedSignals)
+
 	return &HTTPHandler{
 		config:      config,
 		manager:     config.Manager,
 		rateLimiter: limiter,
+		allowed:     allowed,
 	}
 }
 
@@ -139,21 +161,29 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Map signal name to os.Signal
-	sig, err := h.parseSignal(req.Signal)
+	canonicalName, sig, err := h.parseSignal(req.Signal)
 	if err != nil {
 		h.sendError(w, http.StatusBadRequest, fmt.Sprintf("invalid signal: %v", err))
 		return
 	}
 
+	// Allowlist check (if configured)
+	if h.allowed != nil {
+		if _, ok := h.allowed[canonicalName]; !ok {
+			h.sendError(w, http.StatusBadRequest, fmt.Sprintf("signal %s is not allowed", canonicalName))
+			return
+		}
+	}
+
 	// Check if signal is supported
 	if !Supports(sig) {
-		h.sendError(w, http.StatusBadRequest, fmt.Sprintf("signal %s is not supported on this platform", req.Signal))
+		h.sendError(w, http.StatusBadRequest, fmt.Sprintf("signal %s is not supported on this platform", canonicalName))
 		return
 	}
 
 	// Create context with grace period if specified
 	ctx := r.Context()
-	if req.GracePeriodSeconds != nil && *req.GracePeriodSeconds > 0 {
+	if h.config.AllowClientGracePeriod && req.GracePeriodSeconds != nil && *req.GracePeriodSeconds > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(*req.GracePeriodSeconds)*time.Second)
 		defer cancel()
@@ -168,8 +198,8 @@ func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Success response
 	h.sendSuccess(w, SignalResponse{
 		Success: true,
-		Message: fmt.Sprintf("signal %s processed successfully", req.Signal),
-		Signal:  req.Signal,
+		Message: fmt.Sprintf("signal %s processed successfully", canonicalName),
+		Signal:  canonicalName,
 	})
 }
 
@@ -183,8 +213,7 @@ func (h *HTTPHandler) authenticate(r *http.Request) bool {
 	// Token authentication
 	if h.config.TokenAuth != "" {
 		auth := r.Header.Get("Authorization")
-		expectedAuth := "Bearer " + h.config.TokenAuth
-		if auth != expectedAuth {
+		if !httpauth.BearerTokenMatches(auth, h.config.TokenAuth) {
 			return false
 		}
 	}
@@ -201,13 +230,51 @@ func (h *HTTPHandler) authenticate(r *http.Request) bool {
 }
 
 // parseSignal converts a signal name to os.Signal.
-func (h *HTTPHandler) parseSignal(name string) (os.Signal, error) {
-	sig, ok := httpSignalMap[name]
-	if !ok {
-		return nil, fmt.Errorf("unknown signal: %s", name)
+// It accepts common variants (trimmed, case-insensitive, optional SIG prefix).
+func (h *HTTPHandler) parseSignal(name string) (string, os.Signal, error) {
+	canonicalName, err := normalizeSignalName(name)
+	if err != nil {
+		return "", nil, err
 	}
 
-	return sig, nil
+	sig, ok := httpSignalMap[canonicalName]
+	if !ok {
+		return "", nil, fmt.Errorf("unknown signal: %s", canonicalName)
+	}
+
+	return canonicalName, sig, nil
+}
+
+func normalizeSignalName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", fmt.Errorf("signal name is empty")
+	}
+
+	upper := strings.ToUpper(name)
+	if strings.HasPrefix(upper, "SIG") {
+		return upper, nil
+	}
+
+	// Accept common forms without prefix, e.g. "TERM" -> "SIGTERM".
+	return "SIG" + upper, nil
+}
+
+func buildAllowedSignalSet(allowed []string) map[string]struct{} {
+	if len(allowed) == 0 {
+		return nil
+	}
+
+	set := make(map[string]struct{}, len(allowed))
+	for _, s := range allowed {
+		canonical, err := normalizeSignalName(s)
+		if err != nil {
+			continue
+		}
+		set[canonical] = struct{}{}
+	}
+
+	return set
 }
 
 var httpSignalMap = func() map[string]os.Signal {

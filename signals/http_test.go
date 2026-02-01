@@ -207,11 +207,41 @@ func TestHTTPHandler_GracePeriod(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.NotNil(t, ctxReceived, "Context should have been passed to handler")
 
-	// Verify context has deadline
+	// Default: do not trust client-provided grace period.
+	_, ok := ctxReceived.Deadline()
+	assert.False(t, ok, "Context should not have a deadline by default")
+}
+
+func TestHTTPHandler_GracePeriod_AllowedByConfig(t *testing.T) {
+	m := NewManager()
+	var ctxReceived context.Context
+
+	m.OnShutdown(func(ctx context.Context) error {
+		ctxReceived = ctx
+		return nil
+	})
+
+	handler := NewHTTPHandler(HTTPConfig{
+		Manager:                m,
+		AllowClientGracePeriod: true,
+	})
+
+	gracePeriod := 2
+	body := SignalRequest{Signal: "SIGTERM", GracePeriodSeconds: &gracePeriod}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/signal", bytes.NewReader(bodyBytes))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NotNil(t, ctxReceived)
+
 	deadline, ok := ctxReceived.Deadline()
-	assert.True(t, ok, "Context should have a deadline")
-	assert.True(t, time.Until(deadline) > 0, "Deadline should be in the future")
-	assert.True(t, time.Until(deadline) <= 5*time.Second, "Deadline should be within grace period")
+	assert.True(t, ok, "Context should have a deadline when enabled")
+	assert.True(t, time.Until(deadline) > 0)
+	assert.True(t, time.Until(deadline) <= 2*time.Second)
 }
 
 func TestParseSignal(t *testing.T) {
@@ -233,7 +263,7 @@ func TestParseSignal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sig, err := handler.parseSignal(tt.signalName)
+			_, sig, err := handler.parseSignal(tt.signalName)
 
 			if tt.shouldError {
 				assert.Error(t, err, "Should return error for invalid signal")
@@ -244,4 +274,96 @@ func TestParseSignal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHTTPHandler_AllowedSignals(t *testing.T) {
+	m := NewManager()
+	handler := NewHTTPHandler(HTTPConfig{
+		Manager:        m,
+		AllowedSignals: []string{"SIGHUP"},
+	})
+
+	body := SignalRequest{Signal: "SIGTERM"}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/signal", bytes.NewReader(bodyBytes))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestHTTPHandler_AllowedSignals_Success_Normalization(t *testing.T) {
+	m := NewManager()
+	var shutdownCalled bool
+
+	m.OnShutdown(func(ctx context.Context) error {
+		shutdownCalled = true
+		return nil
+	})
+
+	handler := NewHTTPHandler(HTTPConfig{
+		Manager:        m,
+		AllowedSignals: []string{"SIGTERM"},
+	})
+
+	body := SignalRequest{Signal: "term"}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/signal", bytes.NewReader(bodyBytes))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, shutdownCalled)
+
+	var resp SignalResponse
+	err := json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "SIGTERM", resp.Signal)
+}
+
+func TestHTTPHandler_AllowedSignals_Success_Normalization_HUP(t *testing.T) {
+	m := NewManager()
+	var reloadCalled bool
+
+	m.OnReload(func(ctx context.Context) error {
+		reloadCalled = true
+		return nil
+	})
+
+	handler := NewHTTPHandler(HTTPConfig{
+		Manager:        m,
+		AllowedSignals: []string{"hup"},
+	})
+
+	body := SignalRequest{Signal: "sighup"}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/signal", bytes.NewReader(bodyBytes))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, reloadCalled)
+
+	var resp SignalResponse
+	err := json.NewDecoder(w.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "SIGHUP", resp.Signal)
+}
+
+func TestHTTPHandler_AllowedSignals_AllInvalidEntriesRejectAll(t *testing.T) {
+	handler := NewHTTPHandler(HTTPConfig{
+		AllowedSignals: []string{"", "   "},
+	})
+
+	body := SignalRequest{Signal: "SIGTERM"}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/signal", bytes.NewReader(bodyBytes))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
