@@ -7,17 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.3] - 2026-01-31
+## [0.3.3] - 2026-02-04
 
 ### Added
 
 - **signals**: `HTTPConfig.AllowedSignals` to restrict which signals can be requested via `HTTPHandler`.
 - **signals**: `HTTPConfig.AllowClientGracePeriod` to control whether the handler honors `grace_period_seconds`.
+- **config**: `EnvVarSpecWithAliases` plus `LoadEnvOverridesWithReport` / `LoadEnvOverridesWithEnvelopeAndReport` for alias precedence + conflict diagnostics (sensitive values masked by default).
+- **logging**: `IsSensitiveKey` helper for envinfo/doctor-style masking.
 
 ### Changed
 
 - **signals**: `HTTPHandler` now ignores client `grace_period_seconds` unless `AllowClientGracePeriod` is enabled.
 - **signals + telemetry/exporters**: bearer token auth now uses normalized parsing and constant-time compare.
+
+### Fixed
+
+- **foundry + crucible**: version reporting now reflects the actual gofulmen module version in downstream binaries.
 
 ## [0.3.2] - 2026-01-28
 

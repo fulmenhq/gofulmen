@@ -4,21 +4,24 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
-## [0.3.3] - 2026-01-31
+## [0.3.3] - 2026-02-04
 
-### Signals HTTP handler hardening
+### Control-plane hardening + diagnostics primitives
 
 **Release Type**: Patch Release (Security Hardening)
 
 #### Overview
 
-This release hardens the `signals` HTTP admin endpoint and Prometheus exporter auth for control-plane usage.
+This release hardens the `signals` HTTP admin endpoint and Prometheus exporter auth for control-plane usage, and adds small diagnostics primitives (env var alias/conflict reporting, sensitive-key masking) to reduce duplication across Fulmen templates.
 
 #### Highlights
 
 - **signals**: add `HTTPConfig.AllowedSignals` allowlist (optional; nil/empty preserves existing behavior).
 - **signals**: add `HTTPConfig.AllowClientGracePeriod` (default `false`) to ignore client-provided `grace_period_seconds` unless explicitly enabled.
 - **signals + telemetry/exporters**: bearer token parsing + constant-time compare.
+- **config**: add env var alias specs + conflict diagnostics (`LoadEnvOverridesWithReport`); sensitive values are masked by default.
+- **logging**: add `IsSensitiveKey(name string) bool` helper for envinfo/doctor-style masking.
+- **foundry + crucible**: version reporting now reflects the actual installed gofulmen module version in downstream binaries.
 
 #### Behavior change note
 

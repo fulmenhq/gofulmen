@@ -319,6 +319,26 @@ if err != nil {
 merged, _, _ = config.LoadLayeredConfig(opts, envOverrides)
 fmt.Printf("Retries (env) => %v\n", merged["settings"].(map[string]any)["retries"])
 
+// Environment variable aliases + conflict diagnostics (optional)
+report, err := config.LoadEnvOverridesWithReport([]config.EnvVarSpecWithAliases{
+    {
+        Name:    "APP_SERVER_PORT",
+        Aliases: []string{"APP_PORT"},
+        Path:    []string{"server", "port"},
+        Type:    config.EnvInt,
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+if len(report.Conflicts) > 0 {
+    // Conflicts include masked values by default for sensitive env vars.
+    log.Printf("env conflicts: %+v", report.Conflicts)
+}
+
+merged, _, _ = config.LoadLayeredConfig(opts, report.Overrides)
+fmt.Printf("Port (env) => %v\n", merged["server"].(map[string]any)["port"])
+
 // Merge schemas at runtime (base + overlay)
 mergedSchema, _ := schema.MergeJSONSchemas(
     []byte(`{"type":"object"}`),
@@ -355,6 +375,9 @@ logger.Info("User login", map[string]any{
     "password": "secret123",  // Will be redacted as [REDACTED]
     "apiKey": "sk_live_abc123", // Will be redacted
 })
+
+// Diagnostics helpers (for envinfo/doctor):
+_ = logging.IsSensitiveKey("GITHUB_TOKEN")
 
 // Custom redaction configuration
 redactionConfig := logging.RedactionConfig{
