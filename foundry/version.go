@@ -3,16 +3,21 @@ package foundry
 import (
 	"github.com/fulmenhq/crucible"
 	cruciblefoundry "github.com/fulmenhq/crucible/foundry"
+
+	internalversion "github.com/fulmenhq/gofulmen/internal/version"
 )
 
 // version is the current version of gofulmen.
 // This should match the VERSION file in the repository root.
 // Updated during release process.
-const version = "0.1.8"
+const version = "0.3.3"
 
 // GofulmenVersion returns the gofulmen library version.
 // This is sourced from the version constant which should match the VERSION file.
 func GofulmenVersion() string {
+	if v := internalversion.ModuleVersion("github.com/fulmenhq/gofulmen"); v != "" {
+		return v
+	}
 	return "v" + version
 }
 

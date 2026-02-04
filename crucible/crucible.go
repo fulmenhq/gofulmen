@@ -2,13 +2,15 @@ package crucible
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/fulmenhq/crucible"
+	internalversion "github.com/fulmenhq/gofulmen/internal/version"
 )
 
 // GofulmenVersion is deprecated. Use foundry.GofulmenVersion() instead.
 // This constant is kept for backward compatibility but will be removed in v0.2.0.
-const GofulmenVersion = "0.1.8"
+const GofulmenVersion = "0.3.3"
 
 const (
 	CrucibleVersion = crucible.Version
@@ -66,12 +68,17 @@ type Version struct {
 }
 
 func GetVersion() Version {
+	gofulmenVersion := strings.TrimPrefix(internalversion.ModuleVersion("github.com/fulmenhq/gofulmen"), "v")
+	if gofulmenVersion == "" {
+		gofulmenVersion = GofulmenVersion
+	}
 	return Version{
-		Gofulmen: GofulmenVersion,
+		Gofulmen: gofulmenVersion,
 		Crucible: CrucibleVersion,
 	}
 }
 
 func GetVersionString() string {
-	return fmt.Sprintf("gofulmen/%s crucible/%s", GofulmenVersion, CrucibleVersion)
+	v := GetVersion()
+	return fmt.Sprintf("gofulmen/%s crucible/%s", v.Gofulmen, v.Crucible)
 }
