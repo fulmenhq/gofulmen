@@ -33,6 +33,8 @@ Gofulmen uses Crucible v0.3.0 role prompts synced from SSOT.
 | `devlead`  | `config/crucible-go/agentic/roles/devlead.yaml`  | Implementation / bug fixes                          |
 | `devrev`   | `config/crucible-go/agentic/roles/devrev.yaml`   | Code review / four-eyes audit                       |
 | `infoarch` | `config/crucible-go/agentic/roles/infoarch.yaml` | Documentation / standards                           |
+| `prodmktg` | `config/crucible-go/agentic/roles/prodmktg.yaml` | Product marketing / branding / messaging            |
+| `releng`   | `config/crucible-go/agentic/roles/releng.yaml`   | Release engineering / version management            |
 | `secrev`   | `config/crucible-go/agentic/roles/secrev.yaml`   | Security review (secrets, crypto, supply chain, DX) |
 
 See `config/crucible-go/agentic/roles/README.md` for full definitions.
