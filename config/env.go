@@ -31,6 +31,66 @@ func LoadEnvOverrides(specs []EnvVarSpec) (map[string]any, error) {
 	return LoadEnvOverridesWithEnvelope(specs, "")
 }
 
+// EnvVarSpecWithAliases maps a canonical environment variable and any alias names
+// to a configuration path.
+//
+// This type is intentionally separate from EnvVarSpec to avoid breaking
+// downstream code that uses unkeyed EnvVarSpec literals.
+type EnvVarSpecWithAliases struct {
+	Name    string
+	Aliases []string
+	Path    []string
+	Type    EnvVarType
+}
+
+// EnvVarSource indicates whether an override was sourced from a canonical name
+// or an alias.
+type EnvVarSource string
+
+const (
+	EnvVarSourceCanonical EnvVarSource = "canonical"
+	EnvVarSourceAlias     EnvVarSource = "alias"
+)
+
+// EnvVarApplied records which environment variable name provided the effective
+// value for a spec.
+type EnvVarApplied struct {
+	SpecName   string
+	ChosenName string
+	Source     EnvVarSource
+	Path       []string
+}
+
+// EnvVarConflict indicates that multiple env vars for a spec were set with
+// different values.
+//
+// Values are masked by default to avoid leaking secrets into logs/telemetry.
+type EnvVarConflict struct {
+	CanonicalName string
+	AliasName     string
+	Canonical     string
+	Alias         string
+	ChosenName    string
+	ValueLen      int
+	Masked        bool
+}
+
+// LoadEnvOverridesReport contains overrides plus diagnostics about which env vars
+// were applied and any conflicts detected.
+type LoadEnvOverridesReport struct {
+	Overrides map[string]any
+	Applied   []EnvVarApplied
+	Conflicts []EnvVarConflict
+}
+
+// LoadEnvOverridesWithReport builds a runtime override map from environment
+// variables according to the provided specs and returns diagnostics.
+//
+// Precedence: aliases override the canonical Name when both are set.
+func LoadEnvOverridesWithReport(specs []EnvVarSpecWithAliases) (LoadEnvOverridesReport, error) {
+	return LoadEnvOverridesWithEnvelopeAndReport(specs, "")
+}
+
 // LoadEnvOverridesWithEnvelope builds a runtime override map from environment variables with structured error reporting.
 func LoadEnvOverridesWithEnvelope(specs []EnvVarSpec, correlationID string) (map[string]any, error) {
 	overrides := make(map[string]any)
@@ -38,6 +98,7 @@ func LoadEnvOverridesWithEnvelope(specs []EnvVarSpec, correlationID string) (map
 		if spec.Name == "" || len(spec.Path) == 0 {
 			continue
 		}
+
 		value, ok := os.LookupEnv(spec.Name)
 		if !ok {
 			continue
@@ -47,12 +108,16 @@ func LoadEnvOverridesWithEnvelope(specs []EnvVarSpec, correlationID string) (map
 			envelope := errors.NewErrorEnvelope("CONFIG_ENV_PARSE_ERROR", fmt.Sprintf("Failed to parse environment variable %s", spec.Name))
 			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
 			envelope = envelope.WithCorrelationID(correlationID)
+
+			display, masked := maskEnvValue(spec.Name, value)
 			envelope = errors.SafeWithContext(envelope, map[string]interface{}{
 				"component":  "config",
 				"operation":  "load_env_overrides",
 				"error_type": "env_parse_error",
 				"env_var":    spec.Name,
-				"env_value":  value,
+				"env_value":  display,
+				"env_masked": masked,
+				"env_len":    len(value),
 				"env_type":   envTypeToString(spec.Type),
 			})
 			envelope = envelope.WithOriginal(err)
@@ -61,6 +126,135 @@ func LoadEnvOverridesWithEnvelope(specs []EnvVarSpec, correlationID string) (map
 		setNestedValue(overrides, spec.Path, parsed)
 	}
 	return overrides, nil
+}
+
+// LoadEnvOverridesWithEnvelopeAndReport builds a runtime override map from
+// environment variables with structured error reporting and diagnostics.
+func LoadEnvOverridesWithEnvelopeAndReport(specs []EnvVarSpecWithAliases, correlationID string) (LoadEnvOverridesReport, error) {
+	overrides := make(map[string]any)
+	var applied []EnvVarApplied
+	var conflicts []EnvVarConflict
+
+	for _, spec := range specs {
+		if spec.Name == "" || len(spec.Path) == 0 {
+			continue
+		}
+
+		canonicalValue, canonicalOK := os.LookupEnv(spec.Name)
+		chosenName := ""
+		chosenRaw := ""
+		source := EnvVarSourceCanonical
+
+		// Aliases take precedence when set. If multiple aliases are set, the first
+		// one in spec.Aliases order wins.
+		for _, alias := range spec.Aliases {
+			if alias == "" {
+				continue
+			}
+			v, ok := os.LookupEnv(alias)
+			if !ok {
+				continue
+			}
+			chosenName = alias
+			chosenRaw = v
+			source = EnvVarSourceAlias
+			break
+		}
+
+		if chosenName == "" {
+			if !canonicalOK {
+				continue
+			}
+			chosenName = spec.Name
+			chosenRaw = canonicalValue
+			source = EnvVarSourceCanonical
+		}
+
+		if canonicalOK && source == EnvVarSourceAlias {
+			if strings.TrimSpace(canonicalValue) != strings.TrimSpace(chosenRaw) {
+				canonicalDisplay, canonicalMasked := maskEnvValue(spec.Name, canonicalValue)
+				aliasDisplay, aliasMasked := maskEnvValue(chosenName, chosenRaw)
+				masked := canonicalMasked || aliasMasked
+
+				conflicts = append(conflicts, EnvVarConflict{
+					CanonicalName: spec.Name,
+					AliasName:     chosenName,
+					Canonical:     canonicalDisplay,
+					Alias:         aliasDisplay,
+					ChosenName:    chosenName,
+					ValueLen:      len(chosenRaw),
+					Masked:        masked,
+				})
+			}
+		}
+
+		parsed, err := parseEnvValue(chosenRaw, spec.Type)
+		if err != nil {
+			envelope := errors.NewErrorEnvelope("CONFIG_ENV_PARSE_ERROR", fmt.Sprintf("Failed to parse environment variable %s", spec.Name))
+			envelope = errors.SafeWithSeverity(envelope, errors.SeverityMedium)
+			envelope = envelope.WithCorrelationID(correlationID)
+
+			display, masked := maskEnvValue(chosenName, chosenRaw)
+			envelope = errors.SafeWithContext(envelope, map[string]interface{}{
+				"component":  "config",
+				"operation":  "load_env_overrides",
+				"error_type": "env_parse_error",
+				"env_var":    chosenName,
+				"env_value":  display,
+				"env_masked": masked,
+				"env_len":    len(chosenRaw),
+				"env_type":   envTypeToString(spec.Type),
+			})
+			envelope = envelope.WithOriginal(err)
+			return LoadEnvOverridesReport{}, envelope
+		}
+		setNestedValue(overrides, spec.Path, parsed)
+		applied = append(applied, EnvVarApplied{
+			SpecName:   spec.Name,
+			ChosenName: chosenName,
+			Source:     source,
+			Path:       append([]string(nil), spec.Path...),
+		})
+	}
+
+	return LoadEnvOverridesReport{
+		Overrides: overrides,
+		Applied:   applied,
+		Conflicts: conflicts,
+	}, nil
+}
+
+func isSensitiveEnvName(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false
+	}
+
+	upper := strings.ToUpper(name)
+	for _, needle := range []string{
+		"TOKEN",
+		"SECRET",
+		"PASSWORD",
+		"PASSWD",
+		"PWD",
+		"API_KEY",
+		"PRIVATE_KEY",
+		"CREDENTIAL",
+		"AUTHORIZATION",
+	} {
+		if strings.Contains(upper, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func maskEnvValue(envName, raw string) (string, bool) {
+	if isSensitiveEnvName(envName) {
+		return "[set]", true
+	}
+	return strings.TrimSpace(raw), false
 }
 
 func envTypeToString(t EnvVarType) string {
