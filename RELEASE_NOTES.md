@@ -22,6 +22,7 @@ This release hardens the `signals` HTTP admin endpoint and Prometheus exporter a
 - **config**: add env var alias specs + conflict diagnostics (`LoadEnvOverridesWithReport`); sensitive values are masked by default.
 - **logging**: add `IsSensitiveKey(name string) bool` helper for envinfo/doctor-style masking.
 - **foundry + crucible**: version reporting now reflects the actual installed gofulmen module version in downstream binaries.
+- **Crucible v0.4.10**: synced SSOT assets and updated dependency.
 
 #### Behavior change note
 

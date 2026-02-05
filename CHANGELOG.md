@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **signals**: `HTTPHandler` now ignores client `grace_period_seconds` unless `AllowClientGracePeriod` is enabled.
 - **signals + telemetry/exporters**: bearer token auth now uses normalized parsing and constant-time compare.
+- **Crucible v0.4.10** – Synced SSOT assets and updated `go.mod` dependency.
 
 ### Fixed
 

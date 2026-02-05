@@ -52,7 +52,15 @@
     },
     "category": {
       "type": "string",
-      "enum": ["agentic", "automation", "review", "governance", "marketing"],
+      "enum": [
+        "agentic",
+        "analytics",
+        "automation",
+        "consulting",
+        "governance",
+        "marketing",
+        "review"
+      ],
       "description": "Role category for organization"
     },
     "tags": {
@@ -140,6 +148,31 @@
         }
       },
       "description": "Named checklists for common tasks"
+    },
+    "pre_push_checklist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Checklist of validations to perform before pushing changes"
+    },
+    "required_reading": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Explanation of what should be read and why"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Guidance on where to find required reading (project-specific)"
+        }
+      },
+      "description": "Documents that must be read before starting work in this role"
+    },
+    "cross_role_note": {
+      "type": "string",
+      "description": "Guidance on coordination with other roles"
     }
   },
   "additionalProperties": false,
