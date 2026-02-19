@@ -71,6 +71,32 @@
       },
       "description": "Searchable tags for the role"
     },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "analytics",
+          "architecture",
+          "automation",
+          "consulting",
+          "coordination",
+          "delivery",
+          "development",
+          "documentation",
+          "governance",
+          "implementation",
+          "marketing",
+          "product",
+          "quality",
+          "security",
+          "strategy"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 3,
+      "description": "Process domains this role operates in (1-3). Used for organizational categorization beyond technical functions."
+    },
     "extends": {
       "type": "string",
       "format": "uri",

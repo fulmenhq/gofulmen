@@ -6,6 +6,9 @@ version: 2.0.0
 author: infoarch
 status: approved
 category: automation
+domains:
+  - delivery
+  - development
 tags:
   - role
   - release
