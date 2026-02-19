@@ -10,7 +10,7 @@ import (
 
 // GofulmenVersion is deprecated. Use foundry.GofulmenVersion() instead.
 // This constant is kept for backward compatibility but will be removed in v0.2.0.
-const GofulmenVersion = "0.3.3"
+const GofulmenVersion = "0.3.4"
 
 const (
 	CrucibleVersion = crucible.Version
@@ -37,6 +37,30 @@ type ObservabilitySchemas = crucible.ObservabilitySchemas
 type LoggingSchemas = crucible.LoggingSchemas
 type LoggingSchemasV1 = crucible.LoggingSchemasV1
 type CodingStandards = crucible.CodingStandards
+
+// Agentic role types — re-exported from crucible v0.4.12.
+type AgenticConfig = crucible.AgenticConfig
+type RolePrompt = crucible.RolePrompt
+type RoleMindset = crucible.RoleMindset
+type RoleEscalation = crucible.RoleEscalation
+type RoleExample = crucible.RoleExample
+type RoleRequiredReading = crucible.RoleRequiredReading
+type RoleRequiredReadingFile = crucible.RoleRequiredReadingFile
+
+// LoadRole loads and parses a single role by slug from the embedded catalog.
+func LoadRole(slug string) (*RolePrompt, error) {
+	return crucible.LoadRole(slug)
+}
+
+// LoadRoleCatalog loads all roles from the embedded catalog, keyed by slug.
+func LoadRoleCatalog() (map[string]*RolePrompt, error) {
+	return crucible.LoadRoleCatalog()
+}
+
+// ListRoleSlugs returns sorted slugs of all available roles in the embedded catalog.
+func ListRoleSlugs() ([]string, error) {
+	return crucible.ListRoleSlugs()
+}
 
 func GetSchema(schemaPath string) ([]byte, error) {
 	return crucible.GetSchema(schemaPath)

@@ -264,6 +264,77 @@ func main() {
 }
 ```
 
+### Role Catalog (v0.4.12+)
+
+The typed role catalog API provides first-class access to agentic role definitions
+from the Crucible SSOT. Roles define how AI agents operate in repositories — their
+scope, responsibilities, escalation rules, and checklists.
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/fulmenhq/gofulmen/crucible"
+)
+
+func main() {
+    // Load a single role by slug
+    role, err := crucible.LoadRole("devlead")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Role: %s — %s\n", role.Name, role.Description)
+    fmt.Printf("Responsibilities: %v\n", role.Responsibilities)
+
+    // List all available role slugs (sorted, no README)
+    slugs, err := crucible.ListRoleSlugs()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Available roles: %v\n", slugs)
+
+    // Load the full catalog as a map keyed by slug
+    catalog, err := crucible.LoadRoleCatalog()
+    if err != nil {
+        log.Fatal(err)
+    }
+    for slug, r := range catalog {
+        fmt.Printf("  %s: %s (status=%s)\n", slug, r.Name, r.Status)
+    }
+
+    // Access v0.4.12 fields: pre_push_checklist, required_reading, cross_role_note
+    releng, _ := crucible.LoadRole("releng")
+    if releng.RequiredReading != nil {
+        fmt.Printf("Required reading: %s\n", releng.RequiredReading.Description)
+        for _, f := range releng.RequiredReading.Files {
+            fmt.Printf("  - %s: %s\n", f.Path, f.Reason)
+        }
+    }
+    if len(releng.PrePushChecklist) > 0 {
+        fmt.Println("Pre-push checklist:")
+        for _, item := range releng.PrePushChecklist {
+            fmt.Printf("  [ ] %s\n", item)
+        }
+    }
+
+    // Raw YAML access (for custom parsing or non-typed use)
+    raw, err := crucible.ConfigRegistry.Agentic().Role("devlead")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Raw YAML: %d bytes\n", len(raw))
+}
+```
+
+**Types available**: `RolePrompt`, `RoleMindset`, `RoleEscalation`, `RoleExample`,
+`RoleRequiredReading`, `RoleRequiredReadingFile`, `AgenticConfig`
+
+**Slug validation**: Slugs must match `^[a-z][a-z0-9]*$` (lowercase letters and digits,
+must start with a letter). Invalid slugs return an error immediately.
+
 ### Parsing Schemas
 
 ```go
@@ -412,6 +483,33 @@ Gets ASCII string analysis schema bytes.
 #### crucible.GetASCIIBoxCharsSchema() ([]byte, error)
 
 Gets ASCII box chars schema bytes.
+
+### Role Catalog
+
+#### crucible.LoadRole(slug string) (\*RolePrompt, error)
+
+Loads and parses a single role by slug from the embedded catalog.
+
+**Parameters:**
+
+- `slug`: Role identifier matching `^[a-z][a-z0-9]*$`
+
+**Returns:**
+
+- `*RolePrompt`: Parsed role with all schema fields
+- `error`: If slug is invalid or role not found
+
+#### crucible.ListRoleSlugs() ([]string, error)
+
+Returns sorted slugs of all available roles. README is excluded.
+
+#### crucible.LoadRoleCatalog() (map[string]\*RolePrompt, error)
+
+Loads all roles from the embedded catalog, keyed by parsed slug.
+
+#### crucible.ConfigRegistry.Agentic().Role(slug string) ([]byte, error)
+
+Returns raw YAML bytes for a role. Use when you need custom parsing.
 
 ### Generic Access
 
