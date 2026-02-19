@@ -120,7 +120,7 @@ func main() {
 
     // Get version string
     fmt.Println(crucible.GetVersionString())
-    // Output: gofulmen/0.1.0 crucible/2025.10.0
+    // Output: gofulmen/0.3.4 crucible/0.4.12
 }
 ```
 
@@ -270,70 +270,120 @@ The typed role catalog API provides first-class access to agentic role definitio
 from the Crucible SSOT. Roles define how AI agents operate in repositories — their
 scope, responsibilities, escalation rules, and checklists.
 
+**Quick start — load a single role:**
+
 ```go
-package main
+import "github.com/fulmenhq/gofulmen/crucible"
 
-import (
-    "fmt"
-    "log"
+role, err := crucible.LoadRole("devlead")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Role: %s — %s\n", role.Name, role.Description)
+```
 
-    "github.com/fulmenhq/gofulmen/crucible"
-)
+**List available roles:**
 
-func main() {
-    // Load a single role by slug
-    role, err := crucible.LoadRole("devlead")
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Role: %s — %s\n", role.Name, role.Description)
-    fmt.Printf("Responsibilities: %v\n", role.Responsibilities)
+```go
+slugs, err := crucible.ListRoleSlugs()  // sorted, README excluded
+```
 
-    // List all available role slugs (sorted, no README)
-    slugs, err := crucible.ListRoleSlugs()
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Available roles: %v\n", slugs)
+**Load all roles at once:**
 
-    // Load the full catalog as a map keyed by slug
-    catalog, err := crucible.LoadRoleCatalog()
-    if err != nil {
-        log.Fatal(err)
-    }
-    for slug, r := range catalog {
-        fmt.Printf("  %s: %s (status=%s)\n", slug, r.Name, r.Status)
-    }
-
-    // Access v0.4.12 fields: pre_push_checklist, required_reading, cross_role_note
-    releng, _ := crucible.LoadRole("releng")
-    if releng.RequiredReading != nil {
-        fmt.Printf("Required reading: %s\n", releng.RequiredReading.Description)
-        for _, f := range releng.RequiredReading.Files {
-            fmt.Printf("  - %s: %s\n", f.Path, f.Reason)
-        }
-    }
-    if len(releng.PrePushChecklist) > 0 {
-        fmt.Println("Pre-push checklist:")
-        for _, item := range releng.PrePushChecklist {
-            fmt.Printf("  [ ] %s\n", item)
-        }
-    }
-
-    // Raw YAML access (for custom parsing or non-typed use)
-    raw, err := crucible.ConfigRegistry.Agentic().Role("devlead")
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Raw YAML: %d bytes\n", len(raw))
+```go
+catalog, err := crucible.LoadRoleCatalog()  // map[slug]*RolePrompt
+for slug, r := range catalog {
+    fmt.Printf("  %s: %s (status=%s)\n", slug, r.Name, r.Status)
 }
 ```
 
-**Types available**: `RolePrompt`, `RoleMindset`, `RoleEscalation`, `RoleExample`,
-`RoleRequiredReading`, `RoleRequiredReadingFile`, `AgenticConfig`
+**Check if a role exists:**
+
+```go
+_, err := crucible.LoadRole("someslug")
+if err != nil {
+    // role not found or invalid slug
+}
+```
+
+**Access agent orchestration fields:**
+
+```go
+role, _ := crucible.LoadRole("devlead")
+
+// What the role focuses on and its guiding principles
+if role.Mindset != nil {
+    fmt.Println("Focus:", role.Mindset.Focus)
+    fmt.Println("Principles:", role.Mindset.Principles)
+}
+
+// When and where to escalate
+for _, e := range role.EscalatesTo {
+    fmt.Printf("Escalate to %s when: %s\n", e.Target, e.When)
+}
+
+// Boundaries — what this role must NOT do
+fmt.Println("Does not:", role.DoesNot)
+```
+
+**Access v0.4.12 fields (pre-push checklist, required reading, cross-role note):**
+
+```go
+releng, _ := crucible.LoadRole("releng")
+
+if releng.RequiredReading != nil {
+    fmt.Printf("Required reading: %s\n", releng.RequiredReading.Description)
+    for _, f := range releng.RequiredReading.Files {
+        fmt.Printf("  - %s: %s\n", f.Path, f.Reason)
+    }
+}
+
+if len(releng.PrePushChecklist) > 0 {
+    for _, item := range releng.PrePushChecklist {
+        fmt.Printf("  [ ] %s\n", item)
+    }
+}
+
+if releng.CrossRoleNote != "" {
+    fmt.Println("Cross-role note:", releng.CrossRoleNote)
+}
+```
+
+**Raw YAML access (for custom parsing):**
+
+```go
+raw, err := crucible.ConfigRegistry.Agentic().Role("devlead")
+// raw is []byte of the original YAML
+```
 
 **Slug validation**: Slugs must match `^[a-z][a-z0-9]*$` (lowercase letters and digits,
 must start with a letter). Invalid slugs return an error immediately.
+
+#### RolePrompt Fields
+
+| Field              | Type                   | Required | Description                                                     |
+| ------------------ | ---------------------- | -------- | --------------------------------------------------------------- |
+| `Slug`             | `string`               | yes      | Role identifier (e.g. `"devlead"`)                              |
+| `Name`             | `string`               | yes      | Human-readable name                                             |
+| `Description`      | `string`               | yes      | One-line role summary                                           |
+| `Version`          | `string`               | yes      | Schema version                                                  |
+| `Status`           | `string`               | yes      | `"active"`, `"draft"`, etc.                                     |
+| `Scope`            | `[]string`             | yes      | What the role owns                                              |
+| `Responsibilities` | `[]string`             | yes      | What the role does                                              |
+| `EscalatesTo`      | `[]RoleEscalation`     | yes      | When to hand off (`Target` + `When`)                            |
+| `DoesNot`          | `[]string`             | yes      | Explicit boundaries                                             |
+| `Mindset`          | `*RoleMindset`         | no       | `Focus` and `Principles` slices                                 |
+| `Author`           | `string`               | no       | Role author                                                     |
+| `Category`         | `string`               | no       | Role category                                                   |
+| `Extends`          | `string`               | no       | Parent role slug                                                |
+| `Domains`          | `[]string`             | no       | Applicable domains                                              |
+| `Tags`             | `[]string`             | no       | Freeform tags                                                   |
+| `Context`          | `string`               | no       | Additional context                                              |
+| `Examples`         | `[]RoleExample`        | no       | `Type`, `Title`, `Content`                                      |
+| `Checklists`       | `map[string][]string`  | no       | Named checklists                                                |
+| `PrePushChecklist` | `[]string`             | no       | Pre-push gate items                                             |
+| `RequiredReading`  | `*RoleRequiredReading` | no       | `Description`, `Pattern`, `Files` (each with `Path` + `Reason`) |
+| `CrossRoleNote`    | `string`               | no       | Note for cross-role coordination                                |
 
 ### Parsing Schemas
 
@@ -704,8 +754,8 @@ The crucible package is a thin facade that:
 
 ## Version Compatibility
 
-- **Gofulmen Version**: 0.1.0
-- **Crucible Version**: 2025.10.0
+- **Gofulmen Version**: 0.3.4
+- **Crucible Version**: 0.4.12
 
 Both versions are exposed via `GetVersion()` for diagnostics and compatibility tracking.
 
