@@ -6,11 +6,11 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/fulmenhq/crucible v0.4.12
 	github.com/google/uuid v1.6.0
-	github.com/mattn/go-runewidth v0.0.19
+	github.com/mattn/go-runewidth v0.0.20
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/stretchr/testify v1.8.1
 	github.com/zeebo/xxh3 v1.0.2
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/mod v0.32.0
 	golang.org/x/text v0.33.0
 	golang.org/x/time v0.14.0
