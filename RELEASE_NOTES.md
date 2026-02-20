@@ -4,6 +4,65 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.3.4] - 2026-02-20
+
+### Typed role catalog API + dependency updates
+
+**Release Type**: Patch Release (Feature + Maintenance)
+
+#### Overview
+
+This release adds the typed role catalog API to the crucible shim — exposing `LoadRole`, `ListRoleSlugs`, and `LoadRoleCatalog` with full Go types — and brings all direct dependencies to their latest versions. Crucible is updated to v0.4.12, which adds 3 new roles and the `domains` field across the catalog.
+
+#### Highlights
+
+- **crucible**: Typed role catalog shim re-exports from Crucible v0.4.12.
+  - `LoadRole(slug)` — load and parse a single role by slug.
+  - `ListRoleSlugs()` — sorted list of all available role slugs.
+  - `LoadRoleCatalog()` — full catalog as `map[string]*RolePrompt`.
+  - 7 type aliases: `RolePrompt`, `RoleMindset`, `RoleEscalation`, `RoleExample`, `RoleRequiredReading`, `RoleRequiredReadingFile`, `AgenticConfig`.
+  - Raw YAML access via `ConfigRegistry.Agentic().Role(slug)`.
+  - 12 tests exercising the shim path with invariant-based assertions.
+- **Crucible v0.4.12**: 3 new roles (`cxotech`, `deliverylead`, `infraeng`), `domains` field on all roles.
+- **Dependency updates**: All direct dependencies updated to latest (0 vulnerabilities).
+  - zap v1.27.1, go-runewidth v0.0.20, x/mod v0.33.0, x/text v0.34.0, doublestar v4.10.0, xxh3 v1.1.0, testify v1.11.1.
+- **Documentation**: Expanded crucible/README.md role catalog section with field reference table, per-task snippets, and fixed stale version numbers.
+- **AGENTS.md**: Added explicit commit trailer template to prevent omitted `Role:` and `Committer-of-Record:` lines.
+
+#### For Library Consumers
+
+Access the role catalog through the gofulmen crucible shim:
+
+```go
+import "github.com/fulmenhq/gofulmen/crucible"
+
+// Load a single role
+role, err := crucible.LoadRole("devlead")
+fmt.Printf("Role: %s — %s\n", role.Name, role.Description)
+
+// List all available roles
+slugs, _ := crucible.ListRoleSlugs()
+
+// Load full catalog
+catalog, _ := crucible.LoadRoleCatalog()
+
+// Access orchestration fields
+if role.Mindset != nil {
+    fmt.Println("Focus:", role.Mindset.Focus)
+}
+for _, e := range role.EscalatesTo {
+    fmt.Printf("Escalate to %s when: %s\n", e.Target, e.When)
+}
+```
+
+#### Testing
+
+- `make check-all`
+- `make test` (all 27 packages pass)
+- `goneat dependencies --vuln` (0 findings)
+
+---
+
 ## [0.3.3] - 2026-02-04
 
 ### Control-plane hardening + diagnostics primitives
@@ -88,27 +147,6 @@ normalized, _ := fulencode.Normalize(userInput, fulencode.TEXT_SAFE, nil)
 - `make check-all`
 - `make test`
 - All fixture tests pass against Crucible v0.4.9 test vectors
-
----
-
-## [0.3.1] - 2026-01-07
-
-### Crucible v0.4.3 sync
-
-**Release Type**: Patch Release (Dependency Update)
-
-#### Overview
-
-This release updates Crucible to v0.4.3, keeping gofulmen aligned with the latest SSOT assets.
-
-#### Highlights
-
-- **Crucible v0.4.3** – Updated embedded Crucible assets and `go.mod` dependency.
-
-#### Testing
-
-- `make check-all`
-- `make test`
 
 ---
 
