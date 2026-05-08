@@ -12,7 +12,9 @@
 //  1. Context injection (for testing) - WithIdentity(ctx, identity)
 //  2. Explicit path via Options - GetWithOptions(ctx, Options{ExplicitPath: path})
 //  3. Environment variable - FULMEN_APP_IDENTITY_PATH
-//  4. Nearest ancestor search - Walk from cwd to filesystem root looking for .fulmen/app.yaml
+//  4. Embedded identity - RegisterEmbeddedIdentityYAML(data)
+//  5. Nearest ancestor search - Walk from cwd to filesystem root looking for .fulmen/app.yaml
+//  6. Executable-dir ancestor search fallback
 //
 // # Usage
 //

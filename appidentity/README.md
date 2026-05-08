@@ -18,7 +18,7 @@ The appidentity module addresses common application identity challenges:
 - **Schema Validation**: Validates against Crucible v1.0.0 app-identity schema
 - **Process-Level Caching**: Thread-safe singleton with sync.Once
 - **Context Injection**: Test-friendly overrides via context
-- **Multiple Sources**: Context → Explicit path → Env var → Discovery
+- **Multiple Sources**: Context → Explicit path → Env var → Embedded identity → Discovery
 - **Rich Metadata**: Optional project URL, license, repository category, etc.
 
 ## ⚠️ YAML Structure - CRITICAL
@@ -139,7 +139,9 @@ Identity loading follows this precedence order (highest to lowest):
 1. **Context Injection**: `appidentity.WithIdentity(ctx, identity)`
 2. **Explicit Path**: `GetWithOptions(ctx, Options{ExplicitPath: "/path/to/app.yaml"})`
 3. **Environment Variable**: `FULMEN_APP_IDENTITY_PATH=/path/to/app.yaml`
-4. **Ancestor Search**: Searches up to 20 parent directories for `.fulmen/app.yaml`
+4. **Embedded Identity**: `RegisterEmbeddedIdentityYAML(data)` for shipped binaries and packaged CLIs
+5. **Ancestor Search**: Searches up to 20 parent directories for `.fulmen/app.yaml`
+6. **Executable Directory Fallback**: Searches ancestors of the running executable directory
 
 ### Explicit Path Loading
 

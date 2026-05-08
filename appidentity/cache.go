@@ -28,9 +28,9 @@ var (
 //  1. Context injection (via WithIdentity) - highest priority
 //  2. ExplicitPath in options (via GetWithOptions)
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
-//  4. Nearest ancestor search from current directory
-//  5. Fallback: Nearest ancestor search from executable directory
-//  6. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
+//  4. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
+//  5. Nearest ancestor search from current directory
+//  6. Fallback: Nearest ancestor search from executable directory
 //
 // This function is thread-safe and ensures only one discovery attempt runs at
 // a time under concurrent access.
@@ -49,9 +49,9 @@ func Get(ctx context.Context) (*Identity, error) {
 //  1. Context injection (via WithIdentity)
 //  2. opts.ExplicitPath
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
-//  4. Nearest ancestor search from opts.RepoRoot (default: cwd)
-//  5. Fallback: Nearest ancestor search from executable directory
-//  6. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
+//  4. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
+//  5. Nearest ancestor search from opts.RepoRoot (default: cwd)
+//  6. Fallback: Nearest ancestor search from executable directory
 func GetWithOptions(ctx context.Context, opts Options) (*Identity, error) {
 	// Priority 1: Check for context injection (override).
 	if identity := fromContext(ctx); identity != nil {
