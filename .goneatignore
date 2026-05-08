@@ -14,6 +14,10 @@ vendor/
 dist/
 bin/
 
+# Local and CI caches
+.cache/
+.gocache/
+
 # Test fixtures (keep our own fixtures, but exclude crucible synced ones)
 test/fixtures/crucible/
 

@@ -1,0 +1,20 @@
+---
+extends: default
+
+ignore: |
+  .cache/**
+  .gocache/**
+  .crucible/**
+  config/crucible-go/**
+  schemas/crucible-go/**
+  appidentity/testdata/invalid-format.yaml
+
+rules:
+  comments:
+    min-spaces-from-content: 2
+  document-start: disable
+  indentation:
+    spaces: 2
+  line-length:
+    max: 160
+    level: warning
