@@ -194,8 +194,9 @@ func executableStartDir() (string, error) {
 //  1. Context injection (checked by caller)
 //  2. ExplicitPath in Options
 //  3. Environment variable (FULMEN_APP_IDENTITY_PATH)
-//  4. Nearest ancestor search from RepoRoot (default: cwd)
-//  5. Fallback: Nearest ancestor search from executable directory
+//  4. Embedded identity (registered via RegisterEmbeddedIdentityYAML)
+//  5. Nearest ancestor search from RepoRoot (default: cwd)
+//  6. Fallback: Nearest ancestor search from executable directory
 func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 	var identityPath string
 	var err error
@@ -215,7 +216,8 @@ func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 		return loadIdentityFile(identityPath)
 	}
 
-	// Priority 2-5: Environment variable, ancestor search, and fallback.
+	// Priority 2-6: Environment variable, embedded identity, ancestor search,
+	// and fallback.
 	startDir := opts.RepoRoot
 	if startDir == "" {
 		startDir, err = os.Getwd()
@@ -224,15 +226,21 @@ func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 		}
 	}
 
+	if os.Getenv(EnvIdentityPath) != "" {
+		identityPath, err = findIdentityFile(startDir)
+		if err == nil {
+			return loadIdentityFile(identityPath)
+		}
+		return nil, err
+	}
+
+	if embedded, ok := getEmbeddedIdentity(); ok {
+		return embedded, nil
+	}
+
 	identityPath, err = findIdentityFile(startDir)
 	if err == nil {
 		return loadIdentityFile(identityPath)
-	}
-
-	// Respect environment variable precedence: if it's set and points at a
-	// missing file, that result is authoritative and should not fall back.
-	if os.Getenv(EnvIdentityPath) != "" {
-		return nil, err
 	}
 
 	var notFoundErr *NotFoundError
@@ -242,19 +250,12 @@ func discoverIdentity(ctx context.Context, opts Options) (*Identity, error) {
 
 	exeStartDir, exeErr := executableStartDir()
 	if exeErr != nil {
-		if embedded, ok := getEmbeddedIdentity(); ok {
-			return embedded, nil
-		}
 		return nil, err
 	}
 
 	fallbackPath, fallbackErr := findIdentityFile(exeStartDir)
 	if fallbackErr == nil {
 		return loadIdentityFile(fallbackPath)
-	}
-
-	if embedded, ok := getEmbeddedIdentity(); ok {
-		return embedded, nil
 	}
 
 	var fallbackNotFoundErr *NotFoundError

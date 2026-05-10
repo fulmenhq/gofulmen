@@ -28,8 +28,8 @@ var (
 // Discovery precedence:
 //  1. Explicit path (Options.ExplicitPath)
 //  2. Environment variable override (FULMEN_APP_IDENTITY_PATH)
-//  3. Filesystem discovery (CWD ancestor search, optional exe-dir fallback)
-//  4. Embedded identity (registered via this function)
+//  3. Embedded identity (registered via this function)
+//  4. Filesystem discovery (CWD ancestor search, optional exe-dir fallback)
 func RegisterEmbeddedIdentityYAML(data []byte) error {
 	if len(data) == 0 {
 		return fmt.Errorf("embedded identity payload is empty")

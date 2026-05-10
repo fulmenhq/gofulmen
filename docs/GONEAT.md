@@ -89,6 +89,41 @@ make sync
 make version-bump TYPE=patch
 ```
 
+## CI Runner Alignment
+
+Gofulmen CI runs inside the Fulmen toolbox runner image, currently pinned in
+`.github/workflows/ci.yml` as:
+
+```yaml
+container:
+  image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.4.1
+```
+
+Use the canonical `*-runner-musl` or `*-runner-glibc` image names rather than
+the older compatibility aliases. When CI and local `goneat` disagree on format
+or lint behavior, check the runner version before changing repo policy:
+
+```bash
+goneat docs show appnotes/yaml-format-lint-alignment
+```
+
+That appnote documents the YAML formatter/linter contract: `.yamllint` defines
+lint policy, goneat pins formatter behavior for inline comment padding, and
+`.yamlfmt` carries formatter-native settings such as indentation and line
+endings. For gofulmen, keep YAML indentation at two spaces and inline comments
+at two spaces so `yamllint`, local `goneat format`, and the CI runner agree.
+
+Do not install replacement copies of tools already bundled in the runner unless
+the PR intentionally changes the toolchain. In particular, the v0.4.x toolbox
+runners include `golangci-lint`; using `golangci/golangci-lint-action` inside
+the container bypasses that pinned binary and can reintroduce Go version drift.
+
+The workflow sets `GOPATH`, `GOMODCACHE`, and `GOCACHE` under the GitHub
+workspace. Keep those cache paths workspace-local when running the toolbox
+container as non-root (`--user 1001`), otherwise Go may try to write under the
+image's protected `/opt/gopath` tree. Keep those directories listed in
+`.goneatignore` so `make fmt` does not recurse into downloaded module caches.
+
 ## Development Workflow
 
 ### Initial Setup

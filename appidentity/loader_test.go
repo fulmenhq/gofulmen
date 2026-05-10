@@ -543,6 +543,53 @@ func TestDiscoverIdentityEmbeddedFallback(t *testing.T) {
 	}
 }
 
+// TestDiscoverIdentityEmbeddedBeatsForeignCWD verifies a shipped binary's
+// embedded identity cannot be shadowed by an unrelated repository identity in
+// the current working directory.
+func TestDiscoverIdentityEmbeddedBeatsForeignCWD(t *testing.T) {
+	neutralizeIdentityPathEnv(t)
+
+	ctx := context.Background()
+	Reset()
+	t.Cleanup(Reset)
+
+	embedded := []byte("app:\n  binary_name: shipped\n  vendor: shipped\n  env_prefix: SHIPPED_\n  config_name: shipped\n  description: Shipped binary identity\n")
+	if err := RegisterEmbeddedIdentityYAML(embedded); err != nil {
+		t.Fatalf("RegisterEmbeddedIdentityYAML() failed: %v", err)
+	}
+
+	foreign := t.TempDir()
+	foreignIdentityDir := filepath.Join(foreign, DefaultIdentityDir)
+	if err := os.MkdirAll(foreignIdentityDir, 0755); err != nil {
+		t.Fatalf("failed to create foreign identity dir: %v", err)
+	}
+
+	foreignIdentityPath := filepath.Join(foreignIdentityDir, DefaultIdentityFilename)
+	foreignYAML := []byte("app:\n  binary_name: foreign\n  vendor: foreign\n  env_prefix: FOREIGN_\n  config_name: foreign\n  description: Foreign repository identity\n")
+	if err := os.WriteFile(foreignIdentityPath, foreignYAML, 0644); err != nil {
+		t.Fatalf("failed to write foreign identity file: %v", err)
+	}
+
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(oldDir)
+	})
+	if err := os.Chdir(foreign); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+
+	identity, err := Get(ctx)
+	if err != nil {
+		t.Fatalf("Get() failed: %v", err)
+	}
+	if identity.BinaryName != "shipped" {
+		t.Fatalf("BinaryName = %q, want %q", identity.BinaryName, "shipped")
+	}
+}
+
 // TestDiscoverIdentityEmbeddedRespectsEnvVar verifies an env var override remains
 // authoritative even when an embedded identity is registered.
 func TestDiscoverIdentityEmbeddedRespectsEnvVar(t *testing.T) {
