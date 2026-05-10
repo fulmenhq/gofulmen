@@ -61,21 +61,21 @@ func formatYAML(schemaData []byte, metadata *ProvenanceMetadata, style Provenanc
 		case ProvenanceObject:
 			// Write provenance as YAML comment
 			buf.WriteString("# x-crucible-source:\n")
-			buf.WriteString(fmt.Sprintf("#   schema_id: %s\n", metadata.SchemaID))
-			buf.WriteString(fmt.Sprintf("#   crucible_version: %s\n", metadata.CrucibleVersion))
-			buf.WriteString(fmt.Sprintf("#   gofulmen_version: %s\n", metadata.GofulmenVersion))
+			fmt.Fprintf(&buf, "#   schema_id: %s\n", metadata.SchemaID)
+			fmt.Fprintf(&buf, "#   crucible_version: %s\n", metadata.CrucibleVersion)
+			fmt.Fprintf(&buf, "#   gofulmen_version: %s\n", metadata.GofulmenVersion)
 			if metadata.GitRevision != "" {
-				buf.WriteString(fmt.Sprintf("#   git_revision: %s\n", metadata.GitRevision))
+				fmt.Fprintf(&buf, "#   git_revision: %s\n", metadata.GitRevision)
 			}
-			buf.WriteString(fmt.Sprintf("#   exported_at: %s\n", metadata.ExportedAt.Format("2006-01-02T15:04:05Z07:00")))
+			fmt.Fprintf(&buf, "#   exported_at: %s\n", metadata.ExportedAt.Format("2006-01-02T15:04:05Z07:00"))
 			if metadata.Identity != nil {
 				if metadata.Identity.Vendor != "" || metadata.Identity.Binary != "" {
 					buf.WriteString("#   identity:\n")
 					if metadata.Identity.Vendor != "" {
-						buf.WriteString(fmt.Sprintf("#     vendor: %s\n", metadata.Identity.Vendor))
+						fmt.Fprintf(&buf, "#     vendor: %s\n", metadata.Identity.Vendor)
 					}
 					if metadata.Identity.Binary != "" {
-						buf.WriteString(fmt.Sprintf("#     binary: %s\n", metadata.Identity.Binary))
+						fmt.Fprintf(&buf, "#     binary: %s\n", metadata.Identity.Binary)
 					}
 				}
 			}

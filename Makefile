@@ -94,49 +94,17 @@ sync: ## Sync assets from Crucible SSOT
 	@echo "✅ Sync completed"
 
 crucible-update: ## Update Crucible dependency to specific version (usage: make crucible-update VERSION=v0.2.19)
-	@if [ -z "$(VERSION)" ]; then \
-		echo "❌ VERSION not specified. Usage: make crucible-update VERSION=v0.2.19"; \
-		exit 1; \
-	fi
-	@echo "Updating Crucible to $(VERSION)..."
-	@echo ""
-	@echo "Step 1: Updating .goneat/ssot-consumer.yaml..."
-	@sed -i.bak 's|ref: v[0-9]*\.[0-9]*\.[0-9]*|ref: $(VERSION)|' .goneat/ssot-consumer.yaml && rm .goneat/ssot-consumer.yaml.bak
-	@echo "✅ Updated ssot-consumer.yaml ref to $(VERSION)"
-	@echo ""
-	@echo "Step 2: Running make sync to update provenance..."
-	@$(MAKE) sync
-	@echo ""
-	@echo "Step 3: Updating go.mod..."
-	@go get github.com/fulmenhq/crucible@$(VERSION)
-	@go mod tidy
-	@echo "✅ Updated go.mod to $(VERSION)"
-	@echo ""
-	@echo "Step 4: Running tests to verify compatibility..."
-	@go test ./crucible -run TestCrucibleVersionMatchesMetadata -v
-	@echo ""
-	@echo "✅ Crucible updated successfully to $(VERSION)"
-	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Review changes: git diff"
-	@echo "  2. Run full checks: make check-all"
-	@echo "  3. Commit changes with proper attribution"
+	@VERSION="$(VERSION)" ./scripts/crucible-update.sh
 
 version-bump: ## Bump version (usage: make version-bump TYPE=patch|minor|major|calver)
-	@if [ -z "$(TYPE)" ]; then \
-		echo "❌ TYPE not specified. Usage: make version-bump TYPE=patch|minor|major|calver"; \
-		exit 1; \
-	fi
+	@test -n "$(TYPE)" || { echo "❌ TYPE not specified. Usage: make version-bump TYPE=patch|minor|major|calver"; exit 1; }
 	@echo "Bumping version ($(TYPE))..."
 	@$(GONEAT_RESOLVE); $$GONEAT version bump $(TYPE)
 	@echo "✅ Version bumped to $$(cat VERSION)"
 
 version-set: ## Set version to specific value (usage: make version-set VERSION=x.y.z)
-	@if [ -z "$(VERSION)" ]; then \
-		echo "❌ VERSION not specified. Usage: make version:set VERSION=x.y.z"; \
-		exit 1; \
-	fi
-	@echo "$(VERSION)" > VERSION
+	@test -n "$(VERSION)" || { echo "❌ VERSION not specified. Usage: make version-set VERSION=x.y.z"; exit 1; }
+	@printf "%s\n" "$(VERSION)" > VERSION
 	@echo "✅ Version set to $(VERSION)"
 
 version-bump-major: ## Bump major version
@@ -245,41 +213,13 @@ assess: ## Run goneat assess (requires bootstrap)
 
 # License compliance
 license-inventory: ## Generate CSV inventory of dependency licenses
-	@echo "🔎 Generating license inventory (CSV)..."
-	@mkdir -p docs/licenses dist/reports
-	@if ! command -v go-licenses >/dev/null 2>&1; then \
-		echo "Installing go-licenses..."; \
-		go install github.com/google/go-licenses@latest; \
-	fi
-	go-licenses csv ./... > docs/licenses/inventory.csv
-	@echo "✅ Wrote docs/licenses/inventory.csv"
+	@./scripts/license.sh inventory
 
 license-save: ## Save third-party license texts
-	@echo "📄 Saving third-party license texts..."
-	@rm -rf docs/licenses/third-party
-	@if ! command -v go-licenses >/dev/null 2>&1; then \
-		echo "Installing go-licenses..."; \
-		go install github.com/google/go-licenses@latest; \
-	fi
-	go-licenses save ./... --save_path=docs/licenses/third-party
-	@echo "✅ Saved third-party licenses to docs/licenses/third-party"
+	@./scripts/license.sh save
 
 license-audit: ## Audit for forbidden licenses
-	@echo "🧪 Auditing dependency licenses..."
-	@mkdir -p dist/reports
-	@if ! command -v go-licenses >/dev/null 2>&1; then \
-		echo "Installing go-licenses..."; \
-		go install github.com/google/go-licenses@latest; \
-	fi
-	forbidden='GPL|LGPL|AGPL|MPL|CDDL'; \
-	out=$$(go-licenses csv ./...); \
-	echo "$$out" > dist/reports/license-inventory.csv; \
-	if echo "$$out" | grep -E "$$forbidden" >/dev/null; then \
-		echo "❌ Forbidden license detected. See dist/reports/license-inventory.csv"; \
-		exit 1; \
-	else \
-		echo "✅ No forbidden licenses detected"; \
-	fi
+	@./scripts/license.sh audit
 
 update-licenses: license-inventory license-save ## Update license inventory and texts
 
@@ -298,23 +238,7 @@ dev: ## Set up development environment
 
 # Schema export targets
 export-schema: ## Export a schema (usage: make export-schema SCHEMA_ID=... OUT=...)
-	@if [ -z "$(SCHEMA_ID)" ]; then \
-		echo "❌ SCHEMA_ID not specified. Usage: make export-schema SCHEMA_ID=observability/logging/v1.0.0/log-event.schema.json OUT=output.json"; \
-		exit 1; \
-	fi
-	@if [ -z "$(OUT)" ]; then \
-		echo "❌ OUT not specified. Usage: make export-schema SCHEMA_ID=... OUT=output.json"; \
-		exit 1; \
-	fi
-	@echo "Exporting schema $(SCHEMA_ID) to $(OUT)..."
-	@go run ./cmd/gofulmen-export-schema --schema-id="$(SCHEMA_ID)" --out="$(OUT)" --no-validate
-	@echo "✅ Schema exported successfully"
+	@SCHEMA_ID="$(SCHEMA_ID)" OUT="$(OUT)" ./scripts/export-schema.sh export
 
 export-schema-example: ## Export example logging schema
-	@echo "Exporting example logging schema..."
-	@mkdir -p vendor/crucible/schemas
-	@go run ./cmd/gofulmen-export-schema \
-		--schema-id=observability/logging/v1.0.0/log-event.schema.json \
-		--out=vendor/crucible/schemas/logging-event.schema.json \
-		--no-validate
-	@echo "✅ Example schema exported to vendor/crucible/schemas/logging-event.schema.json"
+	@./scripts/export-schema.sh example

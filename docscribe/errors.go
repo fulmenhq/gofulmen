@@ -32,9 +32,9 @@ func (e *ParseError) Error() string {
 
 	if e.LineNumber > 0 {
 		if e.Column > 0 {
-			sb.WriteString(fmt.Sprintf(" at line %d, column %d", e.LineNumber, e.Column))
+			fmt.Fprintf(&sb, " at line %d, column %d", e.LineNumber, e.Column)
 		} else {
-			sb.WriteString(fmt.Sprintf(" at line %d", e.LineNumber))
+			fmt.Fprintf(&sb, " at line %d", e.LineNumber)
 		}
 	}
 

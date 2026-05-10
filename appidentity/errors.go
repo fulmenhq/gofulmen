@@ -46,13 +46,13 @@ func (e *NotFoundError) Error() string {
 	sb.WriteString("app identity not found")
 
 	if e.StartDir != "" {
-		sb.WriteString(fmt.Sprintf(" (started from: %s)", e.StartDir))
+		fmt.Fprintf(&sb, " (started from: %s)", e.StartDir)
 	}
 
 	if len(e.SearchedPaths) > 0 {
 		sb.WriteString("\nSearched paths:")
 		for _, path := range e.SearchedPaths {
-			sb.WriteString(fmt.Sprintf("\n  - %s", path))
+			fmt.Fprintf(&sb, "\n  - %s", path)
 		}
 	}
 
@@ -63,7 +63,7 @@ func (e *NotFoundError) Error() string {
 		}
 		sb.WriteString("\n" + label + ":")
 		for _, path := range e.FallbackSearchedPaths {
-			sb.WriteString(fmt.Sprintf("\n  - %s", path))
+			fmt.Fprintf(&sb, "\n  - %s", path)
 		}
 	}
 
@@ -100,13 +100,13 @@ func (e *ValidationError) Error() string {
 	sb.WriteString("app identity validation failed")
 
 	if e.Path != "" {
-		sb.WriteString(fmt.Sprintf(" (%s)", e.Path))
+		fmt.Fprintf(&sb, " (%s)", e.Path)
 	}
 
 	if len(e.Errors) > 0 {
 		sb.WriteString("\nValidation errors:")
 		for _, fieldErr := range e.Errors {
-			sb.WriteString(fmt.Sprintf("\n  - %s: %s", fieldErr.Field, fieldErr.Message))
+			fmt.Fprintf(&sb, "\n  - %s: %s", fieldErr.Field, fieldErr.Message)
 		}
 	}
 
@@ -157,14 +157,14 @@ func (e *MalformedError) Error() string {
 
 	if e.Path != "" {
 		if e.Line > 0 {
-			sb.WriteString(fmt.Sprintf(" (%s:%d)", e.Path, e.Line))
+			fmt.Fprintf(&sb, " (%s:%d)", e.Path, e.Line)
 		} else {
-			sb.WriteString(fmt.Sprintf(" (%s)", e.Path))
+			fmt.Fprintf(&sb, " (%s)", e.Path)
 		}
 	}
 
 	if e.Err != nil {
-		sb.WriteString(fmt.Sprintf(": %s", e.Err.Error()))
+		fmt.Fprintf(&sb, ": %s", e.Err.Error())
 	}
 
 	return sb.String()
