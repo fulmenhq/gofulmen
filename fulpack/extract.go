@@ -183,7 +183,7 @@ func extractTarReader(tr *tar.Reader, destination string, opts *ExtractOptions, 
 		// Extract based on type
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if extractErr := extractDirectory(targetPath, header.Mode, opts); extractErr != nil {
+			if extractErr := extractDirectory(targetPath, tarPermissionMode(header.Mode), opts); extractErr != nil {
 				result.ErrorCount++
 				result.Errors = append(result.Errors, ExtractionError{
 					Path:  header.Name,
@@ -208,7 +208,7 @@ func extractTarReader(tr *tar.Reader, destination string, opts *ExtractOptions, 
 					calculateCompressionRatio(totalUncompressedSize, compressedSize), entryCount)
 			}
 
-			bytesWritten, extractErr := extractFile(tr, targetPath, header.Mode, header.Size, opts)
+			bytesWritten, extractErr := extractFile(tr, targetPath, tarPermissionMode(header.Mode), header.Size, opts)
 			if extractErr != nil {
 				if extractErr == errSkipFile {
 					result.SkippedCount++
@@ -316,7 +316,7 @@ func extractZip(archivePath string, destination string, opts *ExtractOptions, re
 
 		// Extract based on type
 		if f.FileInfo().IsDir() {
-			if extractErr := extractDirectory(targetPath, int64(f.Mode()), opts); extractErr != nil {
+			if extractErr := extractDirectory(targetPath, f.Mode(), opts); extractErr != nil {
 				result.ErrorCount++
 				result.Errors = append(result.Errors, ExtractionError{
 					Path:  f.Name,
@@ -327,7 +327,12 @@ func extractZip(archivePath string, destination string, opts *ExtractOptions, re
 			result.ExtractedCount++
 		} else {
 			// Security: Check max size limit
-			totalUncompressedSize += int64(f.UncompressedSize64)
+			var sizeErr error
+			totalUncompressedSize, sizeErr = checkedAddUint64(totalUncompressedSize, f.UncompressedSize64, "zip uncompressed size")
+			if sizeErr != nil {
+				return newErrorf(ErrCodeCorruptArchive, OperationExtract, archivePath, sizeErr,
+					"failed to read zip entry size: %v", sizeErr)
+			}
 			if totalUncompressedSize > opts.MaxSize {
 				return newErrorf(ErrCodeMaxSizeExceeded, OperationExtract, archivePath, nil,
 					"total uncompressed size exceeds limit of %d bytes", opts.MaxSize)
@@ -350,7 +355,14 @@ func extractZip(archivePath string, destination string, opts *ExtractOptions, re
 				continue
 			}
 
-			bytesWritten, extractErr := extractFile(rc, targetPath, int64(f.Mode()), int64(f.UncompressedSize64), opts)
+			expectedSize, sizeErr := checkedUint64ToInt64(f.UncompressedSize64, "zip uncompressed size")
+			if sizeErr != nil {
+				_ = rc.Close()
+				return newErrorf(ErrCodeCorruptArchive, OperationExtract, archivePath, sizeErr,
+					"failed to read zip entry size: %v", sizeErr)
+			}
+
+			bytesWritten, extractErr := extractFile(rc, targetPath, f.Mode(), expectedSize, opts)
 			_ = rc.Close()
 
 			if extractErr != nil {
@@ -433,7 +445,7 @@ func extractGzip(archivePath string, destination string, opts *ExtractOptions, r
 }
 
 // extractDirectory creates a directory with proper permissions.
-func extractDirectory(targetPath string, mode int64, opts *ExtractOptions) error {
+func extractDirectory(targetPath string, mode os.FileMode, opts *ExtractOptions) error {
 	// Check if directory already exists
 	if info, err := os.Stat(targetPath); err == nil {
 		if !info.IsDir() {
@@ -444,10 +456,7 @@ func extractDirectory(targetPath string, mode int64, opts *ExtractOptions) error
 	}
 
 	// Create directory
-	perm := os.FileMode(0755)
-	if *opts.PreservePermissions && mode != 0 {
-		perm = os.FileMode(mode)
-	}
+	perm := extractionMode(mode, 0755, *opts.PreservePermissions)
 
 	if err := os.MkdirAll(targetPath, perm); err != nil {
 		return fmt.Errorf("failed to create directory: %v", err)
@@ -460,7 +469,7 @@ func extractDirectory(targetPath string, mode int64, opts *ExtractOptions) error
 var errSkipFile = fmt.Errorf("file skipped")
 
 // extractFile extracts a file from a reader to target path.
-func extractFile(reader io.Reader, targetPath string, mode int64, expectedSize int64, opts *ExtractOptions) (int64, error) {
+func extractFile(reader io.Reader, targetPath string, mode os.FileMode, expectedSize int64, opts *ExtractOptions) (int64, error) {
 	// Ensure parent directory exists
 	parentDir := filepath.Dir(targetPath)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
@@ -480,10 +489,7 @@ func extractFile(reader io.Reader, targetPath string, mode int64, expectedSize i
 	}
 
 	// Create file
-	perm := os.FileMode(0644)
-	if *opts.PreservePermissions && mode != 0 {
-		perm = os.FileMode(mode)
-	}
+	perm := extractionMode(mode, 0644, *opts.PreservePermissions)
 
 	outFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {

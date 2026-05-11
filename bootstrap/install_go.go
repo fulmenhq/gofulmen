@@ -36,9 +36,12 @@ func installGo(tool *Tool) error {
 	}
 
 	if gopath != "" {
-		binPath := filepath.Join(gopath, "bin", binName)
-		if _, err := os.Stat(binPath); err == nil {
-			return nil
+		cleanGoPath, err := filepath.Abs(gopath)
+		if err == nil {
+			binPath := filepath.Join(filepath.Clean(cleanGoPath), "bin", binName)
+			if _, err := os.Stat(binPath); err == nil { // #nosec G703 -- GOPATH is normalized before probing installed binary.
+				return nil
+			}
 		}
 	}
 

@@ -311,7 +311,7 @@ func encodeASCIIString(s string, mode DecodeOnErrorMode) ([]byte, int, *Fulencod
 	buf := make([]byte, 0, len(s))
 	for i, r := range s {
 		if r <= 0x7F {
-			buf = append(buf, byte(r))
+			buf = append(buf, s[i])
 			continue
 		}
 		switch mode {
