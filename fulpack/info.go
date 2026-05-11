@@ -161,7 +161,11 @@ func readZipInfo(path string, info *ArchiveInfo) error {
 
 	var totalSize int64
 	for _, f := range zr.File {
-		totalSize += int64(f.UncompressedSize64)
+		var addErr error
+		totalSize, addErr = checkedAddUint64(totalSize, f.UncompressedSize64, "zip uncompressed size")
+		if addErr != nil {
+			return newErrorf(ErrCodeCorruptArchive, OperationInfo, path, addErr, "failed to read zip archive size: %v", addErr)
+		}
 	}
 
 	info.EntryCount = len(zr.File)

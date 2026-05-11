@@ -94,7 +94,12 @@ func LoadFrom(ctx context.Context, path string) (*Identity, error) {
 
 // loadIdentityFile reads and parses a YAML identity file.
 func loadIdentityFile(path string) (*Identity, error) {
-	data, err := os.ReadFile(path)
+	safePath, err := normalizeIdentityPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(safePath) // #nosec G304,G703 -- Explicit identity paths are normalized before use.
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, &NotFoundError{
@@ -124,11 +129,11 @@ func loadIdentityFile(path string) (*Identity, error) {
 func findIdentityFile(startDir string) (string, error) {
 	// Check environment variable first
 	if envPath := os.Getenv(EnvIdentityPath); envPath != "" {
-		absPath, err := filepath.Abs(envPath)
+		absPath, err := normalizeIdentityPath(envPath)
 		if err != nil {
 			return "", fmt.Errorf("invalid %s path: %w", EnvIdentityPath, err)
 		}
-		if _, err := os.Stat(absPath); err == nil {
+		if _, err := os.Stat(absPath); err == nil { // #nosec G703 -- Environment override is normalized before probing.
 			return absPath, nil
 		}
 		return "", &NotFoundError{
@@ -167,6 +172,17 @@ func findIdentityFile(startDir string) (string, error) {
 		SearchedPaths: searchedPaths,
 		StartDir:      absStartDir,
 	}
+}
+
+func normalizeIdentityPath(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("identity path cannot be empty")
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(absPath), nil
 }
 
 // executableStartDir returns the directory that should be used as the start point

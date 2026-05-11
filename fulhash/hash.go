@@ -2,6 +2,7 @@ package fulhash
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash"
@@ -70,22 +71,22 @@ func Hash(data []byte, opts ...Option) (Digest, error) {
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalXXH3128, 1, tags)
 	case SHA256:
 		h := sha256.New()
-		h.Write(data)
+		_, _ = h.Write(data)
 		bytes = h.Sum(nil)
 		// Emit SHA256 specific counter
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalSHA256, 1, tags)
 	case CRC32:
 		h := crc32.NewIEEE()
-		h.Write(data)
+		_, _ = h.Write(data)
 		sum := h.Sum32()
-		bytes = []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+		bytes = uint32Bytes(sum)
 		// Emit CRC32 specific counter
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32, 1, tags)
 	case CRC32C:
 		h := crc32.New(crc32.MakeTable(crc32.Castagnoli))
-		h.Write(data)
+		_, _ = h.Write(data)
 		sum := h.Sum32()
-		bytes = []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+		bytes = uint32Bytes(sum)
 		// Emit CRC32C specific counter
 		telemetry.EmitCounter(metrics.FulHashOperationsTotalCRC32C, 1, tags)
 	default:
@@ -251,8 +252,14 @@ func (h *crc32Hasher) Write(p []byte) (n int, err error) {
 func (h *crc32Hasher) Sum() Digest {
 	sum := h.hasher.Sum32()
 	// Convert uint32 to big-endian bytes
-	bytes := []byte{byte(sum >> 24), byte(sum >> 16), byte(sum >> 8), byte(sum)}
+	bytes := uint32Bytes(sum)
 	return Digest{algorithm: h.algorithm, bytes: bytes}
+}
+
+func uint32Bytes(sum uint32) []byte {
+	bytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, sum)
+	return bytes
 }
 
 func (h *crc32Hasher) Reset() {

@@ -202,17 +202,17 @@ func mapGoneatFormat(format string) string {
 }
 
 func runGoneat(args ...string) (string, error) {
-	binary := os.Getenv(goneatEnv)
-	if binary == "" {
-		binary = "goneat"
+	binary, err := resolveGoneatBinary()
+	if err != nil {
+		return "", err
 	}
 
-	cmd := exec.Command(binary, args...) // #nosec G204 -- Binary path from env var is expected for goneat integration
+	cmd := exec.Command(binary, args...) // #nosec G204,G702 -- Binary is resolved with LookPath or cleaned absolute env override.
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err = cmd.Run(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return "", fmt.Errorf("goneat binary not found (set %s or install goneat)", goneatEnv)
 		}
@@ -222,6 +222,21 @@ func runGoneat(args ...string) (string, error) {
 		fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil
+}
+
+func resolveGoneatBinary() (string, error) {
+	binary := os.Getenv(goneatEnv)
+	if binary == "" {
+		return exec.LookPath("goneat")
+	}
+	if filepath.Base(binary) == binary {
+		return exec.LookPath(binary)
+	}
+	absPath, err := filepath.Abs(binary)
+	if err != nil {
+		return "", fmt.Errorf("invalid %s path: %w", goneatEnv, err)
+	}
+	return filepath.Clean(absPath), nil
 }
 
 func usage() {

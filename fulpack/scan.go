@@ -143,7 +143,10 @@ func scanZip(path string, opts *ScanOptions) ([]ArchiveEntry, error) {
 
 	var entries []ArchiveEntry
 	for _, f := range zr.File {
-		entry := convertZipFileHeader(f, opts)
+		entry, err := convertZipFileHeader(f, opts)
+		if err != nil {
+			return nil, newErrorf(ErrCodeCorruptArchive, OperationScan, path, err, "failed to read zip header: %v", err)
+		}
 		if entry != nil {
 			entries = append(entries, *entry)
 		}
@@ -224,7 +227,7 @@ func convertTarHeader(header *tar.Header, opts *ScanOptions) *ArchiveEntry {
 
 	if *opts.IncludeMetadata {
 		entry.Modified = header.ModTime
-		entry.Mode = uint32(header.Mode)
+		entry.Mode = archiveEntryMode(tarPermissionMode(header.Mode))
 		if entryType == EntryTypeSymlink {
 			entry.LinkTarget = header.Linkname
 		}
@@ -234,7 +237,7 @@ func convertTarHeader(header *tar.Header, opts *ScanOptions) *ArchiveEntry {
 }
 
 // convertZipFileHeader converts a zip file header to ArchiveEntry.
-func convertZipFileHeader(f *zip.File, opts *ScanOptions) *ArchiveEntry {
+func convertZipFileHeader(f *zip.File, opts *ScanOptions) (*ArchiveEntry, error) {
 	// Determine entry type
 	var entryType EntryType
 	if f.FileInfo().IsDir() {
@@ -243,19 +246,28 @@ func convertZipFileHeader(f *zip.File, opts *ScanOptions) *ArchiveEntry {
 		entryType = EntryTypeFile
 	}
 
+	size, err := checkedUint64ToInt64(f.UncompressedSize64, "zip uncompressed size")
+	if err != nil {
+		return nil, err
+	}
+	compressedSize, err := checkedUint64ToInt64(f.CompressedSize64, "zip compressed size")
+	if err != nil {
+		return nil, err
+	}
+
 	entry := ArchiveEntry{
 		Path:           filepath.Clean(f.Name),
 		Type:           entryType,
-		Size:           int64(f.UncompressedSize64),
-		CompressedSize: int64(f.CompressedSize64),
+		Size:           size,
+		CompressedSize: compressedSize,
 	}
 
 	if *opts.IncludeMetadata {
 		entry.Modified = f.Modified
-		entry.Mode = uint32(f.Mode())
+		entry.Mode = archiveEntryMode(f.Mode())
 	}
 
-	return &entry
+	return &entry, nil
 }
 
 // filterEntries applies filters from ScanOptions.

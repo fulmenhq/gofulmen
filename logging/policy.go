@@ -66,17 +66,22 @@ func LoadPolicy(policyFile string) (*LoggingPolicy, error) {
 }
 
 func loadPolicyFromPath(path string) (*LoggingPolicy, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- Policy path is from predefined search paths
+	safePath, err := normalizePolicyPath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := validatePolicySchema(data, path); err != nil {
+	data, err := os.ReadFile(safePath) // #nosec G304,G703 -- Policy paths are normalized before use.
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validatePolicySchema(data, safePath); err != nil {
 		return nil, fmt.Errorf("policy schema validation failed: %w", err)
 	}
 
 	var policy LoggingPolicy
-	if isYAML(path) {
+	if isYAML(safePath) {
 		if err := yaml.Unmarshal(data, &policy); err != nil {
 			return nil, fmt.Errorf("invalid YAML policy file: %w", err)
 		}
@@ -87,6 +92,17 @@ func loadPolicyFromPath(path string) (*LoggingPolicy, error) {
 	}
 
 	return &policy, nil
+}
+
+func normalizePolicyPath(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("policy file path required")
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(absPath), nil
 }
 
 func validatePolicySchema(data []byte, path string) error {
