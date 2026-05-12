@@ -10,7 +10,7 @@ import (
 // version is the current version of gofulmen.
 // This should match the VERSION file in the repository root.
 // Updated during release process.
-const version = "0.3.4"
+const version = "0.3.5"
 
 // GofulmenVersion returns the gofulmen library version.
 // This is sourced from the version constant which should match the VERSION file.

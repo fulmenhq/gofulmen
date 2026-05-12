@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-05-12
+
+### Fixed
+
+- **appidentity**: Embedded application identity now takes precedence over CWD and executable-directory discovery, preventing shipped binaries from accidentally adopting a foreign checkout's `.fulmen/app.yaml`.
+- **security**: Cleared release-blocking high findings by adding checked ZIP size conversions, permission-mode normalization, validated path/binary resolution, and CRC byte serialization helpers.
+
+### Changed
+
+- **go.uber.org/zap** v1.27.1 → v1.28.0 – Minor.
+- **github.com/mattn/go-runewidth** v0.0.20 → v0.0.23 – Patch.
+- **golang.org/x/mod** v0.33.0 → v0.36.0 – Minor.
+- **golang.org/x/text** v0.34.0 → v0.37.0 – Minor.
+- **golang.org/x/time** v0.14.0 → v0.15.0 – Minor.
+- **CI/tooling**: Updated the Fulmen toolbox runner, aligned YAML lint configuration with goneat formatting rules, and kept the pull-request external installation test active.
+- **Git hooks**: Regenerated and installed goneat hooks without guardian browser interception; repository protection is moving to merge-policy controls instead of local commit/push approval prompts.
+- **Makefile**: Moved longer recipes into helper scripts to reduce lint churn while preserving public Make targets.
+
+### Documentation
+
+- **docs/GONEAT.md**: Documented local/container format and lint alignment workflow.
+- **README.md**: Refreshed release-sensitive version examples and release validation guidance.
+- **Release planning**: Deferred config utility primitive exports to v0.3.6 after confirming they no longer gate v0.3.5.
+
 ## [0.3.4] - 2026-02-20
 
 ### Added
@@ -158,16 +182,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses `telemetry.GetGlobalSystem()` (disabled-by-default) unless the caller injects `LayeredConfigOptions.TelemetrySystem`.
   - Adds a regression test to ensure config load produces no stdout output by default.
 
-## [0.1.27] - 2025-12-24
-
-### Fixed
-
-- **AppIdentity Schema Drift** – Synced `appidentity/app-identity.schema.json` to match Crucible SSOT and added a drift guard test to prevent divergence.
-
-### Changed
-
-- **Sync Behavior** – `make sync` now also refreshes `appidentity/app-identity.schema.json` from the synced Crucible schema.
-
 ## Archived releases
 
-Older release notes (v0.1.26 and earlier) are archived under `docs/releases/`.
+Older release notes (v0.1.27 and earlier) are archived under `docs/releases/`.
