@@ -509,7 +509,7 @@ import "github.com/fulmenhq/gofulmen/foundry/similarity"
 distance := similarity.Distance("kitten", "sitting") // 3
 score := similarity.Score("kitten", "sitting")       // 0.5714...
 
-// v2 API with algorithm selection (NEW in v0.1.5)
+// v2 API with algorithm selection
 distance, _ := similarity.DistanceWithAlgorithm("kitten", "sitting", "osa")
 score, _ := similarity.ScoreWithAlgorithm("kitten", "sitting", "jaro-winkler")
 // Algorithms: "levenshtein", "osa", "damerau", "jaro-winkler", "substring"
@@ -528,7 +528,7 @@ normalized := similarity.Normalize("  Café  ", similarity.NormalizeOptions{
     StripAccents: true,
 }) // "cafe"
 
-// Enable opt-in telemetry (NEW in v0.1.5)
+// Enable opt-in telemetry
 similarity.EnableTelemetry(telemetrySystem)
 ```
 
@@ -670,7 +670,13 @@ make bootstrap
 ### Running Tests
 
 ```bash
-go test ./...
+make test
+```
+
+### Running Quality Gates
+
+```bash
+make check-all
 ```
 
 ### Building CLI Tools
@@ -728,7 +734,7 @@ import "github.com/fulmenhq/gofulmen/crucible"
 
 // Access version info
 fmt.Println(crucible.GetVersionString())
-// Output: gofulmen/v0.3.2 crucible/v0.4.9
+// Output: gofulmen/0.3.5 crucible/0.4.12
 ```
 
 ## Supply Chain & Security

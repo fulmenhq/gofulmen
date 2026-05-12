@@ -4,6 +4,46 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.3.5] - 2026-05-12
+
+### Release hygiene, appidentity precedence, and dependency refresh
+
+**Release Type**: Patch Release (Reliability + Maintenance)
+
+#### Overview
+
+This release tightens the v0.3.x foundation before downstream adoption: embedded appidentity now wins over ambient checkout discovery, CI and local lint formatting are aligned, release-blocking high security findings are cleared, and the direct dependency wave is current.
+
+No new exported config utility primitives are included in v0.3.5. That API design was deferred to v0.3.6 so the semantics can be settled against confirmed downstream needs without expanding the v0.3.5 release scope.
+
+#### Highlights
+
+- **appidentity**: Embedded identities now short-circuit CWD and executable-directory ancestor discovery, so packaged binaries do not self-identify as a nearby foreign repository.
+- **security**: Added checked ZIP size conversions, permission-mode normalization, validated path/binary resolution, CRC byte serialization helpers, and related hardening to clear release-blocking high findings.
+- **CI/tooling**: Updated the Fulmen toolbox runner, aligned `.yamlfmt`/`.yamllint` behavior with goneat, and kept the external installation test active on pull requests.
+- **Git hooks**: Regenerated goneat hooks without guardian browser interception now that the repository is moving from direct-push safeguards toward merge-policy protection.
+- **Lint cleanup**: Moved larger Make recipes into scripts and replaced `WriteString(fmt.Sprintf(...))` patterns with direct `fmt.Fprintf` calls.
+- **Dependency updates**:
+  - `go.uber.org/zap` v1.27.1 → v1.28.0
+  - `github.com/mattn/go-runewidth` v0.0.20 → v0.0.23
+  - `golang.org/x/mod` v0.33.0 → v0.36.0
+  - `golang.org/x/text` v0.34.0 → v0.37.0
+  - `golang.org/x/time` v0.14.0 → v0.15.0
+
+#### For Library Consumers
+
+Consumers that embed appidentity data in shipped binaries get safer default behavior: the embedded identity is preferred over ambient filesystem discovery unless an explicit path or `FULMEN_APP_IDENTITY_PATH` is provided.
+
+No public API migration is required for v0.3.5.
+
+#### Testing
+
+- `make check-all`
+- `make precommit`
+- Pull-request CI: `Test (container)` and `External Installation Test`
+
+---
+
 ## [0.3.4] - 2026-02-20
 
 ### Typed role catalog API + dependency updates
@@ -92,61 +132,6 @@ This release hardens the `signals` HTTP admin endpoint and Prometheus exporter a
 - `make fmt`
 - `make test`
 - `make lint`
-
----
-
-## [0.3.2] - 2026-01-28
-
-### Fulencode module + JSON Schema meta-draft support
-
-**Release Type**: Minor Release (New Feature)
-
-#### Overview
-
-This release introduces the **fulencode** module—a canonical encoding/decoding library with built-in security protections—and expands JSON Schema validation to support all drafts from Draft-04 through Draft-2020-12. Go toolchain updated to 1.25.5 for vulnerability remediation.
-
-#### Highlights
-
-- **Fulencode Module** – New `fulencode/` package for encoding operations across the Fulmen ecosystem.
-  - 12 encoding formats: Base64 variants, Base32 variants, Hex, UTF-8/16, ISO-8859-1, CP1252, ASCII
-  - Security by default: Expansion ratio limits, max size protection, encoding bomb detection
-  - Detection with confidence scoring: BOM, UTF-16 null patterns, UTF-8 validation
-  - Normalization profiles: NFC/NFD/NFKC/NFKD + security-focused `text_safe` profile
-  - SSOT integration: Uses Crucible-generated enums for cross-language consistency
-- **JSON Schema Meta-Draft Support** – Validate schemas using any draft (04, 06, 07, 2019-09, 2020-12).
-- **Go 1.25.5** – Toolchain update addresses stdlib vulnerabilities in Go 1.25.1.
-- **golang.org/x providers** – Updated x/mod (v0.32.0) and x/text (v0.33.0).
-- **Crucible v0.4.9** – New QA role, fulencode schemas/fixtures, classifiers framework, foundation schemas.
-
-#### For Library Consumers
-
-The new `fulencode/` package provides consistent encoding operations:
-
-```go
-import "github.com/fulmenhq/gofulmen/fulencode"
-
-// Encode bytes to base64
-result, _ := fulencode.Encode(data, fulencode.BASE64, nil)
-
-// Decode with security limits
-decoded, _ := fulencode.DecodeString(encoded, fulencode.BASE64, &fulencode.DecodeOptions{
-    MaxDecodedSize:    100 * 1024 * 1024,  // 100MB limit
-    MaxExpansionRatio: 10.0,                // Bomb protection
-})
-
-// Detect encoding with confidence
-detection, _ := fulencode.Detect(unknownBytes, nil)
-fmt.Printf("Encoding: %s (%.0f%% confidence)\n", *detection.Encoding, detection.Confidence*100)
-
-// Normalize text safely (reject control chars, bidi, zero-width)
-normalized, _ := fulencode.Normalize(userInput, fulencode.TEXT_SAFE, nil)
-```
-
-#### Testing
-
-- `make check-all`
-- `make test`
-- All fixture tests pass against Crucible v0.4.9 test vectors
 
 ---
 

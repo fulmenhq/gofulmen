@@ -9,8 +9,8 @@ import (
 )
 
 // GofulmenVersion is deprecated. Use foundry.GofulmenVersion() instead.
-// This constant is kept for backward compatibility but will be removed in v0.2.0.
-const GofulmenVersion = "0.3.4"
+// This constant is kept for backward compatibility until the next major API break.
+const GofulmenVersion = "0.3.5"
 
 const (
 	CrucibleVersion = crucible.Version
