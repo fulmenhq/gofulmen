@@ -1,8 +1,11 @@
 package fulpack_test
 
 import (
+	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fulmenhq/gofulmen/fulpack"
@@ -710,11 +713,9 @@ func TestExtract_WithExcludePatterns(t *testing.T) {
 	t.Logf("Extracted %d files, excluded %d .txt files", result.ExtractedCount, result.SkippedCount)
 }
 
-func TestCreate_ChecksumAlgorithmFallback(t *testing.T) {
+func TestCreate_UnsupportedChecksumAlgorithm(t *testing.T) {
 	tmpDir := t.TempDir()
-	outputPath := filepath.Join(tmpDir, "test.tar.gz")
 
-	// Create test file
 	testDir := filepath.Join(tmpDir, "source")
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
@@ -725,32 +726,131 @@ func TestCreate_ChecksumAlgorithmFallback(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Request sha512 (unsupported) - should fallback to sha256
-	info, err := fulpack.Create(
-		[]string{testFile},
-		outputPath,
-		fulpack.ArchiveFormatTARGZ,
-		&fulpack.CreateOptions{
-			ChecksumAlgorithm: "sha512", // Unsupported - should fallback
-		},
-	)
+	for _, algorithm := range []string{"sha512", "sha1", "md5", "not-a-checksum"} {
+		t.Run(algorithm, func(t *testing.T) {
+			outputPath := filepath.Join(tmpDir, algorithm+".tar.gz")
+			info, err := fulpack.Create(
+				[]string{testFile},
+				outputPath,
+				fulpack.ArchiveFormatTARGZ,
+				&fulpack.CreateOptions{ChecksumAlgorithm: algorithm},
+			)
 
+			if info != nil {
+				t.Fatalf("Create() returned archive info for unsupported checksum %q", algorithm)
+			}
+
+			var fulpackErr *fulpack.FulpackError
+			if !errors.As(err, &fulpackErr) || fulpackErr.Code != fulpack.ErrCodeInvalidOptions {
+				t.Fatalf("Create() error = %v, want INVALID_OPTIONS", err)
+			}
+
+			if _, statErr := os.Stat(outputPath); !os.IsNotExist(statErr) {
+				t.Fatalf("Create() left an output artifact: stat error = %v", statErr)
+			}
+		})
+	}
+}
+
+func TestCreate_DefaultChecksumAlgorithm(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "data.bin")
+	outputPath := filepath.Join(tmpDir, "default.tar.gz")
+	if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	info, err := fulpack.Create([]string{testFile}, outputPath, fulpack.ArchiveFormatTARGZ, nil)
 	if err != nil {
 		t.Fatalf("Create() failed: %v", err)
 	}
+	if info.ChecksumAlgorithm != "sha256" || info.Checksums["sha256"] == "" {
+		t.Fatalf("Create() default checksum = %#v, want sha256 digest", info.Checksums)
+	}
+}
 
-	// Should report sha256 (the actual algorithm used), not sha512
-	if info.ChecksumAlgorithm != "sha256" {
-		t.Errorf("Expected algorithm 'sha256' (fallback), got %s", info.ChecksumAlgorithm)
+func TestCreate_XXH3ChecksumAlgorithm(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "data.bin")
+	outputPath := filepath.Join(tmpDir, "xxh3.tar.gz")
+	if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Checksum should be stored under sha256, not sha512
-	if _, exists := info.Checksums["sha256"]; !exists {
-		t.Errorf("Expected checksum stored under 'sha256' key")
+	info, err := fulpack.Create(
+		[]string{testFile}, outputPath, fulpack.ArchiveFormatTARGZ,
+		&fulpack.CreateOptions{ChecksumAlgorithm: "xxh3-128"},
+	)
+	if err != nil {
+		t.Fatalf("Create() failed: %v", err)
 	}
-	if _, exists := info.Checksums["sha512"]; exists {
-		t.Errorf("Checksum should NOT be stored under 'sha512' (unsupported algorithm)")
+	if info.ChecksumAlgorithm != "xxh3-128" || info.Checksums["xxh3-128"] == "" {
+		t.Fatalf("Create() checksum = %#v, want xxh3-128 digest", info.Checksums)
+	}
+}
+
+func TestCreate_GzipUsesDefaultCompressionLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "data.txt")
+	data := bytes.Repeat([]byte("compression level must be stable for plain gzip\n"), 32768)
+	if err := os.WriteFile(testFile, data, 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	t.Logf("Correctly fell back to sha256 for unsupported sha512 request")
+	lowPath := filepath.Join(tmpDir, "low.gz")
+	highPath := filepath.Join(tmpDir, "high.gz")
+	for _, tc := range []struct {
+		path  string
+		level int
+	}{{lowPath, 1}, {highPath, 9}} {
+		if _, err := fulpack.Create(
+			[]string{testFile}, tc.path, fulpack.ArchiveFormatGZIP,
+			&fulpack.CreateOptions{CompressionLevel: tc.level},
+		); err != nil {
+			t.Fatalf("Create() failed for gzip level %d: %v", tc.level, err)
+		}
+	}
+
+	low, err := os.ReadFile(lowPath)
+	if err != nil {
+		t.Fatalf("Failed to read low-level gzip: %v", err)
+	}
+	high, err := os.ReadFile(highPath)
+	if err != nil {
+		t.Fatalf("Failed to read high-level gzip: %v", err)
+	}
+	if !bytes.Equal(low, high) {
+		t.Fatal("plain gzip output differs across requested compression levels")
+	}
+}
+
+func TestCreate_TarGzAndZipHonorCompressionLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "data.txt")
+	data := []byte(strings.Repeat("compressible content with enough variation for flate levels ", 32768))
+	if err := os.WriteFile(testFile, data, 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	for _, format := range []fulpack.ArchiveFormat{fulpack.ArchiveFormatTARGZ, fulpack.ArchiveFormatZIP} {
+		t.Run(string(format), func(t *testing.T) {
+			lowPath := filepath.Join(tmpDir, string(format)+"-low")
+			highPath := filepath.Join(tmpDir, string(format)+"-high")
+			low, err := fulpack.Create(
+				[]string{testFile}, lowPath, format, &fulpack.CreateOptions{CompressionLevel: 1},
+			)
+			if err != nil {
+				t.Fatalf("Create() failed for level 1: %v", err)
+			}
+			high, err := fulpack.Create(
+				[]string{testFile}, highPath, format, &fulpack.CreateOptions{CompressionLevel: 9},
+			)
+			if err != nil {
+				t.Fatalf("Create() failed for level 9: %v", err)
+			}
+			if low.CompressedSize <= high.CompressedSize {
+				t.Fatalf("compression level was not honored: level 1 size %d, level 9 size %d", low.CompressedSize, high.CompressedSize)
+			}
+		})
+	}
 }

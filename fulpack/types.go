@@ -78,7 +78,8 @@ const (
 // CreateOptions configures archive creation behavior.
 type CreateOptions struct {
 	// CompressionLevel specifies compression level (1-9, default: 6).
-	// Ignored for ArchiveFormatTAR (uncompressed).
+	// ArchiveFormatTARGZ and ArchiveFormatZIP honor this setting; TAR ignores it
+	// and plain ArchiveFormatGZIP always uses level 6.
 	CompressionLevel int `json:"compression_level,omitempty"`
 
 	// IncludePatterns specifies glob patterns to include (e.g., ["**/*.py", "**/*.md"]).
@@ -87,8 +88,8 @@ type CreateOptions struct {
 	// ExcludePatterns specifies glob patterns to exclude (e.g., ["**/__pycache__", "**/.git"]).
 	ExcludePatterns []string `json:"exclude_patterns,omitempty"`
 
-	// ChecksumAlgorithm specifies checksum algorithm ("xxh3-128", "sha256", "sha512", "sha1", "md5").
-	// Default: "sha256"
+	// ChecksumAlgorithm specifies "sha256" or "xxh3-128". Other non-empty
+	// values are rejected. Default: "sha256".
 	ChecksumAlgorithm string `json:"checksum_algorithm,omitempty"`
 
 	// PreservePermissions preserves file permissions (default: true).

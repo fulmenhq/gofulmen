@@ -11,6 +11,9 @@ const (
 	// ErrCodeInvalidFormat indicates an unsupported or invalid archive format.
 	ErrCodeInvalidFormat = "INVALID_FORMAT"
 
+	// ErrCodeInvalidOptions indicates an unsupported archive creation option.
+	ErrCodeInvalidOptions = "INVALID_OPTIONS"
+
 	// ErrCodePathTraversal indicates a path traversal attempt.
 	ErrCodePathTraversal = "PATH_TRAVERSAL"
 
@@ -45,6 +48,7 @@ const (
 // Foundry exit code mappings for fulpack errors.
 var exitCodeMap = map[string]foundry.ExitCode{
 	ErrCodeInvalidFormat:          foundry.ExitInvalidArgument,
+	ErrCodeInvalidOptions:         foundry.ExitInvalidArgument,
 	ErrCodePathTraversal:          foundry.ExitSecurityViolation,
 	ErrCodeAbsolutePath:           foundry.ExitSecurityViolation,
 	ErrCodeSymlinkEscape:          foundry.ExitSecurityViolation,
