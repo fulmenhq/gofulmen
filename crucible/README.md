@@ -120,7 +120,7 @@ func main() {
 
     // Get version string
     fmt.Println(crucible.GetVersionString())
-    // Output: gofulmen/0.3.5 crucible/0.4.12
+    // Output: gofulmen/0.3.6 crucible/0.4.19
 }
 ```
 
@@ -754,8 +754,8 @@ The crucible package is a thin facade that:
 
 ## Version Compatibility
 
-- **Gofulmen Version**: 0.3.5
-- **Crucible Version**: 0.4.12
+- **Gofulmen Version**: 0.3.6
+- **Crucible Version**: 0.4.19
 
 Both versions are exposed via `GetVersion()` for diagnostics and compatibility tracking.
 

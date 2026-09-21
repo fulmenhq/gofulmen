@@ -734,7 +734,7 @@ import "github.com/fulmenhq/gofulmen/crucible"
 
 // Access version info
 fmt.Println(crucible.GetVersionString())
-// Output: gofulmen/0.3.5 crucible/0.4.12
+// Output: gofulmen/0.3.6 crucible/0.4.19
 ```
 
 ## Supply Chain & Security

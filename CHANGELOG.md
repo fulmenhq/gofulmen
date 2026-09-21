@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-09-21
+
+### Added
+
+- **schema**: Added offline file-backed instance validation with `file://` references and configurable reference directories.
+- **buildinfo**: Added stamp-aware host binary identity resolution. `Resolve` uses explicit build stamps and does not fall back to process environment values.
+- **config**: Added non-mutating, error-returning `MergeMaps` and `DeepCopyMap` helpers for supported configuration value graphs.
+
+### Changed
+
+- **fulpack**: Unsupported checksum selections now fail closed. Plain gzip archives use compression level 6 consistently.
+- **Tooling**: Updated goneat to v0.6.0 and the CI runner image to `goneat-tools-runner-glibc:v0.5.6`.
+- **Dependencies**: Refreshed Crucible to v0.4.19 and direct dependencies, including `golang.org/x/text` v0.41.0 for GO-2026-5970. The module retains its Go 1.25 library floor.
+
 ## [0.3.5] - 2026-05-12
 
 ### Fixed
