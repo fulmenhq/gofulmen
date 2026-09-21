@@ -4,6 +4,37 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [0.3.6] - 2026-09-21
+
+### Configuration, validation, and archive reliability
+
+**Release Type**: Patch Release (Features + Reliability)
+
+#### Overview
+
+This release adds focused configuration, validation, and build identity APIs while tightening archive checksum handling. It also refreshes the project tooling and dependency floor.
+
+#### Highlights
+
+- **config**: Added `config.MergeMaps` and `config.DeepCopyMap`. Both validate supported value graphs, return errors for unsupported or cyclic values, and do not mutate caller-owned maps or slices.
+- **schema**: Added offline file-backed instance validation with `file://` references and configurable reference directories.
+- **buildinfo**: Added stamp-aware host binary identity resolution. `Resolve` uses explicit build stamps and does not use process environment fallback values.
+- **fulpack**: Unsupported checksum selections now fail closed, and plain gzip creation uses compression level 6 consistently.
+- **Tooling and dependencies**: Updated goneat to v0.6.0, the CI runner image to `goneat-tools-runner-glibc:v0.5.6`, Crucible to v0.4.19, and `golang.org/x/text` to v0.41.0 for GO-2026-5970. The module retains its Go 1.25 library floor.
+
+#### For Library Consumers
+
+`config.MergeMaps` and `config.DeepCopyMap` provide bounded, non-mutating helpers for configuration values. They return an error when a value graph contains unsupported mutable values or cycles.
+
+No public API migration is required for v0.3.6.
+
+#### Testing
+
+- `make precommit`
+- Pull-request CI: `Test (container)` and `External Installation Test`
+
+---
+
 ## [0.3.5] - 2026-05-12
 
 ### Release hygiene, appidentity precedence, and dependency refresh
