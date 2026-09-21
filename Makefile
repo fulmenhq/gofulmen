@@ -67,7 +67,7 @@ GONEAT_RESOLVE = \
 
 .PHONY: all help bootstrap bootstrap-force tools sync crucible-update version-bump lint test build build-all clean fmt version check-all precommit prepush
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
-.PHONY: release-tag release-verify-tag release-provenance-check release-guard-tag-version
+.PHONY: release-tag release-verify-tag release-verify-remote-tag release-provenance-check release-guard-tag-version
 .PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example verify-hooks-compat
 
 # Default target
@@ -132,6 +132,9 @@ release-tag: ## Create and verify a signed git tag for VERSION
 
 release-verify-tag: ## Verify the signed git tag for VERSION
 	@./scripts/release-verify-tag.sh
+
+release-verify-remote-tag: ## Verify GitHub tag identity, target, and signature for VERSION
+	@./scripts/release-verify-remote-tag.sh
 
 release-prepare: ## Prepare for release (sync, tests, version bump)
 	@echo "Preparing release..."
