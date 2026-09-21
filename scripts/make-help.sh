@@ -28,6 +28,7 @@ Required targets (Makefile Standard):
   release-guard-tag-version - Guard tag matches VERSION
   release-tag     - Create signed git tag for VERSION
   release-verify-tag - Verify signed git tag for VERSION
+  release-verify-remote-tag - Verify GitHub tag identity, target, and signature
   check-all       - Run all quality checks (sync, fmt, lint, test)
   precommit       - Run pre-commit hooks (check-all)
   prepush         - Run pre-push hooks (check-all)

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+readonly EXPECTED_TAGGER_NAME="FulmenHQ Infosec"
+readonly EXPECTED_TAGGER_EMAIL="infosec@3leaps.net"
+readonly EXPECTED_PRIMARY_FINGERPRINT="0CACA49B3119B6BC12B2CA11B9B485F294B9FE07"
+readonly EXPECTED_SIGNING_SUBKEY="DAB70DD758911B26BB45A08C3B75AC591449DEBE"
+
 repo_root() {
 	git rev-parse --show-toplevel
 }
@@ -34,6 +39,29 @@ setup_gpg_tty() {
 	fi
 }
 
+require_release_identity() {
+	local tagger_name="${GOFULMEN_TAGGER_NAME:-${EXPECTED_TAGGER_NAME}}"
+	local tagger_email="${GOFULMEN_TAGGER_EMAIL:-${EXPECTED_TAGGER_EMAIL}}"
+	local signing_key="${GOFULMEN_PGP_KEY_ID:-${EXPECTED_SIGNING_SUBKEY}}"
+
+	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ]; then
+		echo "error: GOFULMEN_TAGGER_NAME must be ${EXPECTED_TAGGER_NAME}" >&2
+		exit 1
+	fi
+	if [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
+		echo "error: GOFULMEN_TAGGER_EMAIL must be ${EXPECTED_TAGGER_EMAIL}" >&2
+		exit 1
+	fi
+	if [ "${signing_key}" != "${EXPECTED_SIGNING_SUBKEY}" ]; then
+		echo "error: GOFULMEN_PGP_KEY_ID must explicitly select ${EXPECTED_SIGNING_SUBKEY}" >&2
+		exit 1
+	fi
+
+	GOFULMEN_TAGGER_NAME="${tagger_name}"
+	GOFULMEN_TAGGER_EMAIL="${tagger_email}"
+	GOFULMEN_PGP_KEY_ID="${signing_key}"
+}
+
 ensure_gpg_signing_ready() {
 	if ! command -v gpg >/dev/null 2>&1; then
 		echo "error: gpg not found in PATH (required for signed tags)" >&2
@@ -41,52 +69,70 @@ ensure_gpg_signing_ready() {
 		exit 1
 	fi
 
-	local key_id="${GOFULMEN_PGP_KEY_ID:-}"
 	local listing
-
-	if [ -n "${key_id}" ]; then
-		listing="$(gpg --list-secret-keys --with-colons --keyid-format=long "${key_id}" 2>/dev/null || true)"
-		if ! echo "${listing}" | grep -q '^sec'; then
-			echo "error: no usable GPG secret key found for GOFULMEN_PGP_KEY_ID=${key_id}" >&2
-			echo "hint: ensure your release env vars are loaded (shell restart is common)" >&2
-			if [ -n "${GNUPGHOME:-}" ]; then
-				echo "hint: GNUPGHOME=${GNUPGHOME}" >&2
-			else
-				echo "hint: set GOFULMEN_GPG_HOMEDIR to your signing keyring directory" >&2
-			fi
-			echo "hint: run: gpg --list-secret-keys --keyid-format=long" >&2
-			echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
-			exit 1
-		fi
-		return 0
-	fi
-
-	listing="$(gpg --list-secret-keys --with-colons --keyid-format=long 2>/dev/null || true)"
-	if ! echo "${listing}" | grep -q '^sec'; then
-		echo "error: no usable GPG secret key found for signed tag creation" >&2
-		echo "hint: ensure your release env vars are loaded (GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
-		if [ -n "${GNUPGHOME:-}" ]; then
-			echo "hint: GNUPGHOME=${GNUPGHOME}" >&2
-		else
-			echo "hint: set GOFULMEN_GPG_HOMEDIR to your signing keyring directory" >&2
-		fi
-		echo "hint: run: gpg --list-secret-keys --keyid-format=long" >&2
+	listing="$(gpg --list-secret-keys --with-colons --fingerprint --fingerprint "${EXPECTED_PRIMARY_FINGERPRINT}" 2>/dev/null || true)"
+	if ! printf '%s\n' "${listing}" | grep -q '^sec'; then
+		echo "error: no usable Infosec secret key found for ${EXPECTED_PRIMARY_FINGERPRINT}" >&2
+		echo "hint: set GOFULMEN_GPG_HOMEDIR to the dedicated Infosec signing keyring" >&2
 		echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
 		exit 1
 	fi
+	if ! printf '%s\n' "${listing}" | grep -q "^fpr:::::::::${EXPECTED_PRIMARY_FINGERPRINT}:"; then
+		echo "error: expected Infosec primary fingerprint is unavailable" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "${listing}" | grep -q "^fpr:::::::::${EXPECTED_SIGNING_SUBKEY}:"; then
+		echo "error: expected Infosec signing subkey is unavailable" >&2
+		exit 1
+	fi
 }
+
+require_origin_main_tip() {
+	local origin_main head
+	origin_main="$(git rev-parse --verify refs/remotes/origin/main 2>/dev/null || true)"
+	if [ -z "${origin_main}" ]; then
+		echo "error: origin/main is unavailable; fetch origin/main before tagging" >&2
+		exit 1
+	fi
+	head="$(git rev-parse HEAD)"
+	if [ "${head}" != "${origin_main}" ]; then
+		echo "error: HEAD does not match origin/main; fetch and fast-forward before tagging" >&2
+		exit 1
+	fi
+}
+
+verify_local_tag_object() {
+	local tag="$1"
+	local tagger_name tagger_email tag_target head
+	tagger_name="$(git for-each-ref --format='%(taggername)' "refs/tags/${tag}")"
+	tagger_email="$(git for-each-ref --format='%(taggeremail)' "refs/tags/${tag}")"
+	tagger_email="${tagger_email#<}"
+	tagger_email="${tagger_email%>}"
+	tag_target="$(git rev-parse "${tag}^{}")"
+	head="$(git rev-parse HEAD)"
+
+	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ] || [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
+		echo "error: tag object does not record the required Infosec tagger identity" >&2
+		exit 1
+	fi
+	if [ "${tag_target}" != "${head}" ]; then
+		echo "error: tag object does not point to the intended main commit" >&2
+		exit 1
+	fi
+}
+
 main() {
 	local root
 	root="$(repo_root)"
-	cd "$root"
+	cd "${root}"
 
 	local version
 	version="$(read_version)"
 
 	local tag="${GOFULMEN_RELEASE_TAG:-v${version}}"
 
-	if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-		echo "error: invalid release tag '$tag' (expected vMAJOR.MINOR.PATCH)" >&2
+	if ! [[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "error: invalid release tag '${tag}' (expected vMAJOR.MINOR.PATCH)" >&2
 		exit 1
 	fi
 
@@ -98,13 +144,13 @@ main() {
 
 	local branch
 	branch="$(git branch --show-current 2>/dev/null || true)"
-	if [ "$branch" != "main" ] && [ "${GOFULMEN_ALLOW_NON_MAIN:-}" != "1" ]; then
-		echo "error: refusing to tag from branch '$branch' (set GOFULMEN_ALLOW_NON_MAIN=1 to override)" >&2
+	if [ "${branch}" != "main" ] && [ "${GOFULMEN_ALLOW_NON_MAIN:-}" != "1" ]; then
+		echo "error: refusing to tag from branch '${branch}' (set GOFULMEN_ALLOW_NON_MAIN=1 to override)" >&2
 		exit 1
 	fi
 
-	if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-		echo "error: tag $tag already exists" >&2
+	if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+		echo "error: tag ${tag} already exists" >&2
 		exit 1
 	fi
 
@@ -121,47 +167,38 @@ main() {
 		export GNUPGHOME="${gpg_homedir}"
 	fi
 
-	if [ -n "${GOFULMEN_PGP_KEY_ID:-}" ] && [ -z "${gpg_homedir}" ]; then
-		echo "error: GOFULMEN_PGP_KEY_ID is set but GOFULMEN_GPG_HOMEDIR is not; set a dedicated signing homedir" >&2
+	if [ -z "${gpg_homedir}" ]; then
+		echo "error: GOFULMEN_GPG_HOMEDIR is required; set the dedicated Infosec signing homedir" >&2
 		exit 1
 	fi
 
+	require_release_identity
+	require_origin_main_tip
 	setup_gpg_tty
 	ensure_gpg_signing_ready
 
-	echo "→ Creating signed tag: $tag"
+	echo "→ Creating signed tag: ${tag}"
 
 	local tag_err
 	tag_err="$(mktemp)"
 
-	if [ -n "${GOFULMEN_PGP_KEY_ID:-}" ]; then
-		if ! git tag -s -a "$tag" -u "${GOFULMEN_PGP_KEY_ID}" -m "Release $tag" 2>"${tag_err}"; then
-			cat "${tag_err}" >&2
-			if grep -qi "no secret key" "${tag_err}"; then
-				echo "hint: no secret key available for signing (check GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
-				echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
-			fi
-			rm -f "${tag_err}"
-			exit 1
+	if ! git -c user.name="${GOFULMEN_TAGGER_NAME}" -c user.email="${GOFULMEN_TAGGER_EMAIL}" tag -s -a "${tag}" -u "${GOFULMEN_PGP_KEY_ID}" -m "Release ${tag}" 2>"${tag_err}"; then
+		cat "${tag_err}" >&2
+		if grep -qi "no secret key" "${tag_err}"; then
+			echo "hint: no Infosec secret key available (check GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
+			echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
 		fi
-	else
-		if ! git tag -s -a "$tag" -m "Release $tag" 2>"${tag_err}"; then
-			cat "${tag_err}" >&2
-			if grep -qi "no secret key" "${tag_err}"; then
-				echo "hint: no secret key available for signing (check GOFULMEN_GPG_HOMEDIR/GOFULMEN_PGP_KEY_ID)" >&2
-				echo "hint: see RELEASE_CHECKLIST.md (Tagging section)" >&2
-			fi
-			rm -f "${tag_err}"
-			exit 1
-		fi
+		rm -f "${tag_err}"
+		exit 1
 	fi
 
 	rm -f "${tag_err}"
 
-	echo "→ Verifying tag signature: $tag"
-	git verify-tag "$tag" >/dev/null
+	echo "→ Verifying tag signature: ${tag}"
+	git verify-tag "${tag}" >/dev/null
+	verify_local_tag_object "${tag}"
 
-	echo "✅ Created and verified signed tag: $tag"
+	echo "✅ Created and verified signed tag: ${tag}"
 
 	# Optional: produce a minisign signature for a deterministic tag attestation.
 	# This does NOT modify the git tag object; it creates a sidecar signature
@@ -185,11 +222,11 @@ main() {
 		local tag_target
 		tag_target="$(git rev-parse "${tag}^{}")"
 
-		cat >"${payload}" <<EOF
-	tag: ${tag}
-	tag_object: ${tag_object}
-	tag_target: ${tag_target}
-EOF
+		cat >"${payload}" <<EOF2
+tag: ${tag}
+tag_object: ${tag_object}
+tag_target: ${tag_target}
+EOF2
 
 		echo "→ Minisign tag attestation: ${payload}"
 		minisign -Sm "${payload}" -s "${GOFULMEN_MINISIGN_KEY}"
@@ -199,7 +236,8 @@ EOF
 
 	echo "Next:"
 	echo "  git push origin main"
-	echo "  git push origin $tag"
+	echo "  git push origin ${tag}"
+	echo "  make release-verify-remote-tag"
 	if [ -f "dist/release/${tag}.tag.txt.minisig" ]; then
 		echo "  # Optional: upload dist/release/${tag}.tag.txt* as release assets"
 	fi

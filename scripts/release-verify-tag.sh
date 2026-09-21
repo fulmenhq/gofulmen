@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+readonly EXPECTED_TAGGER_NAME="FulmenHQ Infosec"
+readonly EXPECTED_TAGGER_EMAIL="infosec@3leaps.net"
+readonly EXPECTED_PRIMARY_FINGERPRINT="0CACA49B3119B6BC12B2CA11B9B485F294B9FE07"
+readonly EXPECTED_SIGNING_SUBKEY="DAB70DD758911B26BB45A08C3B75AC591449DEBE"
+
 repo_root() {
 	git rev-parse --show-toplevel
 }
@@ -13,10 +18,40 @@ read_version() {
 	tr -d ' \t\r\n' <VERSION
 }
 
+verify_tag_identity() {
+	local tag="$1"
+	local tagger_name tagger_email
+	tagger_name="$(git for-each-ref --format='%(taggername)' "refs/tags/${tag}")"
+	tagger_email="$(git for-each-ref --format='%(taggeremail)' "refs/tags/${tag}")"
+	tagger_email="${tagger_email#<}"
+	tagger_email="${tagger_email%>}"
+	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ] || [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
+		echo "error: tag object does not record the required Infosec tagger identity" >&2
+		exit 1
+	fi
+}
+
+verify_tag_signature() {
+	local tag="$1"
+	local verification
+	if ! verification="$(git verify-tag --raw "${tag}" 2>&1)"; then
+		printf '%s\n' "${verification}" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "${verification}" | grep -q "\[GNUPG:\] VALIDSIG ${EXPECTED_SIGNING_SUBKEY} "; then
+		echo "error: tag signature does not use expected Infosec signing subkey ${EXPECTED_SIGNING_SUBKEY}" >&2
+		exit 1
+	fi
+	if ! printf '%s\n' "${verification}" | grep -q "\[GNUPG:\] VALIDSIG ${EXPECTED_SIGNING_SUBKEY} .* ${EXPECTED_PRIMARY_FINGERPRINT}$"; then
+		echo "error: tag signature does not identify expected Infosec primary fingerprint ${EXPECTED_PRIMARY_FINGERPRINT}" >&2
+		exit 1
+	fi
+}
+
 main() {
 	local root
 	root="$(repo_root)"
-	cd "$root"
+	cd "${root}"
 
 	local version
 	version="$(read_version)"
@@ -36,9 +71,10 @@ main() {
 		export GNUPGHOME="${gpg_homedir}"
 	fi
 
-	echo "→ Verifying tag signature: $tag"
-	git verify-tag "$tag" >/dev/null
-	echo "✅ Tag verified: $tag"
+	echo "→ Verifying tag signature: ${tag}"
+	verify_tag_signature "${tag}"
+	verify_tag_identity "${tag}"
+	echo "✅ Tag verified: ${tag}"
 
 	# Optional: verify minisign sidecar signature for the tag attestation.
 	if [ -n "${GOFULMEN_MINISIGN_PUB:-}" ]; then
