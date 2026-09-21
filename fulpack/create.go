@@ -48,6 +48,14 @@ func createImpl(sources []string, output string, format ArchiveFormat, options *
 		return nil, err
 	}
 
+	// Validate checksum selection before creating an output artifact.
+	algorithm, ok := supportedChecksumAlgorithm(opts.ChecksumAlgorithm)
+	if !ok {
+		err = newErrorf(ErrCodeInvalidOptions, OperationCreate, output, nil,
+			"unsupported checksum algorithm %q", opts.ChecksumAlgorithm)
+		return nil, err
+	}
+
 	// Initialize archive info
 	info = &ArchiveInfo{
 		Format:      format,
@@ -94,32 +102,10 @@ func createImpl(sources []string, output string, format ArchiveFormat, options *
 	if openErr == nil {
 		defer func() { _ = outFile.Close() }()
 
-		// Map checksum algorithm to fulhash Algorithm
-		// Note: fulhash currently supports SHA256 and XXH3_128
-		// If unsupported algorithm requested, use SHA256 and update the label
-		var algorithm fulhash.Algorithm
-		actualAlgorithm := opts.ChecksumAlgorithm
-
-		switch opts.ChecksumAlgorithm {
-		case "sha256":
-			algorithm = fulhash.SHA256
-		case "xxh3-128":
-			algorithm = fulhash.XXH3_128
-		case "sha512", "sha1", "md5":
-			// Unsupported by fulhash - fallback to SHA256 and update label
-			algorithm = fulhash.SHA256
-			actualAlgorithm = "sha256"
-		default:
-			// Unknown algorithm - fallback to SHA256
-			algorithm = fulhash.SHA256
-			actualAlgorithm = "sha256"
-		}
-
 		if digest, hashErr := fulhash.HashReader(outFile, fulhash.WithAlgorithm(algorithm)); hashErr == nil {
-			// Store under the ACTUAL algorithm used, not the requested one
-			info.Checksums[actualAlgorithm] = fulhash.FormatDigest(digest)
+			info.Checksums[opts.ChecksumAlgorithm] = fulhash.FormatDigest(digest)
 			info.HasChecksums = true
-			info.ChecksumAlgorithm = actualAlgorithm
+			info.ChecksumAlgorithm = opts.ChecksumAlgorithm
 		}
 	}
 
@@ -128,6 +114,18 @@ func createImpl(sources []string, output string, format ArchiveFormat, options *
 	info.Created = &now
 
 	return info, nil
+}
+
+// supportedChecksumAlgorithm returns the fulhash algorithm for a supported name.
+func supportedChecksumAlgorithm(name string) (fulhash.Algorithm, bool) {
+	switch name {
+	case "sha256":
+		return fulhash.SHA256, true
+	case "xxh3-128":
+		return fulhash.XXH3_128, true
+	default:
+		return "", false
+	}
 }
 
 // discoverSourceFiles uses pathfinder to discover files to archive.
@@ -237,7 +235,7 @@ func createTarGz(output string, files []string, opts *CreateOptions, info *Archi
 	}
 	defer func() { _ = outFile.Close() }()
 
-	// Create gzip writer with compression level
+	// Create gzip writer with the requested compression level.
 	gw, err := gzip.NewWriterLevel(outFile, opts.CompressionLevel)
 	if err != nil {
 		return newErrorf(ErrCodeUnsupportedCompression, OperationCreate, output, err,
@@ -499,8 +497,8 @@ func createGzip(output string, files []string, opts *CreateOptions, info *Archiv
 	}
 	defer func() { _ = outFile.Close() }()
 
-	// Create gzip writer with compression level
-	gw, err := gzip.NewWriterLevel(outFile, opts.CompressionLevel)
+	// Plain gzip always uses the format default compression level.
+	gw, err := gzip.NewWriterLevel(outFile, DefaultCompressionLevel)
 	if err != nil {
 		return newErrorf(ErrCodeUnsupportedCompression, OperationCreate, output, err,
 			"failed to create gzip writer: %v", err)
