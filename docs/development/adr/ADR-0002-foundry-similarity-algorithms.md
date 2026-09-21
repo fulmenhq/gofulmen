@@ -282,13 +282,14 @@ If string-metrics-go succeeds, this ADR will be revised to document:
 - ✅ Expected performance on par with Levenshtein pattern
 
 **Updated Dependency Matrix**:
-| Algorithm | Implementation | Source |
-|-----------|---------------|--------|
-| Levenshtein | Native | gofulmen (existing) |
-| Damerau OSA | Native | rapidfuzz-cpp OSA.hpp (ADR-0003) |
-| Damerau Unrestricted | External | matchr.DamerauLevenshtein() |
-| Jaro-Winkler | External | matchr.JaroWinkler() |
-| Substring | Native | gofulmen custom |
+
+| Algorithm            | Implementation | Source                           |
+| -------------------- | -------------- | -------------------------------- |
+| Levenshtein          | Native         | gofulmen (existing)              |
+| Damerau OSA          | Native         | rapidfuzz-cpp OSA.hpp (ADR-0003) |
+| Damerau Unrestricted | External       | matchr.DamerauLevenshtein()      |
+| Jaro-Winkler         | External       | matchr.JaroWinkler()             |
+| Substring            | Native         | gofulmen custom                  |
 
 This change strengthens the hybrid approach: native implementations for performance-critical and bug-sensitive algorithms, external for proven stable algorithms.
 
