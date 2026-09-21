@@ -63,6 +63,11 @@ cooling:
       reason: "Internal FulmenHQ packages are pre-vetted"
       approved_by: "@3leapsdave"
       approved_date: "2026-01-03"
+    - pattern: "github.com/bmatcuk/doublestar/v4"
+      until: "2026-09-28"
+      reason: "Reviewed v4.10.1 patch adoption"
+      approved_by: "@3leapsdave"
+      approved_date: "2026-09-21"
 # ============================================================================
 # POLICY ENGINE
 # ============================================================================
