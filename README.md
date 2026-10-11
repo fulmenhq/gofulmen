@@ -170,6 +170,8 @@ Signal definitions and behaviors come from Crucible catalog (v1.0.0) ensuring cr
 
 ## Installation
 
+Requires Go 1.26.9+.
+
 ```bash
 go get github.com/fulmenhq/gofulmen
 ```

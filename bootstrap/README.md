@@ -23,6 +23,8 @@ The bootstrap package provides minimal tooling installation capabilities using o
 - ✅ **macOS** (arm64, amd64) - tar/gzip built-in
 - ✅ **Linux** (arm64, amd64) - tar/gzip built-in
 
+**goneat v0.6.2 note:** The v0.6.2 release has no `darwin/amd64` archive. Intel macOS stays on goneat v0.6.1 for that platform. Download examples below use v0.6.2 URLs and checksums and are illustrative of the schema.
+
 ### Tier 2: Partial Support
 
 - ⚠️ **Windows** (amd64, arm64) - Requires manual prerequisites
@@ -98,14 +100,13 @@ Downloads, verifies, extracts, and installs a pre-built binary.
   required: true
   install:
     type: download
-    url: https://github.com/fulmenhq/goneat/releases/download/v0.2.11/goneat_v0.2.11_{{os}}_{{arch}}.tar.gz
+    url: https://github.com/fulmenhq/goneat/releases/download/v0.6.2/goneat_v0.6.2_{{os}}_{{arch}}.tar.gz
     binName: goneat
     destination: ./bin
     checksum:
-      darwin-arm64: c01581b7835362a2f12b41225cada8ca3af1dc65fc454a0c8e68374831869283
-      darwin-amd64: f8bba61d9b729e156ea02d429a53798ef33ee9a57cf38c1a08d3d0428fc57033
-      linux-arm64: e9fbe921a869625a7aef99b111cfbcfc0ce1da527f5ad1664307021472692e00
-      linux-amd64: 35066fb7b6ba615e780aa29bb52ae88771340cccfb54b4e984d79f0e80474ad2
+      darwin-arm64: 3c7d18acb4b46aca469dd2870009c392891fcbd014248817d0fd6acedb27aa93
+      linux-arm64: 0da47a7fabc6d47d24e3580c178a273374715b4e314b74756621ce4649fa00be
+      linux-amd64: f9e29207cefecdfcbd2d10fc5faa9d25857689b786c8903ad09f31f9d2db8401
 ```
 
 **Behavior:**
@@ -271,14 +272,13 @@ tools:
     required: true
     install:
       type: download
-      url: https://github.com/fulmenhq/goneat/releases/download/v0.2.11/goneat_v0.2.11_{{os}}_{{arch}}.tar.gz
+      url: https://github.com/fulmenhq/goneat/releases/download/v0.6.2/goneat_v0.6.2_{{os}}_{{arch}}.tar.gz
       binName: goneat
       destination: ./bin
       checksum:
-        darwin-arm64: c01581b7835362a2f12b41225cada8ca3af1dc65fc454a0c8e68374831869283
-        darwin-amd64: f8bba61d9b729e156ea02d429a53798ef33ee9a57cf38c1a08d3d0428fc57033
-        linux-arm64: e9fbe921a869625a7aef99b111cfbcfc0ce1da527f5ad1664307021472692e00
-        linux-amd64: 35066fb7b6ba615e780aa29bb52ae88771340cccfb54b4e984d79f0e80474ad2
+        darwin-arm64: 3c7d18acb4b46aca469dd2870009c392891fcbd014248817d0fd6acedb27aa93
+        linux-arm64: 0da47a7fabc6d47d24e3580c178a273374715b4e314b74756621ce4649fa00be
+        linux-amd64: f9e29207cefecdfcbd2d10fc5faa9d25857689b786c8903ad09f31f9d2db8401
 
   # Install Go module
   - id: golangci-lint
@@ -347,7 +347,7 @@ Bootstrap provides helpful, actionable error messages:
 ```
 ❌ Failed to download goneat:
    Platform: darwin-arm64
-   URL: https://github.com/fulmenhq/goneat/releases/download/v0.2.11/goneat_v0.2.11_darwin_arm64.tar.gz
+   URL: https://github.com/fulmenhq/goneat/releases/download/v0.6.2/goneat_v0.6.2_darwin_arm64.tar.gz
    Error: 404 Not Found
 
    Possible solutions:

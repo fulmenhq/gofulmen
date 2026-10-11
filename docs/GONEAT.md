@@ -96,7 +96,7 @@ Gofulmen CI runs inside the Fulmen toolbox runner image, currently pinned in
 
 ```yaml
 container:
-  image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.4.1
+  image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.8@sha256:a64b0319f4aad1069f2edd587f9d4d7bf2c52318c3c3e0c9d88650c5983c9c77
 ```
 
 Use the canonical `*-runner-musl` or `*-runner-glibc` image names rather than
@@ -114,7 +114,7 @@ endings. For gofulmen, keep YAML indentation at two spaces and inline comments
 at two spaces so `yamllint`, local `goneat format`, and the CI runner agree.
 
 Do not install replacement copies of tools already bundled in the runner unless
-the PR intentionally changes the toolchain. In particular, the v0.4.x toolbox
+the PR intentionally changes the toolchain. In particular, the v0.5.x toolbox
 runners include `golangci-lint`; using `golangci/golangci-lint-action` inside
 the container bypasses that pinned binary and can reintroduce Go version drift.
 
