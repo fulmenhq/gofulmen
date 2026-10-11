@@ -4,6 +4,40 @@ This document tracks release notes and checklists for gofulmen releases.
 
 > **Convention**: Keep only latest 3 releases here to prevent file bloat. Older releases are archived in `docs/releases/`.
 
+## [Unreleased]
+
+> **TODO (@3leapsdave):** Choose **v0.3.7** vs **v0.4.0** before tagging. The `go` directive now requires Go 1.26.9+, which forces that floor onto consumers. `VERSION` remains `0.3.6` until that call.
+
+### Go 1.26.9 toolchain floor and goneat v0.6.2
+
+**Release Type**: TODO (patch vs minor — Dave)
+
+#### Overview
+
+This draft raises the library Go floor to 1.26.9 to clear reachable stdlib vulnerabilities that `govulncheck` reports on go1.25.14 and go1.26.8. It also moves local/CI tooling to goneat v0.6.2 and digest-pins the Fulmen toolbox runner at v0.5.8.
+
+#### Highlights
+
+- **Go 1.26.9+**: `go.mod` `go` directive 1.25.5 → 1.26.9. Go 1.25 is EOL.
+- **govulncheck**: 9 reachable findings on go1.25.14/go1.26.8 (`net/http`, `net/textproto`, `crypto/tls`; GO-2026-6603 through GO-2026-6617); 0 on go1.26.9.
+- **goneat v0.6.2**: Makefile default and bootstrap install path. No `darwin/amd64` archive; Intel macOS stays on v0.6.1.
+- **CI**: `goneat-tools-runner-glibc:v0.5.8` digest-pinned; install-test `go-version` 1.26.9; `actions/checkout` and `actions/setup-go` SHA-pinned.
+
+#### For Library Consumers
+
+Consumers must build with Go 1.26.9 or newer. No public Go API migration is included in this draft. Crucible remains v0.4.19.
+
+#### Testing
+
+- `GOTOOLCHAIN=go1.26.9 go mod verify`
+- `make fmt && git diff --exit-code`
+- `make test`
+- `make lint`
+- `go build ./...`
+- `govulncheck ./...`
+
+---
+
 ## [0.3.6] - 2026-09-21
 
 ### Configuration, validation, and archive reliability
