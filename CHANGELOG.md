@@ -9,23 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> **TODO (@3leapsdave):** Choose the next version number before tagging.
-> The `go` directive bump (`go 1.25.5` → `go 1.26.9`) forces consumers onto Go 1.26.9+.
-> Decide **v0.3.7** (patch) vs **v0.4.0** (minor). `VERSION` remains `0.3.6` until that call.
-
-### Changed
-
-- **Go 1.26.9+ library floor** – Raised the module `go` directive from 1.25.5 to 1.26.9. Go 1.25 is EOL. `govulncheck ./...` reports 9 reachable stdlib findings (`net/http`, `net/textproto`, `crypto/tls`; GO-2026-6603 through GO-2026-6617) on go1.25.14/go1.26.8 and zero on go1.26.9.
-- **Tooling**: Updated goneat to v0.6.2 and the CI runner image to digest-pinned `goneat-tools-runner-glibc:v0.5.8`. The v0.6.2 release has no `darwin/amd64` archive; Intel macOS stays on goneat v0.6.1.
-- **CI**: Pinned `actions/checkout` and `actions/setup-go` to full commit SHAs. External installation test uses Go 1.26.9.
-- **Developer tools**: `.goneat/tools.yaml` Go `minimum_version` and `recommended_version` are now 1.26.9.
-
-### Documentation
-
-- README Installation now states the Go 1.26.9+ requirement.
-- `docs/GONEAT.md` runner pin updated to v0.5.8.
-- `bootstrap/README.md` download examples updated from goneat v0.2.11 to v0.6.2 (illustrative; no darwin/amd64 asset).
-
 ## [0.3.6] - 2026-09-21
 
 ### Added
