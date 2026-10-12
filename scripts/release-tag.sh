@@ -110,11 +110,11 @@ verify_local_tag_object() {
 }
 
 main() {
+	require_tagger_env || exit 1
+
 	local root
 	root="$(repo_root)"
 	cd "${root}"
-
-	require_tagger_env || exit 1
 
 	local version
 	version="$(read_version)"

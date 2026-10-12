@@ -30,6 +30,8 @@ require_value() {
 }
 
 main() {
+	require_tagger_env || exit 1
+
 	local root
 	root="$(repo_root)"
 	cd "${root}"
@@ -38,8 +40,6 @@ main() {
 		echo "error: gh is required to verify the remote tag object" >&2
 		exit 1
 	fi
-
-	require_tagger_env || exit 1
 
 	local version tag ref_sha tagger_name tagger_email target_sha verified reason local_target
 	version="$(read_version)"
