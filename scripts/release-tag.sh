@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly EXPECTED_TAGGER_NAME="FulmenHQ Infosec"
-readonly EXPECTED_TAGGER_EMAIL="infosec@3leaps.net"
+# Tagger identity is env SSOT (required; fail closed if unset):
+#   GOFULMEN_TAGGER_NAME, GOFULMEN_TAGGER_EMAIL
+# shellcheck source=scripts/release-tagger-env.sh
+source "$(cd "$(dirname "$0")" && pwd)/release-tagger-env.sh"
+
 readonly EXPECTED_PRIMARY_FINGERPRINT="0CACA49B3119B6BC12B2CA11B9B485F294B9FE07"
 readonly EXPECTED_SIGNING_SUBKEY="DAB70DD758911B26BB45A08C3B75AC591449DEBE"
 
@@ -40,25 +43,13 @@ setup_gpg_tty() {
 }
 
 require_release_identity() {
-	local tagger_name="${GOFULMEN_TAGGER_NAME:-${EXPECTED_TAGGER_NAME}}"
-	local tagger_email="${GOFULMEN_TAGGER_EMAIL:-${EXPECTED_TAGGER_EMAIL}}"
-	local signing_key="${GOFULMEN_PGP_KEY_ID:-${EXPECTED_SIGNING_SUBKEY}}"
+	require_tagger_env || exit 1
 
-	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ]; then
-		echo "error: GOFULMEN_TAGGER_NAME must be ${EXPECTED_TAGGER_NAME}" >&2
-		exit 1
-	fi
-	if [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
-		echo "error: GOFULMEN_TAGGER_EMAIL must be ${EXPECTED_TAGGER_EMAIL}" >&2
-		exit 1
-	fi
+	local signing_key="${GOFULMEN_PGP_KEY_ID:-${EXPECTED_SIGNING_SUBKEY}}"
 	if [ "${signing_key}" != "${EXPECTED_SIGNING_SUBKEY}" ]; then
 		echo "error: GOFULMEN_PGP_KEY_ID must explicitly select ${EXPECTED_SIGNING_SUBKEY}" >&2
 		exit 1
 	fi
-
-	GOFULMEN_TAGGER_NAME="${tagger_name}"
-	GOFULMEN_TAGGER_EMAIL="${tagger_email}"
 	GOFULMEN_PGP_KEY_ID="${signing_key}"
 }
 
@@ -111,10 +102,7 @@ verify_local_tag_object() {
 	tag_target="$(git rev-parse "${tag}^{}")"
 	head="$(git rev-parse HEAD)"
 
-	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ] || [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
-		echo "error: tag object does not record the required Infosec tagger identity" >&2
-		exit 1
-	fi
+	assert_tagger_identity "${tagger_name}" "${tagger_email}" || exit 1
 	if [ "${tag_target}" != "${head}" ]; then
 		echo "error: tag object does not point to the intended main commit" >&2
 		exit 1
@@ -122,6 +110,8 @@ verify_local_tag_object() {
 }
 
 main() {
+	require_tagger_env || exit 1
+
 	local root
 	root="$(repo_root)"
 	cd "${root}"

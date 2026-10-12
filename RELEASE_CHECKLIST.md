@@ -12,8 +12,8 @@ validated here and then codified into Crucible.
   - If unset, scripts default to `v$(cat VERSION)`.
 - `GOFULMEN_GPG_HOMEDIR`: required dedicated Infosec signing keyring directory (separate from personal `~/.gnupg`)
 - `GOFULMEN_PGP_KEY_ID`: defaults to, and if set must be, `DAB70DD758911B26BB45A08C3B75AC591449DEBE` (the pinned Infosec signing subkey)
-- `GOFULMEN_TAGGER_NAME`: fixed as `FulmenHQ Infosec` by `make release-tag`
-- `GOFULMEN_TAGGER_EMAIL`: fixed as `infosec@3leaps.net` by `make release-tag`; this email must be verified on the GitHub account holding the Infosec public key
+- `GOFULMEN_TAGGER_NAME`: required tagger name stamped on the signed tag object; fail closed if unset
+- `GOFULMEN_TAGGER_EMAIL`: required tagger email stamped on the signed tag object; fail closed if unset. Must be a UID on the signing key and a verified email on the GitHub account that holds the public key
 - `GOFULMEN_MINISIGN_KEY`: optional minisign secret key path (creates a sidecar signature for the tag attestation)
 - `GOFULMEN_MINISIGN_PUB`: optional minisign public key path (verifies the sidecar signature)
 - `GOFULMEN_ALLOW_NON_MAIN=1`: optional override to tag from a non-`main` branch (not recommended)
@@ -45,7 +45,7 @@ Note: `GOFULMEN_RELEASE_TAG` is not a secret and typically isn’t stored in enc
 ## Tagging (Signed Tag Required)
 
 - [ ] Confirm the Infosec primary fingerprint `0CACA49B3119B6BC12B2CA11B9B485F294B9FE07` and signing subkey `DAB70DD758911B26BB45A08C3B75AC591449DEBE` are available in `GOFULMEN_GPG_HOMEDIR`. A key rotation requires updating these pinned release checks before it is used.
-- [ ] Confirm `infosec@3leaps.net` is a verified email on the GitHub account that has the matching Infosec public key.
+- [ ] Confirm `GOFULMEN_TAGGER_NAME` and `GOFULMEN_TAGGER_EMAIL` are set. Confirm the email is a UID on the signing key and a verified address on the GitHub account that holds the matching public key.
 - [ ] Ensure interactive GPG signing can prompt for passphrase (recommended):
   ```bash
   export GPG_TTY="$(tty)"
@@ -96,8 +96,8 @@ Note: `GOFULMEN_RELEASE_TAG` is not a secret and typically isn’t stored in enc
     ```bash
     make release-verify-remote-tag
     ```
-    This confirms the remote annotated tag object records the Infosec tagger identity, points to the reviewed local target, and reports GitHub verification as `valid`.
-  - [ ] **GitHub Web UI (note)**: a green "Verified" badge requires the Infosec public key on the GitHub account and the `infosec@3leaps.net` tagger email verified there. The API gate above is the release record.
+    This confirms the remote annotated tag object records `GOFULMEN_TAGGER_NAME` / `GOFULMEN_TAGGER_EMAIL`, points to the reviewed local target, and reports GitHub verification as `valid`.
+  - [ ] **GitHub Web UI (note)**: a green "Verified" badge requires the signing public key on the GitHub account and `GOFULMEN_TAGGER_EMAIL` verified there. The API gate above is the release record.
 - [ ] Optional: publish minisign attestation (if enabled):
   - `make release-tag` can produce `dist/release/vX.Y.Z.tag.txt` + `.minisig` when `GOFULMEN_MINISIGN_KEY` and `GOFULMEN_MINISIGN_PUB` are set.
   - These files are **not uploaded automatically**; to distribute them, attach them to a GitHub Release (or another artifact channel):

@@ -26,9 +26,9 @@ Required targets (Makefile Standard):
   release-clean   - Remove local release artifacts
   release-provenance-check - Verify SSOT provenance files
   release-guard-tag-version - Guard tag matches VERSION
-  release-tag     - Create signed git tag for VERSION
-  release-verify-tag - Verify signed git tag for VERSION
-  release-verify-remote-tag - Verify GitHub tag identity, target, and signature
+  release-tag     - Create signed git tag for VERSION (requires GOFULMEN_TAGGER_NAME/EMAIL)
+  release-verify-tag - Verify signed git tag against GOFULMEN_TAGGER_NAME/EMAIL
+  release-verify-remote-tag - Verify GitHub tag identity against GOFULMEN_TAGGER_NAME/EMAIL
   check-all       - Run all quality checks (sync, fmt, lint, test)
   precommit       - Run pre-commit hooks (check-all)
   prepush         - Run pre-push hooks (check-all)
