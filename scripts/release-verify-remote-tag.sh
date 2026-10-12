@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly EXPECTED_TAGGER_NAME="FulmenHQ Infosec"
-readonly EXPECTED_TAGGER_EMAIL="infosec@3leaps.net"
+# Tagger identity is env SSOT (required; fail closed if unset):
+#   GOFULMEN_TAGGER_NAME, GOFULMEN_TAGGER_EMAIL
+# shellcheck source=scripts/release-tagger-env.sh
+source "$(cd "$(dirname "$0")" && pwd)/release-tagger-env.sh"
+
 readonly GITHUB_REPOSITORY="fulmenhq/gofulmen"
 
 repo_root() {
@@ -36,6 +39,8 @@ main() {
 		exit 1
 	fi
 
+	require_tagger_env || exit 1
+
 	local version tag ref_sha tagger_name tagger_email target_sha verified reason local_target
 	version="$(read_version)"
 	tag="${GOFULMEN_RELEASE_TAG:-v${version}}"
@@ -53,10 +58,7 @@ main() {
 	verified="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}" --jq '.verification.verified')"
 	reason="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}" --jq '.verification.reason')"
 
-	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ] || [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
-		echo "error: remote tag object does not record the required Infosec tagger identity" >&2
-		exit 1
-	fi
+	assert_tagger_identity "${tagger_name}" "${tagger_email}" || exit 1
 	if [ "${verified}" != "true" ] || [ "${reason}" != "valid" ]; then
 		echo "error: GitHub did not verify the annotated tag object (reason: ${reason})" >&2
 		exit 1

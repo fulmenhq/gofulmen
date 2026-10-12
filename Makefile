@@ -69,6 +69,7 @@ GONEAT_RESOLVE = \
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
 .PHONY: release-tag release-verify-tag release-verify-remote-tag release-provenance-check release-guard-tag-version
 .PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example verify-hooks-compat
+.PHONY: test-release-tagger-env
 
 # Default target
 all: fmt test
@@ -127,13 +128,24 @@ release-provenance-check: ## Verify Crucible SSOT provenance files exist
 release-guard-tag-version: ## Guard: ensure tag matches VERSION (CI-friendly)
 	@./scripts/release-guard-tag-version.sh
 
-release-tag: ## Create and verify a signed git tag for VERSION
+# Signed-tag identity is env SSOT (required; fail closed if unset):
+#   GOFULMEN_TAGGER_NAME   - tagger name stamped on the signed tag
+#   GOFULMEN_TAGGER_EMAIL  - tagger email; must be a UID on the signing key
+#                            and a verified email on the GitHub account
+require_tagger_env = \
+	if [ -z "$${GOFULMEN_TAGGER_NAME}" ]; then echo "error: GOFULMEN_TAGGER_NAME is required" >&2; exit 1; fi; \
+	if [ -z "$${GOFULMEN_TAGGER_EMAIL}" ]; then echo "error: GOFULMEN_TAGGER_EMAIL is required" >&2; exit 1; fi
+
+release-tag: ## Create and verify a signed git tag for VERSION (requires GOFULMEN_TAGGER_NAME/EMAIL)
+	@$(require_tagger_env)
 	@./scripts/release-tag.sh
 
-release-verify-tag: ## Verify the signed git tag for VERSION
+release-verify-tag: ## Verify the signed git tag for VERSION (requires GOFULMEN_TAGGER_NAME/EMAIL)
+	@$(require_tagger_env)
 	@./scripts/release-verify-tag.sh
 
-release-verify-remote-tag: ## Verify GitHub tag identity, target, and signature for VERSION
+release-verify-remote-tag: ## Verify GitHub tag identity against GOFULMEN_TAGGER_NAME/EMAIL
+	@$(require_tagger_env)
 	@./scripts/release-verify-remote-tag.sh
 
 release-prepare: ## Prepare for release (sync, tests, version bump)
@@ -197,6 +209,10 @@ prepush: ## Run pre-push hooks
 test: ## Run all tests
 	@echo "Running test suite..."
 	$(GOTEST) ./... -v
+	@$(MAKE) test-release-tagger-env
+
+test-release-tagger-env: ## Verify GOFULMEN_TAGGER_NAME/EMAIL fail-closed SSOT
+	@./scripts/release-tagger-env.test.sh
 
 test-coverage: ## Run tests with coverage
 	@echo "Running tests with coverage..."

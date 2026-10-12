@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly EXPECTED_TAGGER_NAME="FulmenHQ Infosec"
-readonly EXPECTED_TAGGER_EMAIL="infosec@3leaps.net"
+# Tagger identity is env SSOT (required; fail closed if unset):
+#   GOFULMEN_TAGGER_NAME, GOFULMEN_TAGGER_EMAIL
+# shellcheck source=scripts/release-tagger-env.sh
+source "$(cd "$(dirname "$0")" && pwd)/release-tagger-env.sh"
+
 readonly EXPECTED_PRIMARY_FINGERPRINT="0CACA49B3119B6BC12B2CA11B9B485F294B9FE07"
 readonly EXPECTED_SIGNING_SUBKEY="DAB70DD758911B26BB45A08C3B75AC591449DEBE"
 
@@ -25,10 +28,7 @@ verify_tag_identity() {
 	tagger_email="$(git for-each-ref --format='%(taggeremail)' "refs/tags/${tag}")"
 	tagger_email="${tagger_email#<}"
 	tagger_email="${tagger_email%>}"
-	if [ "${tagger_name}" != "${EXPECTED_TAGGER_NAME}" ] || [ "${tagger_email}" != "${EXPECTED_TAGGER_EMAIL}" ]; then
-		echo "error: tag object does not record the required Infosec tagger identity" >&2
-		exit 1
-	fi
+	assert_tagger_identity "${tagger_name}" "${tagger_email}" || exit 1
 }
 
 verify_tag_signature() {
@@ -52,6 +52,8 @@ main() {
 	local root
 	root="$(repo_root)"
 	cd "${root}"
+
+	require_tagger_env || exit 1
 
 	local version
 	version="$(read_version)"
