@@ -33,6 +33,12 @@ make test            # Run all tests
 make test-coverage   # With coverage report
 ```
 
+Gated targets currently require exactly Go 1.26.10 (CVE-2026-111943 /
+GO-2026-6809). gosec v2.29.0 cannot read Go 1.27 package data, so Go 1.27
+fails `make lint` / `make check-all` / `make prepush`. Do not add a
+`toolchain` line or `GOTOOLCHAIN` to the Makefile. golangci-lint is
+pinned at v2.14.0.
+
 ### Quality Assurance
 
 ```bash

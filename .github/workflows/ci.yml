@@ -11,7 +11,7 @@ jobs:
     name: Test (container)
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.8@sha256:a64b0319f4aad1069f2edd587f9d4d7bf2c52318c3c3e0c9d88650c5983c9c77
+      image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.12@sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d
       options: --user 1001
     env:
       GOCACHE: ${{ github.workspace }}/.cache/go-build
@@ -26,24 +26,12 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Verify Go version
-        run: go version
+      - name: Verify runner toolchain
+        run: ./scripts/verify-runner-toolchain.sh
       - name: Download dependencies
         run: go mod download
       - name: Verify dependencies
         run: go mod verify
-      - name: Verify runner toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "PATH=$PATH"
-          echo "go: $(go version)"
-          echo "goneat: $(goneat --version | head -n1)"
-          echo "sfetch: $(sfetch --version | head -n1)"
-          echo "actionlint: $(actionlint -version 2>/dev/null || true)"
-          echo "golangci-lint: $(golangci-lint version | head -n1)"
-          echo "make: $(make --version | head -n1)"
-          echo "bash: $(bash --version | head -n1)"
       - name: Format (fail on diff)
         run: |
           set -euo pipefail
@@ -66,7 +54,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5.6.0
         with:
-          go-version: "1.26.9"
+          go-version: "1.26.10"
       - name: Resolve install ref
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then

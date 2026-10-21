@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Go 1.26.10 floor** – `go.mod` `go` directive and the CI/setup-go toolchain gate require exact Go 1.26.10 for CVE-2026-111943 / GO-2026-6809 (`crypto/x509` Certificate.Verify denylist, Medium 6.8). Go 1.26.9 is no longer acceptable. Go 1.27.3 is refused while gosec's latest release remains v2.29.0.
+
+### Changed
+
+- **Tooling**: goneat v0.6.2 → v0.6.5. CI runner `goneat-tools-runner-glibc` v0.5.8 → digest-pinned v0.5.12 (`sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d`). gosec pinned to v2.29.0 in `.goneat/tools.yaml`. golangci-lint pinned to v2.14.0.
+- **CI**: Fail-closed runner toolchain gate requires exact Go 1.26.10. Go 1.27 is refused until gosec can read that toolchain. Git hooks continue to run without guardian.
+
 ## [0.3.6] - 2026-09-21
 
 ### Added

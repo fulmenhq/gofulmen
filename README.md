@@ -170,7 +170,7 @@ Signal definitions and behaviors come from Crucible catalog (v1.0.0) ensuring cr
 
 ## Installation
 
-Requires Go 1.26.9+.
+Requires Go 1.26.10+.
 
 ```bash
 go get github.com/fulmenhq/gofulmen
@@ -668,6 +668,11 @@ make bootstrap
 ```
 
 ## Development
+
+Library consumers need Go 1.26.10 or newer (CVE-2026-111943 / GO-2026-6809).
+Gated local targets (`make check-all`, `make prepush`, `make lint`) currently
+require **exactly Go 1.26.10** because gosec v2.29.0 cannot read Go 1.27
+package data. Do not add a `toolchain` line or `GOTOOLCHAIN` to the Makefile.
 
 ### Running Tests
 

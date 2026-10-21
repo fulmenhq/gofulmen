@@ -23,7 +23,12 @@ scopes:
       - go
       - go-licenses
       - golangci-lint
+      - gosec
       - yamlfmt
+  security:
+    description: Security scanning tools used by goneat assess
+    tools:
+      - gosec
 tools:
   actionlint:
     name: actionlint
@@ -58,8 +63,8 @@ tools:
         - scoop
         - winget
     version_scheme: semver
-    minimum_version: 1.26.9
-    recommended_version: 1.26.9
+    minimum_version: 1.26.10
+    recommended_version: 1.26.10
   go-licenses:
     name: go-licenses
     description: License compliance for Go dependencies
@@ -76,7 +81,7 @@ tools:
     description: Fast linters runner for Go
     kind: go
     detect_command: golangci-lint --version
-    install_package: github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    install_package: github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
     version_args:
       - --version
     check_args:
@@ -95,8 +100,24 @@ tools:
         - scoop
         - winget
     version_scheme: semver
-    minimum_version: 1.54.0
-    recommended_version: 2.4.0
+    minimum_version: 2.14.0
+    recommended_version: 2.14.0
+  gosec:
+    name: gosec
+    description: Go security checker
+    kind: go
+    detect_command: gosec -version
+    install_package: github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+    version_args:
+      - -version
+    check_args:
+      - -h
+    installer_priority:
+      all:
+        - go-install
+    version_scheme: semver
+    minimum_version: 2.29.0
+    recommended_version: 2.29.0
   jq:
     name: jq
     description: JSON processor - used in CI/CD scripts

@@ -49,7 +49,8 @@ BINDIR_RESOLVE = \
 	fi
 
 # Tooling
-GONEAT_VERSION ?= v0.6.2
+GONEAT_VERSION ?= v0.6.5
+GOLANGCI_LINT_VERSION ?= v2.14.0
 SFETCH_INSTALL_URL ?= https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh
 
 SFETCH_RESOLVE = \
@@ -69,7 +70,7 @@ GONEAT_RESOLVE = \
 .PHONY: version-set version-bump-major version-bump-minor version-bump-patch release-check release-prepare release-build
 .PHONY: release-tag release-verify-tag release-verify-remote-tag release-provenance-check release-guard-tag-version
 .PHONY: test-coverage assess license-inventory license-save license-audit update-licenses dev export-schema export-schema-example verify-hooks-compat
-.PHONY: test-release-tagger-env
+.PHONY: test-release-tagger-env test-runner-toolchain
 
 # Default target
 all: fmt test
@@ -197,12 +198,12 @@ verify-hooks-compat: ## Verify generated goneat hooks are compatible
 
 precommit: ## Run pre-commit hooks
 	@echo "Running pre-commit validation..."
-	@$(GONEAT_RESOLVE); $$GONEAT assess --hook pre-commit --hook-manifest .goneat/hooks.yaml --package-mode
+	@$(GONEAT_RESOLVE); $$GONEAT assess --mode check --hook pre-commit --hook-manifest .goneat/hooks.yaml --package-mode
 	@echo "✅ Pre-commit checks passed"
 
 prepush: ## Run pre-push hooks
 	@echo "Running pre-push validation..."
-	@$(GONEAT_RESOLVE); $$GONEAT assess --hook pre-push --hook-manifest .goneat/hooks.yaml --package-mode
+	@$(GONEAT_RESOLVE); $$GONEAT assess --mode check --hook pre-push --hook-manifest .goneat/hooks.yaml --package-mode
 	@echo "✅ Pre-push checks passed"
 
 # Test targets
@@ -210,9 +211,13 @@ test: ## Run all tests
 	@echo "Running test suite..."
 	$(GOTEST) ./... -v
 	@$(MAKE) test-release-tagger-env
+	@$(MAKE) test-runner-toolchain
 
 test-release-tagger-env: ## Verify GOFULMEN_TAGGER_NAME/EMAIL fail-closed SSOT
 	@./scripts/release-tagger-env.test.sh
+
+test-runner-toolchain: ## Verify the runner toolchain gate refuses non-1.26.10 Go
+	@./scripts/verify-runner-toolchain.test.sh
 
 test-coverage: ## Run tests with coverage
 	@echo "Running tests with coverage..."
