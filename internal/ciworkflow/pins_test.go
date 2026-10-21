@@ -13,12 +13,14 @@ import (
 )
 
 const (
-	requiredGoDirective = "1.26.9"
-	requiredGoneat      = "v0.6.5"
-	requiredGosecPkg    = "github.com/securego/gosec/v2/cmd/gosec@v2.29.0"
-	requiredRunnerImage = "ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.12@sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d"
-	requiredGateScript  = "./scripts/verify-runner-toolchain.sh"
-	requiredGoToken     = "go1.26.9 "
+	requiredGoDirective     = "1.26.10"
+	requiredGoneat          = "v0.6.5"
+	requiredGolangciLint    = "v2.14.0"
+	requiredGolangciLintPkg = "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0"
+	requiredGosecPkg        = "github.com/securego/gosec/v2/cmd/gosec@v2.29.0"
+	requiredRunnerImage     = "ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.12@sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d"
+	requiredGateScript      = "./scripts/verify-runner-toolchain.sh"
+	requiredGoToken         = "go1.26.10 "
 )
 
 type workflowFile struct {
@@ -150,6 +152,9 @@ func TestMakefileGoneatPinAndNoGOTOOLCHAIN(t *testing.T) {
 	if !strings.Contains(body, "GONEAT_VERSION ?= "+requiredGoneat) {
 		t.Fatalf("Makefile missing GONEAT_VERSION ?= %s", requiredGoneat)
 	}
+	if !strings.Contains(body, "GOLANGCI_LINT_VERSION ?= "+requiredGolangciLint) {
+		t.Fatalf("Makefile missing GOLANGCI_LINT_VERSION ?= %s", requiredGolangciLint)
+	}
 	if strings.Contains(body, "GOTOOLCHAIN") {
 		t.Fatal("Makefile must not wire GOTOOLCHAIN")
 	}
@@ -175,6 +180,14 @@ func TestGosecPinnedExact(t *testing.T) {
 	if strings.Contains(gosec.InstallPackage, "@latest") {
 		t.Fatal("gosec must not use @latest")
 	}
+
+	golangci, ok := cfg.Tools["golangci-lint"]
+	if !ok {
+		t.Fatal("tools.yaml missing golangci-lint")
+	}
+	if golangci.InstallPackage != requiredGolangciLintPkg {
+		t.Fatalf("golangci-lint install_package=%q, want %q", golangci.InstallPackage, requiredGolangciLintPkg)
+	}
 }
 
 func TestRunnerToolchainGateExactGo(t *testing.T) {
@@ -193,10 +206,10 @@ func TestRunnerToolchainGateExactGo(t *testing.T) {
 		line    string
 		wantErr bool
 	}{
-		{name: "exact 1.26.9", line: "go version go1.26.9 linux/amd64", wantErr: false},
-		{name: "1.26.8", line: "go version go1.26.8 linux/amd64", wantErr: true},
-		{name: "1.27.2", line: "go version go1.27.2 linux/amd64", wantErr: true},
-		{name: "1.26.10", line: "go version go1.26.10 linux/amd64", wantErr: true},
+		{name: "exact 1.26.10", line: "go version go1.26.10 linux/amd64", wantErr: false},
+		{name: "1.26.9", line: "go version go1.26.9 linux/amd64", wantErr: true},
+		{name: "1.27.3", line: "go version go1.27.3 linux/amd64", wantErr: true},
+		{name: "1.26.11", line: "go version go1.26.11 linux/amd64", wantErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

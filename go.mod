@@ -1,6 +1,6 @@
 module github.com/fulmenhq/gofulmen
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.1

@@ -124,13 +124,11 @@ container as non-root (`--user 1001`), otherwise Go may try to write under the
 image's protected `/opt/gopath` tree. Keep those directories listed in
 `.goneatignore` so `make fmt` does not recurse into downloaded module caches.
 
-CI fails closed unless `go version` reports exactly `go1.26.9` (see
-`scripts/verify-runner-toolchain.sh`). Go 1.27 currently fails goneat-driven
-gosec gates because gosec v2.29.0 cannot read Go 1.27 package data. Until gosec
-publishes a release with that fix, hosts with a newer local Go should run gated
-targets as `GOTOOLCHAIN=go1.26.9 make <target>` (for example
-`GOTOOLCHAIN=go1.26.9 make check-all`). This workaround is temporary and may be
-removed then. Do not add `GOTOOLCHAIN` to the Makefile.
+CI fails closed unless `go version` reports exactly `go1.26.10` (see
+`scripts/verify-runner-toolchain.sh`). Go 1.27 is still refused because
+gosec v2.29.0 cannot read Go 1.27 package data. Do not add a `toolchain`
+line or `GOTOOLCHAIN` to the Makefile. golangci-lint is pinned to v2.14.0
+in `.goneat/tools.yaml` and `Makefile` `GOLANGCI_LINT_VERSION`.
 
 ## Development Workflow
 

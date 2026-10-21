@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unit paths for the fail-closed Go 1.26.9 runner toolchain gate.
+# Unit paths for the fail-closed Go 1.26.10 runner toolchain gate.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -51,10 +51,10 @@ expect_pass() {
 	fi
 }
 
-expect_pass "exact go1.26.9" "go version go1.26.9 linux/amd64"
+expect_pass "exact go1.26.10" "go version go1.26.10 linux/amd64"
+expect_fail "go1.26.9" "go version go1.26.9 linux/amd64"
 expect_fail "go1.26.8" "go version go1.26.8 linux/amd64"
-expect_fail "go1.26.10" "go version go1.26.10 linux/amd64"
-expect_fail "go1.27.2" "go version go1.27.2 linux/amd64"
+expect_fail "go1.27.3" "go version go1.27.3 linux/amd64"
 expect_fail "go1.25.14" "go version go1.25.14 linux/amd64"
 expect_fail "empty go version" ""
 

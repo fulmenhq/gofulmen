@@ -50,6 +50,7 @@ BINDIR_RESOLVE = \
 
 # Tooling
 GONEAT_VERSION ?= v0.6.5
+GOLANGCI_LINT_VERSION ?= v2.14.0
 SFETCH_INSTALL_URL ?= https://github.com/3leaps/sfetch/releases/latest/download/install-sfetch.sh
 
 SFETCH_RESOLVE = \
@@ -215,7 +216,7 @@ test: ## Run all tests
 test-release-tagger-env: ## Verify GOFULMEN_TAGGER_NAME/EMAIL fail-closed SSOT
 	@./scripts/release-tagger-env.test.sh
 
-test-runner-toolchain: ## Verify the runner toolchain gate refuses non-1.26.9 Go
+test-runner-toolchain: ## Verify the runner toolchain gate refuses non-1.26.10 Go
 	@./scripts/verify-runner-toolchain.test.sh
 
 test-coverage: ## Run tests with coverage
