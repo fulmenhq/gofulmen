@@ -96,7 +96,7 @@ Gofulmen CI runs inside the Fulmen toolbox runner image, currently pinned in
 
 ```yaml
 container:
-  image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.8@sha256:a64b0319f4aad1069f2edd587f9d4d7bf2c52318c3c3e0c9d88650c5983c9c77
+  image: ghcr.io/fulmenhq/goneat-tools-runner-glibc:v0.5.12@sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d
 ```
 
 Use the canonical `*-runner-musl` or `*-runner-glibc` image names rather than
@@ -123,6 +123,14 @@ workspace. Keep those cache paths workspace-local when running the toolbox
 container as non-root (`--user 1001`), otherwise Go may try to write under the
 image's protected `/opt/gopath` tree. Keep those directories listed in
 `.goneatignore` so `make fmt` does not recurse into downloaded module caches.
+
+CI fails closed unless `go version` reports exactly `go1.26.9` (see
+`scripts/verify-runner-toolchain.sh`). Go 1.27 currently fails goneat-driven
+gosec gates because gosec v2.29.0 cannot read Go 1.27 package data. Until gosec
+publishes a release with that fix, hosts with a newer local Go should run gated
+targets as `GOTOOLCHAIN=go1.26.9 make <target>` (for example
+`GOTOOLCHAIN=go1.26.9 make check-all`). This workaround is temporary and may be
+removed then. Do not add `GOTOOLCHAIN` to the Makefile.
 
 ## Development Workflow
 

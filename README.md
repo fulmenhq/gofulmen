@@ -669,6 +669,20 @@ make bootstrap
 
 ## Development
 
+Library consumers need Go 1.26.9 or newer. Gated local targets (`make check-all`,
+`make prepush`, `make lint`) currently require **exactly Go 1.26.9** because
+gosec v2.29.0 cannot read Go 1.27 package data. This is a temporary workaround
+until gosec publishes a release with that fix, and it may be removed then. Do
+not add `GOTOOLCHAIN` to the Makefile.
+
+On a host whose default Go is newer than 1.26.9, run gated targets as:
+
+```bash
+GOTOOLCHAIN=go1.26.9 make <target>
+```
+
+For example: `GOTOOLCHAIN=go1.26.9 make check-all`.
+
 ### Running Tests
 
 ```bash

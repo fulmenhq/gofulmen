@@ -33,6 +33,18 @@ make test            # Run all tests
 make test-coverage   # With coverage report
 ```
 
+Gated targets currently require exactly Go 1.26.9. gosec v2.29.0 cannot read
+Go 1.27 package data, so a newer local toolchain fails `make lint` /
+`make check-all` / `make prepush`. Until gosec publishes a release with that
+fix, prefix those targets with `GOTOOLCHAIN=go1.26.9`:
+
+```bash
+GOTOOLCHAIN=go1.26.9 make <target>
+```
+
+This is a temporary workaround and may be removed then. Do not add
+`GOTOOLCHAIN` to the Makefile.
+
 ### Quality Assurance
 
 ```bash

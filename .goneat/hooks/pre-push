@@ -69,6 +69,8 @@ if [ -z "$GONEAT_BIN" ]; then
   fi
 fi
 
+# Guardian enforcement for protected git push operations
+
 # Verify crucible sources are clean before pushing
 if [ -f "$REPO_ROOT/scripts/verify-crucible-clean.sh" ]; then
   if ! "$REPO_ROOT/scripts/verify-crucible-clean.sh"; then
@@ -78,7 +80,7 @@ if [ -f "$REPO_ROOT/scripts/verify-crucible-clean.sh" ]; then
   fi
 fi
 
-# Use goneat's orchestrated assessment (manifest-driven)
-"$GONEAT_BIN" assess --hook pre-push --hook-manifest "$REPO_ROOT/.goneat/hooks.yaml" --staged-only --package-mode
+# Report only. --mode check does not rewrite files.
+"$GONEAT_BIN" assess --mode check --hook pre-push --hook-manifest "$REPO_ROOT/.goneat/hooks.yaml" --staged-only --package-mode
 
 echo "✅ Pre-push validation passed!"

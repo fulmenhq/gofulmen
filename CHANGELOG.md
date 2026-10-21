@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Tooling**: goneat v0.6.2 → v0.6.5. CI runner `goneat-tools-runner-glibc` v0.5.8 → digest-pinned v0.5.12 (`sha256:616a4b5361d2cf7d32ac32496d58e9c288660d5606f0a27efdbf56e3a462ab2d`). gosec pinned to v2.29.0 in `.goneat/tools.yaml`.
+- **CI**: Fail-closed runner toolchain gate requires exact Go 1.26.9 from the digest-pinned image. Go 1.27 is refused until gosec can read that toolchain.
+
+### Documentation
+
+- Documented the temporary `GOTOOLCHAIN=go1.26.9 make <target>` workaround for hosts with a newer local Go, to be removed when gosec ships a Go 1.27 fix.
+
 ## [0.3.6] - 2026-09-21
 
 ### Added
